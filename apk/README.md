@@ -1,6 +1,6 @@
 # Offline Azan APK Releases
 
-### Current Version: v3.0.44 (versionCode: 204)
-- **Filename:** `app-v3.0.44.apk`
-- **Build Type:** Debug / Release
-- **Status:** Current latest version with updated masjid list, custom audio support, and guest masjid mode.
+### Current Version: v3.0.45 (versionCode: 205)
+- **Filename:** `app-v3.0.45.apk`
+- **Build Type:** Release / Signed Debug Keystore
+- **Status:** Both buttons in Can't find your masjid dialog unhighlighted (neutral outlined), latest masjid list and audio support.

@@ -696,13 +696,13 @@ fun FirstTimeSetupScreen(
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // VERTICAL STACK OF HIGHLIGHTED BUTTONS: GUEST MASJID (TOP), THEN REQUEST MASJID (BOTTOM)
+                            // VERTICAL STACK OF NEUTRAL BUTTONS: GUEST MASJID (TOP), THEN REQUEST MASJID (BOTTOM)
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                // 1. GUEST MASJID BUTTON (TOP) - HIGHLIGHTED GOLD BUTTON
-                                Button(
+                                // 1. GUEST MASJID BUTTON (TOP) - NEUTRAL UNHIGHLIGHTED
+                                OutlinedButton(
                                     onClick = {
                                         showCantFindMasjidDialog = false
                                         val guestMasjid = uiState.allMasajid.firstOrNull {
@@ -714,9 +714,10 @@ fun FirstTimeSetupScreen(
                                         onSelectMasjid(guestMasjid)
                                         onFinishSetup(guestMasjid.id)
                                     },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFF2CA50),
-                                        contentColor = Color(0xFF0F172A)
+                                    border = BorderStroke(1.2.dp, Color(0xFFF2CA50).copy(alpha = 0.65f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = Color(0xFF131D2A).copy(alpha = 0.95f),
+                                        contentColor = Color(0xFFF2CA50)
                                     ),
                                     shape = RoundedCornerShape(14.dp),
                                     modifier = Modifier
@@ -736,15 +737,16 @@ fun FirstTimeSetupScreen(
                                     )
                                 }
 
-                                // 2. REQUEST MASJID BUTTON (BOTTOM) - HIGHLIGHTED GOLD BUTTON
-                                Button(
+                                // 2. REQUEST MASJID BUTTON (BOTTOM) - NEUTRAL UNHIGHLIGHTED
+                                OutlinedButton(
                                     onClick = {
                                         showCantFindMasjidDialog = false
                                         showAddMasjidDialog = true
                                     },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFF2CA50),
-                                        contentColor = Color(0xFF0F172A)
+                                    border = BorderStroke(1.2.dp, Color(0xFFF2CA50).copy(alpha = 0.65f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = Color(0xFF131D2A).copy(alpha = 0.95f),
+                                        contentColor = Color(0xFFF2CA50)
                                     ),
                                     shape = RoundedCornerShape(14.dp),
                                     modifier = Modifier

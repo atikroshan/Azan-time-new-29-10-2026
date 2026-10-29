@@ -1,0 +1,8 @@
+{
+  "name": "Offline Azan 26-10-26",
+  "description": "Offline azan app that plays custom audio locally based on database timings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

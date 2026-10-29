@@ -292,26 +292,10 @@ fun TrackerBoardContent(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(bottom = 0.dp)
                         )
-                        Text(
-                            text = if (uiState.language == "ur") curStrings.azanTimeHeader else "AZAN TIME",
-                            fontSize = if (uiState.language == "ur") 34.sp else 46.sp,
-                            fontFamily = if (uiState.language == "ur") null else GraenMetalFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            style = androidx.compose.ui.text.TextStyle(
-                                brush = GraenMetalGoldGradient,
-                                shadow = GraenMetalGoldShadow
-                            ),
-                            letterSpacing = if (uiState.language == "ur") 0.sp else 1.5.sp,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = if (curStrings.punchLine == "Come towards the path of Allah") curStrings.punchLine.uppercase() else curStrings.punchLine,
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White.copy(alpha = 0.85f),
-                            letterSpacing = if (uiState.language == "ur") 0.sp else 1.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 0.dp)
+                        AzanTimeWordmark(
+                            height = 42.dp,
+                            topPadding = 12.dp,
+                            bottomPadding = 6.dp
                         )
                     }
                 }
@@ -3256,26 +3240,10 @@ fun RamazanScreenContent(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(bottom = 0.dp)
                         )
-                        Text(
-                            text = if (uiState.language == "ur") curStrings.azanTimeHeader else "AZAN TIME",
-                            fontSize = if (uiState.language == "ur") 34.sp else 46.sp,
-                            fontFamily = if (uiState.language == "ur") null else GraenMetalFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            style = androidx.compose.ui.text.TextStyle(
-                                brush = GraenMetalGoldGradient,
-                                shadow = GraenMetalGoldShadow
-                            ),
-                            letterSpacing = if (uiState.language == "ur") 0.sp else 1.5.sp,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = if (curStrings.punchLine == "Come towards the path of Allah") curStrings.punchLine.uppercase() else curStrings.punchLine,
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White.copy(alpha = 0.85f),
-                            letterSpacing = if (uiState.language == "ur") 0.sp else 1.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 0.dp)
+                        AzanTimeWordmark(
+                            height = 42.dp,
+                            topPadding = 12.dp,
+                            bottomPadding = 6.dp
                         )
                     }
                 }

@@ -94,33 +94,10 @@ fun SplashScreen(onFinished: () -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "AZAN TIME",
-                fontFamily = GraenMetalFont,
-                fontSize = 44.sp,
-                fontWeight = FontWeight.Bold,
-                style = androidx.compose.ui.text.TextStyle(
-                    brush = Brush.verticalGradient(
-                        listOf(Color(0xFFF3DE8E), Color(0xFFF3D66A), Color(0xFFB37C3C))
-                    ),
-                    shadow = Shadow(
-                        color = Color(0xFFFFE08B).copy(alpha = 0.5f),
-                        offset = Offset(0f, 0f),
-                        blurRadius = 16f
-                    )
-                ),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "\"AAO ALLAH KI RAAH MEIN CHALE\"",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White.copy(alpha = 0.9f),
-                letterSpacing = 1.5.sp,
-                textAlign = TextAlign.Center
+            AzanTimeWordmark(
+                height = 54.dp,
+                topPadding = 12.dp,
+                bottomPadding = 8.dp
             )
         }
     }

@@ -1,6 +1,6 @@
 # Offline Azan APK Releases
 
-### Current Version: v3.0.45 (versionCode: 205)
-- **Filename:** `app-v3.0.45.apk`
+### Current Version: v3.0.53 (versionCode: 213)
+- **Filename:** `app-v3.0.53.apk`
 - **Build Type:** Release / Signed Debug Keystore
-- **Status:** Both buttons in Can't find your masjid dialog unhighlighted (neutral outlined), latest masjid list and audio support.
+- **Status:** All 12 official Roboto TTF fonts (Thin, Light, Regular, Medium, Bold, Black & Italics) are bundled directly inside the APK (`res/font/`), ensuring exact uniform font rendering on all Android devices.

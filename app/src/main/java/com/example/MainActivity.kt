@@ -807,7 +807,11 @@ fun AzanHomeContent(
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
         ) {
-            val hasMasjidPhoto = photoUrl.isNotBlank()
+            val isGuestMasjid = uiState.selectedMasjid.id.equals("guest", ignoreCase = true) ||
+                    uiState.selectedMasjid.name.contains("guest", ignoreCase = true) ||
+                    uiState.selectedMasjid.name.contains("गेस्ट", ignoreCase = true) ||
+                    uiState.selectedMasjid.name.contains("گیسٹ", ignoreCase = true)
+            val hasMasjidPhoto = photoUrl.isNotBlank() && !isGuestMasjid
             var langRowHeightPx by remember { mutableIntStateOf(0) }
             val langRowHeightDp = with(density) { langRowHeightPx.toDp() }
             val photoTopPadding = if (langRowHeightDp > 0.dp) langRowHeightDp + 16.dp else 60.dp
@@ -908,54 +912,11 @@ fun AzanHomeContent(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            // AZAN TIME typography & Punchline precisely fitted inside AZAN TIME (Enlarged 2x)
-                            var headerWidthDp by remember { mutableStateOf<androidx.compose.ui.unit.Dp?>(null) }
-                            val density = androidx.compose.ui.platform.LocalDensity.current
-                            val curStrings = com.example.ui.theme.getAppStrings(uiState.language)
-
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = if (uiState.language == "ur") curStrings.azanTimeHeader else "AZAN TIME",
-                                    fontFamily = if (uiState.language == "ur") null else com.example.ui.GraenMetalFontFamily,
-                                    fontSize = if (uiState.language == "ur") 32.sp else 40.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    letterSpacing = 2.sp,
-                                    textAlign = TextAlign.Center,
-                                    style = TextStyle(
-                                        brush = com.example.ui.GraenMetalGoldGradient,
-                                        shadow = com.example.ui.GraenMetalGoldShadow
-                                    ),
-                                    onTextLayout = { layoutResult ->
-                                        val w = with(density) { layoutResult.size.width.toDp() }
-                                        if (headerWidthDp != w) {
-                                            headerWidthDp = w
-                                        }
-                                    }
-                                )
-
-                                Spacer(modifier = Modifier.height(0.dp))
-
-                                Box(
-                                    modifier = if (headerWidthDp != null) Modifier.width(headerWidthDp!!) else Modifier,
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = if (curStrings.punchLine == "Come towards the path of Allah") curStrings.punchLine.uppercase() else curStrings.punchLine,
-                                        fontSize = 11.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.SansSerif,
-                                        color = Color(0xFFF2CA50).copy(alpha = 0.95f),
-                                        textAlign = TextAlign.Center,
-                                        letterSpacing = 0.sp,
-                                        maxLines = 1,
-                                        softWrap = false
-                                    )
-                                }
-                            }
+                            com.example.ui.AzanTimeWordmark(
+                                height = 46.dp,
+                                topPadding = 14.dp,
+                                bottomPadding = 6.dp
+                            )
                         }
                     }
                 }
@@ -2925,7 +2886,7 @@ fun AzanJammatDisplay(
                 text = azanFormatted,
                 fontSize = if (isNext) 12.sp else 10.5.sp,
                 fontWeight = FontWeight(900),
-                fontFamily = FontFamily.SansSerif,
+                fontFamily = com.example.ui.theme.AppFontFamily,
                 color = if (isNext || isOngoing) Color(0xFFFFD700) else Color.White
             )
         }
@@ -2954,7 +2915,7 @@ fun AzanJammatDisplay(
                 text = jammatFormatted,
                 fontSize = if (isNext) 12.sp else 10.5.sp,
                 fontWeight = FontWeight(900),
-                fontFamily = FontFamily.SansSerif,
+                fontFamily = com.example.ui.theme.AppFontFamily,
                 color = if (isNext || isOngoing) Color(0xFF4ADE80) else Color(0xFFE2E8F0)
             )
         }
@@ -3014,7 +2975,7 @@ fun HighlightedAzanJammatDisplay(
                 text = strings.azanLabel.uppercase(),
                 fontSize = effectiveLabelSize,
                 fontWeight = FontWeight(900),
-                fontFamily = FontFamily.SansSerif,
+                fontFamily = com.example.ui.theme.AppFontFamily,
                 color = Color(0xFFF3DE8E),
                 letterSpacing = 0.5.sp,
                 maxLines = 1
@@ -3028,7 +2989,7 @@ fun HighlightedAzanJammatDisplay(
                     text = azanTimeStr,
                     fontSize = effectiveTimeSize,
                     fontWeight = FontWeight(900),
-                    fontFamily = FontFamily.SansSerif,
+                    fontFamily = com.example.ui.theme.AppFontFamily,
                     letterSpacing = (-0.5).sp,
                     color = Color(0xFFFFD700),
                     maxLines = 1,
@@ -3040,7 +3001,7 @@ fun HighlightedAzanJammatDisplay(
                         text = azanSuffix,
                         fontSize = effectiveSuffixSize,
                         fontWeight = FontWeight(900),
-                        fontFamily = FontFamily.SansSerif,
+                        fontFamily = com.example.ui.theme.AppFontFamily,
                         color = Color(0xFFFFD700).copy(alpha = 0.85f),
                         maxLines = 1,
                         softWrap = false,
@@ -3075,7 +3036,7 @@ fun HighlightedAzanJammatDisplay(
                 text = strings.jammatLabel.uppercase(),
                 fontSize = effectiveLabelSize,
                 fontWeight = FontWeight(900),
-                fontFamily = FontFamily.SansSerif,
+                fontFamily = com.example.ui.theme.AppFontFamily,
                 color = Color(0xFF86EFAC),
                 letterSpacing = 0.5.sp,
                 maxLines = 1
@@ -3089,7 +3050,7 @@ fun HighlightedAzanJammatDisplay(
                     text = jammatTimeStr,
                     fontSize = effectiveTimeSize,
                     fontWeight = FontWeight(900),
-                    fontFamily = FontFamily.SansSerif,
+                    fontFamily = com.example.ui.theme.AppFontFamily,
                     letterSpacing = (-0.5).sp,
                     color = Color(0xFF4ADE80),
                     maxLines = 1,
@@ -3101,7 +3062,7 @@ fun HighlightedAzanJammatDisplay(
                         text = jammatSuffix,
                         fontSize = effectiveSuffixSize,
                         fontWeight = FontWeight(900),
-                        fontFamily = FontFamily.SansSerif,
+                        fontFamily = com.example.ui.theme.AppFontFamily,
                         color = Color(0xFF4ADE80).copy(alpha = 0.85f),
                         maxLines = 1,
                         softWrap = false,
@@ -3128,7 +3089,7 @@ fun PrayerTimeDisplay(time24: String, isNext: Boolean) {
             text = timeStr,
             fontSize = if (isNext) 22.sp else 16.sp,
             fontWeight = FontWeight(900),
-            fontFamily = FontFamily.SansSerif,
+            fontFamily = com.example.ui.theme.AppFontFamily,
             style = androidx.compose.ui.text.TextStyle(
                 brush = Brush.verticalGradient(
                     colors = listOf(Color(0xFFF3DE8E), Color(0xFFB37C3C))
@@ -3140,7 +3101,7 @@ fun PrayerTimeDisplay(time24: String, isNext: Boolean) {
                 text = suffixStr,
                 fontSize = if (isNext) 14.sp else 10.sp,
                 fontWeight = FontWeight(900),
-                fontFamily = FontFamily.SansSerif,
+                fontFamily = com.example.ui.theme.AppFontFamily,
                 color = if (isNext) MaterialTheme.colorScheme.secondary else TextMuted
             )
         }

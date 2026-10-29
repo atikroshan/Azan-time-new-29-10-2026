@@ -255,47 +255,11 @@ fun FirstTimeSetupScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    var headerWidthDp by remember { mutableStateOf<androidx.compose.ui.unit.Dp?>(null) }
-                    val density = androidx.compose.ui.platform.LocalDensity.current
-                    val curStrings = com.example.ui.theme.getAppStrings(uiState.language)
-
-                    Text(
-                        text = if (uiState.language == "ur") curStrings.azanTimeHeader else "AZAN TIME",
-                        fontFamily = if (uiState.language == "ur") null else GraenMetalFontFamily,
-                        fontSize = if (uiState.language == "ur") 26.sp else 32.sp,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = 2.sp,
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(
-                            brush = GraenMetalGoldGradient,
-                            shadow = GraenMetalGoldShadow
-                        ),
-                        onTextLayout = { layoutResult ->
-                            val w = with(density) { layoutResult.size.width.toDp() }
-                            if (headerWidthDp != w) {
-                                headerWidthDp = w
-                            }
-                        }
+                    AzanTimeWordmark(
+                        height = 40.dp,
+                        topPadding = 12.dp,
+                        bottomPadding = 6.dp
                     )
-
-                    Box(
-                        modifier = if (headerWidthDp != null) Modifier.width(headerWidthDp!!) else Modifier,
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (curStrings.punchLine == "Come towards the path of Allah") curStrings.punchLine.uppercase() else curStrings.punchLine,
-                            fontSize = 8.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.SansSerif,
-                            color = Color(0xFFF2CA50).copy(alpha = 0.95f),
-                            textAlign = TextAlign.Center,
-                            letterSpacing = 0.sp,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
                 }
             }
 

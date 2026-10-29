@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -230,51 +231,11 @@ fun SupportScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
-
-                var headerWidthDp by remember { mutableStateOf<androidx.compose.ui.unit.Dp?>(null) }
-                val density = androidx.compose.ui.platform.LocalDensity.current
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "AZAN TIME",
-                        fontFamily = GraenMetalFontFamily,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Normal,
-                        letterSpacing = 2.sp,
-                        style = androidx.compose.ui.text.TextStyle(
-                            brush = GraenMetalGoldGradient,
-                            shadow = GraenMetalGoldShadow
-                        ),
-                        onTextLayout = { layoutResult ->
-                            val w = with(density) { layoutResult.size.width.toDp() }
-                            if (headerWidthDp != w) {
-                                headerWidthDp = w
-                            }
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Box(
-                        modifier = if (headerWidthDp != null) Modifier.width(headerWidthDp!!) else Modifier,
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "AAO ALLAH KI RAAH MEIN CHALE",
-                            fontSize = 7.4.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
-                            color = Color(0xFFF2CA50).copy(alpha = 0.95f),
-                            textAlign = TextAlign.Center,
-                            letterSpacing = 0.sp,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
-                }
+                AzanTimeWordmark(
+                    height = 38.dp,
+                    topPadding = 14.dp,
+                    bottomPadding = 8.dp
+                )
             }
 
             // 3. Divided 2-Column Slot: Support & Feedback / Request Add Masjid
@@ -416,16 +377,16 @@ fun SupportScreen(
                         // Left balanced spacer matching QR button width for true center alignment
                         Spacer(modifier = Modifier.width(88.dp))
 
-                        // Center: SADAQAH JARIYAH (CAPS and Centered)
+                        // Center: SUPPORT APP (CAPS and Centered)
                         Column(
                             modifier = Modifier.weight(1f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
                                 text = when (uiState.language) {
-                                    "ur" -> "صدقہ جاریہ"
-                                    "hi" -> "सदक़ा-ए-जारिया"
-                                    else -> "SADAQAH JARIYAH"
+                                    "ur" -> "ایپ سپورٹ"
+                                    "hi" -> "ऐप सपोर्ट"
+                                    else -> "SUPPORT APP"
                                 },
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
@@ -436,9 +397,9 @@ fun SupportScreen(
                             )
                             Text(
                                 text = when (uiState.language) {
-                                    "ur" -> "ایپ تعاون و ثوابِ جاریہ"
-                                    "hi" -> "सवाब-ए-जारिया व ऐप सहयोग"
-                                    else -> "Support App & Sawab-e-Jariyah"
+                                    "ur" -> "ثوابِ جاریہ"
+                                    "hi" -> "सवाब-ए-जारिया"
+                                    else -> "Sawab-e-Jariyah"
                                 },
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -1087,6 +1048,141 @@ fun prepareStraightMasjidPhotoBase64(context: Context, uri: Uri, maxDim: Int = 1
     }
 }
 
+data class StandardizedQrResult(
+    val bitmap: Bitmap,
+    val base64: String,
+    val localFilePath: String,
+    val isCleanRegenerated: Boolean,
+    val decodedPayload: String?
+)
+
+suspend fun prepareStandardizedMasjidQr(
+    context: Context,
+    uri: Uri
+): StandardizedQrResult? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        // 1. Read EXIF Orientation
+        var orientation = ExifInterface.ORIENTATION_NORMAL
+        try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                val exif = ExifInterface(stream)
+                orientation = exif.getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL
+                )
+            }
+        } catch (_: Throwable) {}
+
+        // 2. Decode raw bitmap
+        val originalBitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream)
+        } ?: return@withContext null
+
+        // 3. Straighten rotation
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+        }
+
+        val orientedBitmap = if (!matrix.isIdentity) {
+            Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+        } else {
+            originalBitmap
+        }
+
+        // 4. Decode QR code content via ZXing QRCodeReader
+        var decodedContent: String? = null
+        try {
+            val width = orientedBitmap.width
+            val height = orientedBitmap.height
+            val pixels = IntArray(width * height)
+            orientedBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+            val source = com.google.zxing.RGBLuminanceSource(width, height, pixels)
+            val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
+            val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
+            decodedContent = result.text?.trim()
+        } catch (_: Throwable) {
+            // If full-frame decode failed, try center square crop
+            try {
+                val side = minOf(orientedBitmap.width, orientedBitmap.height)
+                val x = (orientedBitmap.width - side) / 2
+                val y = (orientedBitmap.height - side) / 2
+                val square = Bitmap.createBitmap(orientedBitmap, x, y, side, side)
+                val pixels = IntArray(side * side)
+                square.getPixels(pixels, 0, side, 0, 0, side, side)
+                val source = com.google.zxing.RGBLuminanceSource(side, side, pixels)
+                val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
+                val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
+                decodedContent = result.text?.trim()
+            } catch (_: Throwable) {}
+        }
+
+        val finalBitmap: Bitmap
+        val isRegenerated: Boolean
+
+        if (!decodedContent.isNullOrBlank()) {
+            // Re-generate pixel-perfect standard crisp black & white QR code
+            val size = 600
+            val hints = mapOf(
+                com.google.zxing.EncodeHintType.MARGIN to 1,
+                com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
+            )
+            val bitMatrix = com.google.zxing.qrcode.QRCodeWriter().encode(
+                decodedContent,
+                com.google.zxing.BarcodeFormat.QR_CODE,
+                size,
+                size,
+                hints
+            )
+            finalBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            for (px in 0 until size) {
+                for (py in 0 until size) {
+                    finalBitmap.setPixel(
+                        px,
+                        py,
+                        if (bitMatrix.get(px, py)) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+                    )
+                }
+            }
+            isRegenerated = true
+        } else {
+            // Fallback: Crop straight center square and scale to 600x600
+            val side = minOf(orientedBitmap.width, orientedBitmap.height)
+            val x = (orientedBitmap.width - side) / 2
+            val y = (orientedBitmap.height - side) / 2
+            val cropped = Bitmap.createBitmap(orientedBitmap, x, y, side, side)
+            finalBitmap = Bitmap.createScaledBitmap(cropped, 600, 600, true)
+            isRegenerated = false
+        }
+
+        // Save straight/clean bitmap to app internal storage
+        val destFile = java.io.File(context.filesDir, "custom_masjid_qr.jpg")
+        destFile.outputStream().use { out ->
+            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)
+        }
+
+        // Generate base64 string
+        val baos = ByteArrayOutputStream()
+        finalBitmap.compress(Bitmap.CompressFormat.JPEG, 92, baos)
+        val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+
+        StandardizedQrResult(
+            bitmap = finalBitmap,
+            base64 = base64,
+            localFilePath = destFile.absolutePath,
+            isCleanRegenerated = isRegenerated,
+            decodedPayload = decodedContent
+        )
+    } catch (e: Throwable) {
+        e.printStackTrace()
+        null
+    }
+}
+
 private suspend fun saveCustomQrToInternalStorage(context: Context, qrUri: Uri): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
         val destFile = java.io.File(context.filesDir, "custom_masjid_qr.jpg")
@@ -1120,6 +1216,8 @@ fun AddMasjidAutoDialog(
     var adminContact by remember { mutableStateOf("") }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedQrUri by remember { mutableStateOf<Uri?>(null) }
+    var standardizedQr by remember { mutableStateOf<StandardizedQrResult?>(null) }
+    var isProcessingQr by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isSending by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -1135,9 +1233,19 @@ fun AddMasjidAutoDialog(
     ) { uri: Uri? ->
         selectedQrUri = uri
         if (uri != null) {
+            isProcessingQr = true
             coroutineScope.launch {
-                val path = saveCustomQrToInternalStorage(context, uri)
-                prefs.setCustomMasjidQrPath(path)
+                val res = prepareStandardizedMasjidQr(context, uri)
+                standardizedQr = res
+                isProcessingQr = false
+                if (res != null) {
+                    prefs.setCustomMasjidQrPath(res.localFilePath)
+                }
+            }
+        } else {
+            standardizedQr = null
+            coroutineScope.launch {
+                prefs.setCustomMasjidQrPath(null)
             }
         }
     }
@@ -1399,7 +1507,27 @@ fun AddMasjidAutoDialog(
                         )
                     }
 
-                    if (selectedQrUri != null) {
+                    if (isProcessingQr) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
+                                .padding(10.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = Color(0xFF38BDF8)
+                            )
+                            Text(
+                                text = "Standardizing & Straightening QR...",
+                                fontSize = 12.sp,
+                                color = Color(0xFF38BDF8)
+                            )
+                        }
+                    } else if (standardizedQr != null) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1416,29 +1544,34 @@ fun AddMasjidAutoDialog(
                                     .padding(3.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                AsyncImage(
-                                    model = selectedQrUri,
-                                    contentDescription = "QR Preview",
+                                Image(
+                                    bitmap = standardizedQr!!.bitmap.asImageBitmap(),
+                                    contentDescription = "Standard QR Preview",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Fit
                                 )
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Masjid QR Selected",
+                                    text = if (standardizedQr!!.isCleanRegenerated) "✓ Standard Clean QR Generated" else "✓ Straight Square QR Cropped",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFF3DE8E)
+                                    color = Color(0xFF10B981)
                                 )
                                 Text(
-                                    text = "Support Masjid QR & Google Drive",
+                                    text = if (standardizedQr!!.decodedPayload != null)
+                                        "Payload: ${standardizedQr!!.decodedPayload!!.take(28)}..."
+                                    else
+                                        "Standard high-resolution square QR",
                                     fontSize = 10.sp,
-                                    color = Color.White.copy(alpha = 0.65f)
+                                    color = Color.White.copy(alpha = 0.65f),
+                                    maxLines = 1
                                 )
                             }
                             IconButton(
                                 onClick = {
                                     selectedQrUri = null
+                                    standardizedQr = null
                                     coroutineScope.launch {
                                         prefs.setCustomMasjidQrPath(null)
                                     }
@@ -1503,12 +1636,14 @@ fun AddMasjidAutoDialog(
                                 }
                             }
 
-                            var qrBase64: String? = null
-                            if (qrUri != null) {
+                            var qrBase64: String? = standardizedQr?.base64
+                            if (qrBase64 == null && qrUri != null) {
                                 try {
-                                    qrBase64 = prepareStraightMasjidPhotoBase64(context, qrUri)
-                                    val savedPath = saveCustomQrToInternalStorage(context, qrUri)
-                                    prefs.setCustomMasjidQrPath(savedPath)
+                                    val res = prepareStandardizedMasjidQr(context, qrUri)
+                                    qrBase64 = res?.base64 ?: prepareStraightMasjidPhotoBase64(context, qrUri)
+                                    if (res != null) {
+                                        prefs.setCustomMasjidQrPath(res.localFilePath)
+                                    }
                                 } catch (e: Throwable) {
                                     // Proceed without QR if encoding fails
                                 }

@@ -452,51 +452,13 @@ fun SupportMasjidPopup(
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(2.dp))
 
-                                    var headerWidthDp by remember { mutableStateOf<androidx.compose.ui.unit.Dp?>(null) }
-                                    val density = androidx.compose.ui.platform.LocalDensity.current
-
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "AZAN TIME",
-                                            fontFamily = com.example.ui.GraenMetalFontFamily,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            letterSpacing = 1.5.sp,
-                                            textAlign = TextAlign.Center,
-                                            style = androidx.compose.ui.text.TextStyle(
-                                                brush = com.example.ui.GraenMetalGoldGradient
-                                            ),
-                                            onTextLayout = { layoutResult ->
-                                                val w = with(density) { layoutResult.size.width.toDp() }
-                                                if (headerWidthDp != w) {
-                                                    headerWidthDp = w
-                                                }
-                                            }
-                                        )
-
-                                        Spacer(modifier = Modifier.height(2.dp))
-
-                                        Box(
-                                            modifier = if (headerWidthDp != null) Modifier.width(headerWidthDp!!) else Modifier,
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = "AAO ALLAH KI RAAH MEIN CHALE",
-                                                fontSize = 3.6.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
-                                                color = Color(0xFFF2CA50).copy(alpha = 0.95f),
-                                                textAlign = TextAlign.Center,
-                                                letterSpacing = 0.sp,
-                                                maxLines = 1,
-                                                softWrap = false
-                                            )
-                                        }
-                                    }
+                                    com.example.ui.AzanTimeWordmark(
+                                         height = 26.dp,
+                                         topPadding = 4.dp,
+                                         bottomPadding = 4.dp
+                                    )
                                 }
                             }
                         }

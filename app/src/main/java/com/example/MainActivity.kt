@@ -1317,6 +1317,7 @@ fun AzanHomeContent(
         com.example.ui.SupportMasjidPopup(
             language = uiState.language,
             qrUrl = uiState.selectedMasjid.qrUrl,
+            selectedMasjid = uiState.selectedMasjid,
             onDismiss = { showSupportPopup = false }
         )
     }

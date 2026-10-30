@@ -1,6 +1,6 @@
 # Offline Azan APK Releases
 
-### Current Version: v3.0.53 (versionCode: 213)
-- **Filename:** `app-v3.0.53.apk`
+### Current Version: v3.0.55 (versionCode: 215)
+- **Filename:** `app-v3.0.55.apk`
 - **Build Type:** Release / Signed Debug Keystore
-- **Status:** All 12 official Roboto TTF fonts (Thin, Light, Regular, Medium, Bold, Black & Italics) are bundled directly inside the APK (`res/font/`), ensuring exact uniform font rendering on all Android devices.
+- **Status:** Added official brand vector logos for Google Pay (GPay), PhonePe, Paytm, and BHIM/UPI in the payment app chooser popup when tapping an amount.

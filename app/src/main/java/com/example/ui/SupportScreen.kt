@@ -1961,8 +1961,7 @@ fun UpiAppChooserDialog(
                 UpiAppOptionItem(
                     name = "Google Pay",
                     subtitle = "GPay UPI",
-                    badgeColor = Color(0xFF1A73E8),
-                    badgeText = "GPay",
+                    iconRes = R.drawable.ic_gpay,
                     onClick = { onAppSelected("com.google.android.apps.nbu.paisa.user") }
                 )
 
@@ -1970,8 +1969,7 @@ fun UpiAppChooserDialog(
                 UpiAppOptionItem(
                     name = "PhonePe",
                     subtitle = "PhonePe UPI",
-                    badgeColor = Color(0xFF5F259F),
-                    badgeText = "Pe",
+                    iconRes = R.drawable.ic_phonepe,
                     onClick = { onAppSelected("com.phonepe.app") }
                 )
 
@@ -1979,8 +1977,7 @@ fun UpiAppChooserDialog(
                 UpiAppOptionItem(
                     name = "Paytm",
                     subtitle = "Paytm Payments Bank & UPI",
-                    badgeColor = Color(0xFF00B9F5),
-                    badgeText = "Paytm",
+                    iconRes = R.drawable.ic_paytm,
                     onClick = { onAppSelected("net.one97.paytm") }
                 )
 
@@ -1988,8 +1985,7 @@ fun UpiAppChooserDialog(
                 UpiAppOptionItem(
                     name = "Other UPI App",
                     subtitle = "BHIM, Cred, Amazon Pay, etc.",
-                    badgeColor = Color(0xFF10B981),
-                    badgeText = "UPI",
+                    iconRes = R.drawable.ic_upi,
                     onClick = { onAppSelected(null) }
                 )
             }
@@ -2001,8 +1997,7 @@ fun UpiAppChooserDialog(
 fun UpiAppOptionItem(
     name: String,
     subtitle: String,
-    badgeColor: Color,
-    badgeText: String,
+    iconRes: Int,
     onClick: () -> Unit
 ) {
     Card(
@@ -2021,23 +2016,24 @@ fun UpiAppOptionItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(badgeColor),
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .padding(2.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = badgeText,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                Image(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
-                    fontSize = 13.5.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )

@@ -245,6 +245,7 @@ fun SupportMasjidFloatingButton(
 fun SupportMasjidPopup(
     language: String,
     qrUrl: String? = null,
+    selectedMasjid: com.example.data.MasjidItem? = null,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -254,11 +255,12 @@ fun SupportMasjidPopup(
         customQrPath?.let { java.io.File(it) }?.takeIf { it.exists() }
             ?: java.io.File(context.filesDir, "custom_masjid_qr.jpg").takeIf { it.exists() }
     }
-    val resolvedQrModel = remember(qrUrl, customQrFile) {
+    val effectiveQrUrl = qrUrl ?: selectedMasjid?.qrUrl ?: ""
+    val resolvedQrModel = remember(effectiveQrUrl, customQrFile) {
         if (customQrFile != null && customQrFile.exists()) {
             customQrFile
-        } else if (!qrUrl.isNullOrBlank()) {
-            com.example.data.GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(qrUrl)
+        } else if (effectiveQrUrl.isNotBlank()) {
+            com.example.data.GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(effectiveQrUrl)
         } else {
             null
         }
@@ -296,7 +298,20 @@ fun SupportMasjidPopup(
 
     fun launchUpiForApp(packageName: String?, amount: Int) {
         val amStr = if (amount > 0) "&am=$amount" else ""
-        val uri = Uri.parse("upi://pay?pa=9960171516@ybl&pn=A-tek%20Printing%20Press${amStr}&cu=INR")
+        
+        // Extract or compute the specific Masjid's UPI VPA
+        val upiVpa = when {
+            selectedMasjid != null && selectedMasjid.qrUrl.contains("pa=") -> {
+                "pa=([^&]+)".toRegex().find(selectedMasjid.qrUrl)?.groupValues?.getOrNull(1) ?: "9960171516@ybl"
+            }
+            selectedMasjid != null && selectedMasjid.adminPassword.trim().length == 10 && selectedMasjid.adminPassword.trim().all { it.isDigit() } -> {
+                "${selectedMasjid.adminPassword.trim()}@ybl"
+            }
+            else -> "9960171516@ybl"
+        }
+        
+        val payeeName = Uri.encode(selectedMasjid?.name?.ifBlank { "Masjid Donation" } ?: "Masjid Donation")
+        val uri = Uri.parse("upi://pay?pa=$upiVpa&pn=$payeeName${amStr}&cu=INR")
         val intent = Intent(Intent.ACTION_VIEW, uri)
         if (!packageName.isNullOrBlank()) {
             intent.setPackage(packageName)

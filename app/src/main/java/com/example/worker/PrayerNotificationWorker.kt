@@ -73,9 +73,12 @@ class PrayerNotificationWorker(
 
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-        val title = "Time for $prayerName Prayer"
+        val isFriday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY
+        val displayPrayerName = if (prayerName.equals("Dhuhr", ignoreCase = true) && isFriday) "Jumah" else prayerName
+
+        val title = "Time for $displayPrayerName Prayer"
         val timeDisplay = if (prayerTime.isNotEmpty()) " ($prayerTime)" else ""
-        val content = "It is now time for $prayerName$timeDisplay. Aao Allah ki raah mein chalein."
+        val content = "It is now time for $displayPrayerName$timeDisplay. Aao Allah ki raah mein chalein."
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)

@@ -243,7 +243,9 @@ class AzanForegroundService : Service() {
 
     private fun updateNotification() {
         try {
-            val azanName = currentPlayingPrayerName.value ?: "Azan"
+            val rawAzanName = currentPlayingPrayerName.value ?: "Azan"
+            val isFriday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY
+            val azanName = if (rawAzanName.equals("Dhuhr", ignoreCase = true) && isFriday) "Jumah" else rawAzanName
             val stopIntent = Intent(this, AzanForegroundService::class.java).apply {
                 action = "STOP_AZAN"
             }
@@ -287,8 +289,10 @@ class AzanForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         serviceInstance = this
         initFromPrefs(this)
-        val azanName = intent?.getStringExtra("AZAN_NAME") ?: "Azan"
-        val pIdx = prayerNameToIndex(azanName)
+        val rawAzanName = intent?.getStringExtra("AZAN_NAME") ?: "Azan"
+        val isFriday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY
+        val azanName = if (rawAzanName.equals("Dhuhr", ignoreCase = true) && isFriday) "Jumah" else rawAzanName
+        val pIdx = prayerNameToIndex(rawAzanName)
         if (pIdx != -1) {
             lastAudioPrayerIndex.value = pIdx
         }

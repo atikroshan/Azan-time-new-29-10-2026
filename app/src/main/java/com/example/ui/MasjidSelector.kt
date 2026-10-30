@@ -261,6 +261,7 @@ fun MasjidSelectionDialog(
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
+    var pendingSelectedMasjid by remember { mutableStateOf<MasjidItem?>(null) }
     val strings = remember(language) { MasjidSelectorStrings(language) }
 
     // Speech to text activity launcher
@@ -491,7 +492,7 @@ fun MasjidSelectionDialog(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onSelectMasjid(masjid) },
+                                .clickable { pendingSelectedMasjid = masjid },
                             shape = RoundedCornerShape(14.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = if (isCurrent) Color(0xFF1E2B45) else Color(0xFF141C2E)
@@ -606,6 +607,102 @@ fun MasjidSelectionDialog(
                 }
             }
         }
+    }
+
+    // Confirmation Pop-up Dialog with Confirm / Cancel
+    val targetMasjid = pendingSelectedMasjid
+    if (targetMasjid != null) {
+        AlertDialog(
+            onDismissRequest = { pendingSelectedMasjid = null },
+            modifier = Modifier.border(1.5.dp, Color(0xFFF3DE8E), RoundedCornerShape(20.dp)),
+            containerColor = Color(0xFF0F1E17),
+            shape = RoundedCornerShape(20.dp),
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(Color(0xFF1E3A2E), CircleShape)
+                        .border(1.dp, Color(0xFFF3DE8E), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Mosque,
+                        contentDescription = "Mosque",
+                        tint = Color(0xFFF3DE8E),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    text = when (language) {
+                        "ur" -> "مسجد کے انتخاب کی تصدیق"
+                        "hi" -> "मस्जिद चयन की पुष्टि करें"
+                        else -> "Confirm Masjid Selection"
+                    },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = Color(0xFFF3DE8E)
+                )
+            },
+            text = {
+                val name = targetMasjid.getLocalizedName(language)
+                val area = targetMasjid.getLocalizedArea(language)
+                val city = targetMasjid.getLocalizedCity(language)
+                val locationStr = listOf(area, city).filter { it.isNotBlank() }.joinToString(", ")
+
+                Text(
+                    text = when (language) {
+                        "ur" -> "کیا آپ $name ($locationStr) کو منتخب کرنا چاہتے ہیں؟"
+                        "hi" -> "क्या आप $name ($locationStr) को चुनना चाहते हैं?"
+                        else -> "Are you sure you want to select $name ($locationStr)?"
+                    },
+                    fontSize = 13.5.sp,
+                    color = Color.White.copy(alpha = 0.9f),
+                    lineHeight = 18.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val m = targetMasjid
+                        pendingSelectedMasjid = null
+                        onSelectMasjid(m)
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF3DE8E)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(
+                        text = when (language) {
+                            "ur" -> "ہاں / تصدیق کریں"
+                            "hi" -> "हाँ / पुष्टि करें"
+                            else -> "Confirm"
+                        },
+                        color = Color(0xFF0F1713),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { pendingSelectedMasjid = null },
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                ) {
+                    Text(
+                        text = when (language) {
+                            "ur" -> "منسوخ کریں"
+                            "hi" -> "रद्द करें"
+                            else -> "Cancel"
+                        },
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        )
     }
 }
 

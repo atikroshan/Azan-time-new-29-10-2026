@@ -145,31 +145,41 @@ fun SupportScreen(
     fun launchUpiForApp(packageName: String?, amount: Int) {
         val amStr = if (amount > 0) "&am=$amount" else ""
         var targetVpa = "9960171516@ybl"
-        var targetName = "A-tek%20Printing%20Press"
+        var targetName = Uri.encode(uiState.selectedMasjid.name.ifBlank { "A-tek Printing Press" })
 
-        try {
-            val customQrFile = java.io.File(context.filesDir, "custom_masjid_qr.jpg")
-            if (customQrFile.exists()) {
-                val bitmap = BitmapFactory.decodeFile(customQrFile.absolutePath)
-                if (bitmap != null) {
-                    val width = bitmap.width
-                    val height = bitmap.height
-                    val pixels = IntArray(width * height)
-                    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-                    val source = com.google.zxing.RGBLuminanceSource(width, height, pixels)
-                    val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
-                    val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
-                    val payload = result.text?.trim()
-                    if (!payload.isNullOrBlank() && payload.contains("pa=")) {
-                        val parsedUri = Uri.parse(if (payload.startsWith("upi://")) payload else "upi://pay?$payload")
-                        val pa = parsedUri.getQueryParameter("pa")
-                        val pn = parsedUri.getQueryParameter("pn")
-                        if (!pa.isNullOrBlank()) targetVpa = pa
-                        if (!pn.isNullOrBlank()) targetName = Uri.encode(pn)
+        val selectedMasjid = uiState.selectedMasjid
+        if (selectedMasjid.qrUrl.contains("pa=")) {
+            val matchPa = "pa=([^&]+)".toRegex().find(selectedMasjid.qrUrl)?.groupValues?.getOrNull(1)
+            val matchPn = "pn=([^&]+)".toRegex().find(selectedMasjid.qrUrl)?.groupValues?.getOrNull(1)
+            if (!matchPa.isNullOrBlank()) targetVpa = matchPa
+            if (!matchPn.isNullOrBlank()) targetName = Uri.encode(matchPn)
+        } else if (selectedMasjid.adminPassword.trim().length == 10 && selectedMasjid.adminPassword.trim().all { it.isDigit() }) {
+            targetVpa = "${selectedMasjid.adminPassword.trim()}@ybl"
+        } else {
+            try {
+                val customQrFile = java.io.File(context.filesDir, "custom_masjid_qr.jpg")
+                if (customQrFile.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(customQrFile.absolutePath)
+                    if (bitmap != null) {
+                        val width = bitmap.width
+                        val height = bitmap.height
+                        val pixels = IntArray(width * height)
+                        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+                        val source = com.google.zxing.RGBLuminanceSource(width, height, pixels)
+                        val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
+                        val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
+                        val payload = result.text?.trim()
+                        if (!payload.isNullOrBlank() && payload.contains("pa=")) {
+                            val parsedUri = Uri.parse(if (payload.startsWith("upi://")) payload else "upi://pay?$payload")
+                            val pa = parsedUri.getQueryParameter("pa")
+                            val pn = parsedUri.getQueryParameter("pn")
+                            if (!pa.isNullOrBlank()) targetVpa = pa
+                            if (!pn.isNullOrBlank()) targetName = Uri.encode(pn)
+                        }
                     }
                 }
-            }
-        } catch (_: Throwable) {}
+            } catch (_: Throwable) {}
+        }
 
         val uri = Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
         val intent = Intent(Intent.ACTION_VIEW, uri)
@@ -471,24 +481,24 @@ fun SupportScreen(
                         }
                     }
 
-                    // Amounts
+                    // Amounts (Enlarged)
                     val amounts = listOf(50, 100, 250, 500)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         amounts.forEach { amt ->
                             val isSelected = selectedContributionAmount == amt
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(30.dp)
-                                    .clip(RoundedCornerShape(7.dp))
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(if (isSelected) Color(0xFFE5B842) else Color(0xFF0F261C))
                                     .border(
-                                        width = 1.dp,
+                                        width = 1.2.dp,
                                         color = if (isSelected) Color(0xFFFFE082) else Color(0xFF224836),
-                                        shape = RoundedCornerShape(7.dp)
+                                        shape = RoundedCornerShape(10.dp)
                                     )
                                     .clickable {
                                         selectedContributionAmount = amt
@@ -498,7 +508,7 @@ fun SupportScreen(
                             ) {
                                 Text(
                                     text = "₹$amt",
-                                    fontSize = 10.5.sp,
+                                    fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isSelected) Color(0xFF0F1713) else primaryGold
                                 )
@@ -509,36 +519,36 @@ fun SupportScreen(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(30.dp)
-                                .clip(RoundedCornerShape(7.dp))
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(if (isOtherSelected) Color(0xFFE5B842) else Color(0xFF0F261C))
                                 .border(
-                                    width = 1.dp,
+                                    width = 1.2.dp,
                                     color = if (isOtherSelected) Color(0xFFFFE082) else Color(0xFF224836),
-                                    shape = RoundedCornerShape(7.dp)
+                                    shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable { showOtherAmountDialog = true },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = if (isOtherSelected) "₹$selectedContributionAmount" else "Other",
-                                fontSize = 9.5.sp,
+                                fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isOtherSelected) Color(0xFF0F1713) else primaryGold
                             )
                         }
                     }
 
-                    // Pay UPI Button
+                    // Pay UPI Button (Enlarged)
                     Button(
                         onClick = { showUpiAppChooserDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF123425)),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, primaryGold.copy(alpha = 0.45f)),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.2.dp, primaryGold.copy(alpha = 0.65f)),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(30.dp)
+                            .height(48.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -547,12 +557,12 @@ fun SupportScreen(
                             Image(
                                 painter = painterResource(id = R.drawable.ic_upi),
                                 contentDescription = "UPI Logo",
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Pay ₹$selectedContributionAmount via UPI (GPay, PhonePe, Paytm)",
-                                fontSize = 9.5.sp,
+                                fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = primaryGold,
                                 maxLines = 1
@@ -713,21 +723,37 @@ fun SupportScreen(
     }
 
     if (showQrDialog) {
+        val isGuestMasjid = uiState.selectedMasjid.id.equals("guest", ignoreCase = true) ||
+            uiState.selectedMasjid.name.contains("guest", ignoreCase = true)
+        val effectiveQrUrl = uiState.selectedMasjid.qrUrl
+        val customQrFile = remember { java.io.File(context.filesDir, "custom_masjid_qr.jpg").takeIf { it.exists() } }
+        val dialogQrModel: Any? = remember(effectiveQrUrl, customQrFile, isGuestMasjid) {
+            if (isGuestMasjid) {
+                null
+            } else if (effectiveQrUrl.isNotBlank()) {
+                com.example.data.GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(effectiveQrUrl)
+            } else if (customQrFile != null && customQrFile.exists()) {
+                customQrFile
+            } else {
+                R.drawable.qr_support_donate
+            }
+        }
+
         Dialog(onDismissRequest = { showQrDialog = false }) {
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1B15)),
                 border = BorderStroke(1.5.dp, Color(0xFFE5B842).copy(alpha = 0.55f)),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
+                    .fillMaxWidth(0.95f)
+                    .padding(12.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -751,24 +777,69 @@ fun SupportScreen(
 
                     Box(
                         modifier = Modifier
-                            .size(200.dp)
-                            .background(Color.White, RoundedCornerShape(12.dp))
-                            .border(1.5.dp, primaryGold.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                            .padding(10.dp),
+                            .size(310.dp)
+                            .background(if (dialogQrModel != null) Color.White else Color(0xFF0F1A15), RoundedCornerShape(14.dp))
+                            .border(1.5.dp, primaryGold.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                            .padding(12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.qr_support_donate),
-                            contentDescription = "Donation QR Code",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit
-                        )
+                        if (dialogQrModel != null) {
+                            coil.compose.AsyncImage(
+                                model = dialogQrModel,
+                                contentDescription = "Donation QR Code",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxSize().padding(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(Color(0xFF1E3328), Color(0xFF0D1712))
+                                            ),
+                                            shape = CircleShape
+                                        )
+                                        .border(
+                                            BorderStroke(
+                                                1.5.dp,
+                                                Brush.verticalGradient(
+                                                    listOf(Color(0xFFF3DE8E), Color(0xFFB37C3C))
+                                                )
+                                            ),
+                                            shape = CircleShape
+                                        )
+                                        .padding(6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.foreground),
+                                        contentDescription = "Azan Time Logo",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                com.example.ui.AzanTimeWordmark(
+                                     height = 30.dp,
+                                     topPadding = 4.dp,
+                                     bottomPadding = 4.dp
+                                )
+                            }
+                        }
                     }
 
                     Text(
-                        text = "Scan using any UPI App (GPay, PhonePe, Paytm)",
+                        text = if (dialogQrModel != null) "Scan using any UPI App (GPay, PhonePe, Paytm)" else "QR code not available for this masjid",
                         fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.75f),
+                        color = if (dialogQrModel != null) Color.White.copy(alpha = 0.85f) else Color(0xFFEF4444).copy(alpha = 0.9f),
                         textAlign = TextAlign.Center
                     )
                 }

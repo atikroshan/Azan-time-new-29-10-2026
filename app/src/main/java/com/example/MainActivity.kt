@@ -441,7 +441,10 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                             onLangSelect = { viewModel.setLanguage(it) },
                             onMasjidSubmitted = { viewModel.syncGoogleSheet() },
                             onChangeMasjid = { showMasjidSelectorScreen = true },
-                            onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) }
+                            onSelectMasjid = { masjid ->
+                                viewModel.selectMasjid(masjid.id)
+                                selectedTab = "home"
+                            }
                         )
                     }
                     "ramazan" -> {
@@ -486,6 +489,7 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
             onSelectMasjid = { masjid ->
                 viewModel.selectMasjid(masjid.id)
                 showMasjidSelectorScreen = false
+                selectedTab = "home"
             },
             onLanguageSelect = { viewModel.setLanguage(it) },
             onDismiss = { showMasjidSelectorScreen = false }
@@ -939,7 +943,7 @@ fun AzanHomeContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (isPlayingAzan) {
+                    if (isPlayingAzan && isPulledDown) {
                         Button(
                             onClick = {
                                 com.example.service.AzanForegroundService.stopService(context)
@@ -969,7 +973,7 @@ fun AzanHomeContent(
                         }
                     }
 
-                    if (!isPlayingAzan) {
+                    if (!isPlayingAzan || !isPulledDown) {
                         // Support Masjid QR Button (square shape with rounded corners, placed to the left of Admin button)
                         Box(
                             modifier = Modifier
@@ -1243,6 +1247,7 @@ fun AzanHomeContent(
                                 viewModel = viewModel,
                                 uiState = uiState,
                                 singleSlotMode = false,
+                                isPulledDown = isPulledDown,
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = true
                             )
@@ -1841,6 +1846,7 @@ fun AzanList(
     uiState: com.example.ui.UIState,
     isAccordionClosed: Boolean = false,
     singleSlotMode: Boolean = false,
+    isPulledDown: Boolean = false,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
@@ -2039,7 +2045,7 @@ fun AzanList(
         modifier = modifier.alpha(if (enabled) 1f else 0.5f),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        if (isPlayingAzan) {
+        if (isPlayingAzan && !isPulledDown) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3171,6 +3177,7 @@ fun AdminLoginDialog(
 
     var adminId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var isError by remember { mutableStateOf(false) }
 
     Dialog(
@@ -3252,7 +3259,16 @@ fun AdminLoginDialog(
                     label = { Text("Password") },
                     placeholder = { Text("Enter Password") },
                     singleLine = true,
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                tint = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    },
+                    visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -3428,33 +3444,6 @@ fun AdminPanelScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Subtle Sheet Sync Status Badge (click to configure)
-                    Surface(
-                        onClick = { showAppsScriptSettingsDialog = true },
-                        color = if (uiState.appsScriptUrl.isNotBlank()) Color(0xFF14532D).copy(alpha = 0.65f) else Color(0xFF78350F).copy(alpha = 0.75f),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, if (uiState.appsScriptUrl.isNotBlank()) Color(0xFF86EFAC).copy(alpha = 0.8f) else Color(0xFFFCD34D).copy(alpha = 0.85f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (uiState.appsScriptUrl.isNotBlank()) Icons.Default.CloudDone else Icons.Default.CloudOff,
-                                contentDescription = null,
-                                tint = if (uiState.appsScriptUrl.isNotBlank()) Color(0xFF86EFAC) else Color(0xFFFCD34D),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Text(
-                                text = if (uiState.appsScriptUrl.isNotBlank()) strings.saved else strings.connect,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (uiState.appsScriptUrl.isNotBlank()) Color(0xFF86EFAC) else Color(0xFFFCD34D)
-                            )
-                        }
-                    }
-
                     Button(
                         onClick = {
                             val configuredUrl = uiState.appsScriptUrl.trim()
@@ -3487,21 +3476,30 @@ fun AdminPanelScreen(
                         },
                         enabled = !isSyncingNow,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF1E293B),
-                            contentColor = MaterialTheme.colorScheme.secondary
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = Color(0xFF0F172A)
                         ),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f))
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         if (isSyncingNow) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.secondary
+                                color = Color(0xFF0F172A)
                             )
                         } else {
-                            Text("Done", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Done",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text("DONE", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -3671,6 +3669,76 @@ fun AdminPanelScreen(
                             color = TextColor.copy(alpha = 0.85f),
                             lineHeight = 16.sp
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Button(
+                    onClick = {
+                        val configuredUrl = uiState.appsScriptUrl.trim()
+                        if (configuredUrl.isBlank()) {
+                            showAppsScriptSettingsDialog = true
+                            android.widget.Toast.makeText(
+                                context,
+                                strings.connect,
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            isSyncingNow = true
+                            scope.launch {
+                                val (success, msg) = viewModel.syncMasjidToSheet(uiState.selectedMasjid)
+                                isSyncingNow = false
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    if (success) {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "✅ ${strings.timeUpdated}",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                        onBack()
+                                    } else {
+                                        syncStatusErrorDialog = msg
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isSyncingNow,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                        contentColor = Color(0xFF0F172A)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    if (isSyncingNow) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.5.dp,
+                            color = Color(0xFF0F172A)
+                        )
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Done",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "DONE / SAVE TIMINGS",
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
                     }
                 }
 

@@ -255,14 +255,21 @@ fun SupportMasjidPopup(
         customQrPath?.let { java.io.File(it) }?.takeIf { it.exists() }
             ?: java.io.File(context.filesDir, "custom_masjid_qr.jpg").takeIf { it.exists() }
     }
+    val isGuestMasjid = selectedMasjid != null && (
+        selectedMasjid.id.equals("guest", ignoreCase = true) ||
+        selectedMasjid.name.contains("guest", ignoreCase = true)
+    )
     val effectiveQrUrl = qrUrl ?: selectedMasjid?.qrUrl ?: ""
-    val resolvedQrModel = remember(effectiveQrUrl, customQrFile) {
-        if (customQrFile != null && customQrFile.exists()) {
-            customQrFile
+    val resolvedQrModel: Any? = remember(effectiveQrUrl, customQrFile, isGuestMasjid) {
+        if (isGuestMasjid) {
+            // Guest masjid explicitly has NO photo and NO QR
+            null
         } else if (effectiveQrUrl.isNotBlank()) {
             com.example.data.GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(effectiveQrUrl)
+        } else if (customQrFile != null && customQrFile.exists()) {
+            customQrFile
         } else {
-            null
+            R.drawable.qr_support_donate
         }
     }
     var isVisible by remember { mutableStateOf(false) }
@@ -299,19 +306,43 @@ fun SupportMasjidPopup(
     fun launchUpiForApp(packageName: String?, amount: Int) {
         val amStr = if (amount > 0) "&am=$amount" else ""
         
-        // Extract or compute the specific Masjid's UPI VPA
-        val upiVpa = when {
-            selectedMasjid != null && selectedMasjid.qrUrl.contains("pa=") -> {
-                "pa=([^&]+)".toRegex().find(selectedMasjid.qrUrl)?.groupValues?.getOrNull(1) ?: "9960171516@ybl"
+        var targetVpa = "9960171516@ybl"
+        var targetName = Uri.encode(selectedMasjid?.name?.ifBlank { "Masjid Donation" } ?: "Masjid Donation")
+
+        if (selectedMasjid != null) {
+            val qr = selectedMasjid.qrUrl
+            if (qr.contains("pa=")) {
+                val matchPa = "pa=([^&]+)".toRegex().find(qr)?.groupValues?.getOrNull(1)
+                val matchPn = "pn=([^&]+)".toRegex().find(qr)?.groupValues?.getOrNull(1)
+                if (!matchPa.isNullOrBlank()) targetVpa = matchPa
+                if (!matchPn.isNullOrBlank()) targetName = Uri.encode(matchPn)
+            } else if (selectedMasjid.adminPassword.trim().length == 10 && selectedMasjid.adminPassword.trim().all { it.isDigit() }) {
+                targetVpa = "${selectedMasjid.adminPassword.trim()}@ybl"
             }
-            selectedMasjid != null && selectedMasjid.adminPassword.trim().length == 10 && selectedMasjid.adminPassword.trim().all { it.isDigit() } -> {
-                "${selectedMasjid.adminPassword.trim()}@ybl"
-            }
-            else -> "9960171516@ybl"
+        } else if (customQrFile != null && customQrFile.exists()) {
+            try {
+                val bitmap = android.graphics.BitmapFactory.decodeFile(customQrFile.absolutePath)
+                if (bitmap != null) {
+                    val width = bitmap.width
+                    val height = bitmap.height
+                    val pixels = IntArray(width * height)
+                    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+                    val source = com.google.zxing.RGBLuminanceSource(width, height, pixels)
+                    val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
+                    val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
+                    val payload = result.text?.trim()
+                    if (!payload.isNullOrBlank() && payload.contains("pa=")) {
+                        val parsedUri = Uri.parse(if (payload.startsWith("upi://")) payload else "upi://pay?$payload")
+                        val pa = parsedUri.getQueryParameter("pa")
+                        val pn = parsedUri.getQueryParameter("pn")
+                        if (!pa.isNullOrBlank()) targetVpa = pa
+                        if (!pn.isNullOrBlank()) targetName = Uri.encode(pn)
+                    }
+                }
+            } catch (_: Throwable) {}
         }
-        
-        val payeeName = Uri.encode(selectedMasjid?.name?.ifBlank { "Masjid Donation" } ?: "Masjid Donation")
-        val uri = Uri.parse("upi://pay?pa=$upiVpa&pn=$payeeName${amStr}&cu=INR")
+
+        val uri = Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
         val intent = Intent(Intent.ACTION_VIEW, uri)
         if (!packageName.isNullOrBlank()) {
             intent.setPackage(packageName)
@@ -355,8 +386,8 @@ fun SupportMasjidPopup(
                 border = BorderStroke(1.3.dp, Color(0xFFE5B842).copy(alpha = 0.65f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
                 modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .padding(horizontal = 12.dp, vertical = 20.dp)
+                    .fillMaxWidth(0.95f)
+                    .padding(horizontal = 8.dp, vertical = 10.dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -374,7 +405,7 @@ fun SupportMasjidPopup(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -412,17 +443,17 @@ fun SupportMasjidPopup(
 
                     val hasValidQr = resolvedQrModel != null
 
-                    // Upper Section: QR Code or Azan Time Logo & Punchline if no QR
+                    // Upper Section: QR Code (Double Size: 310.dp) or Azan Time Logo & Punchline if no QR
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(175.dp)
-                                .background(if (hasValidQr) Color.White else Color(0xFF0F1A15), RoundedCornerShape(12.dp))
-                                .border(1.5.dp, Color(0xFFE5B842).copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                                .padding(10.dp),
+                                .size(310.dp)
+                                .background(if (hasValidQr) Color.White else Color(0xFF0F1A15), RoundedCornerShape(14.dp))
+                                .border(1.5.dp, Color(0xFFE5B842).copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                                .padding(12.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             if (hasValidQr) {
@@ -440,7 +471,7 @@ fun SupportMasjidPopup(
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(54.dp)
+                                            .size(64.dp)
                                             .background(
                                                 Brush.linearGradient(
                                                     listOf(Color(0xFF1E3328), Color(0xFF0D1712))
@@ -467,10 +498,10 @@ fun SupportMasjidPopup(
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
 
                                     com.example.ui.AzanTimeWordmark(
-                                         height = 26.dp,
+                                         height = 30.dp,
                                          topPadding = 4.dp,
                                          bottomPadding = 4.dp
                                     )
@@ -478,19 +509,19 @@ fun SupportMasjidPopup(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
                             text = if (hasValidQr) "Scan QR using any UPI app (GPay, PhonePe, Paytm)" else "QR code not available for this masjid",
-                            fontSize = 10.5.sp,
-                            color = if (hasValidQr) Color.White.copy(alpha = 0.75f) else Color(0xFFEF4444).copy(alpha = 0.9f),
+                            fontSize = 11.sp,
+                            color = if (hasValidQr) Color.White.copy(alpha = 0.85f) else Color(0xFFEF4444).copy(alpha = 0.9f),
                             textAlign = TextAlign.Center
                         )
                     }
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // Lower Section: Exactly matches attached image ("niche same function attach image ka")
+                    // Lower Section: Contribution Amount Buttons (Enlarged)
                     val amounts = listOf(50, 100, 250, 500)
                     Row(
                         modifier = Modifier
@@ -503,22 +534,22 @@ fun SupportMasjidPopup(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(34.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(if (isSelected && hasValidQr) Color(0xFFE5B842) else Color(0xFF0F261C))
                                     .border(
-                                        width = 1.dp,
+                                        width = 1.2.dp,
                                         color = if (isSelected && hasValidQr) Color(0xFFFFE082) else Color(0xFF224836),
-                                        shape = RoundedCornerShape(8.dp)
+                                        shape = RoundedCornerShape(10.dp)
                                     )
                                     .let { if (hasValidQr) it.clickable { selectedAmount = amt } else it },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "₹$amt",
-                                    fontSize = 12.sp,
+                                    fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isSelected && hasValidQr) Color(0xFF0F1713) else Color(0xFFF3DE8E).copy(alpha = 0.5f)
+                                    color = if (isSelected && hasValidQr) Color(0xFF0F1713) else Color(0xFFF3DE8E)
                                 )
                             }
                         }
@@ -527,27 +558,27 @@ fun SupportMasjidPopup(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(34.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(if (isOtherSelected && hasValidQr) Color(0xFFE5B842) else Color(0xFF0F261C))
                                 .border(
-                                    width = 1.dp,
+                                    width = 1.2.dp,
                                     color = if (isOtherSelected && hasValidQr) Color(0xFFFFE082) else Color(0xFF224836),
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = RoundedCornerShape(10.dp)
                                 )
                                 .let { if (hasValidQr) it.clickable { showOtherDialog = true } else it },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = if (isOtherSelected) "₹$selectedAmount" else "Other",
-                                fontSize = 11.sp,
+                                fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isOtherSelected && hasValidQr) Color(0xFF0F1713) else Color(0xFFF3DE8E).copy(alpha = 0.5f)
+                                color = if (isOtherSelected && hasValidQr) Color(0xFF0F1713) else Color(0xFFF3DE8E)
                             )
                         }
                     }
 
-                    // Pay UPI Button matching attached image style
+                    // Pay UPI Button matching attached image style (Enlarged)
                     Button(
                         onClick = {
                             if (hasValidQr) {
@@ -561,20 +592,33 @@ fun SupportMasjidPopup(
                             disabledContainerColor = Color(0xFF141F1A)
                         ),
                         enabled = hasValidQr,
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, if (hasValidQr) Color(0xFF2E533F) else Color(0xFF1E3328)),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.2.dp, if (hasValidQr) Color(0xFFE5B842) else Color(0xFF1E3328)),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(36.dp)
+                            .height(48.dp)
                     ) {
-                        Text(
-                            text = if (hasValidQr) "Pay ₹$selectedAmount via UPI (GPay, PhonePe, Paytm)" else "QR Code Not Available",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (hasValidQr) Color(0xFFF3DE8E) else Color.White.copy(alpha = 0.4f),
-                            maxLines = 1
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (hasValidQr) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_upi),
+                                    contentDescription = "UPI Logo",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Text(
+                                text = if (hasValidQr) "Pay ₹$selectedAmount via UPI (GPay, PhonePe, Paytm)" else "QR Code Not Available",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (hasValidQr) Color(0xFFF3DE8E) else Color.White.copy(alpha = 0.4f),
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }

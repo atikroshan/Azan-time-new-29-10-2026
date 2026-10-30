@@ -7,22 +7,26 @@
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M24,24m-22,0a22,22 0 1,0 44,0a22,22 0 1,0 -44,0" />
-    <!-- Orange top slash -->
+    <!-- NPCI Official Orange & Green Dual Arrow Slants -->
+    <!-- Green Slant Arrow -->
     <path
-        android:fillColor="#FF7A00"
-        android:pathData="M14,14 L34,14 L30,22 L10,22 Z" />
-    <!-- Green bottom slash -->
+        android:fillColor="#007F3E"
+        android:pathData="M13,31 L32,15 L28,15 L11,29.5 L13,31 Z" />
     <path
-        android:fillColor="#008A00"
-        android:pathData="M18,26 L38,26 L34,34 L14,34 Z" />
-    <!-- White UPI text outline / text -->
+        android:fillColor="#007F3E"
+        android:pathData="M16.5,33 L35.5,17 L31.5,17 L14.5,31.5 L16.5,33 Z" />
+    <!-- Orange Slant Arrow -->
     <path
-        android:fillColor="#0F172A"
-        android:pathData="M15,16 L17.5,16 L17.5,19 C17.5,20 18.2,20.5 19,20.5 C19.8,20.5 20.5,20 20.5,19 L20.5,16 L23,16 L23,19 C23,21.5 21.2,22.8 19,22.8 C16.8,22.8 15,21.5 15,19 L15,16 Z" />
+        android:fillColor="#F37021"
+        android:pathData="M32,15 L37,21 L35.5,17 L31.5,17 L32,15 Z" />
+    <!-- Bold Clean UPI Text -->
     <path
-        android:fillColor="#0F172A"
-        android:pathData="M24.5,16 L28.5,16 C30.2,16 31.5,17 31.5,18.5 C31.5,20 30.2,21 28.5,21 L26.8,21 L26.8,23 L24.5,23 L24.5,16 Z M26.8,17.8 L26.8,19.2 L28.2,19.2 C28.8,19.2 29.3,18.8 29.3,18.5 C29.3,18.2 28.8,17.8 28.2,17.8 L26.8,17.8 Z" />
+        android:fillColor="#002970"
+        android:pathData="M12,21 L14.5,21 L14.5,25.5 C14.5,27 15.6,28 17,28 C18.4,28 19.5,27 19.5,25.5 L19.5,21 L22,21 L22,25.5 C22,28.5 19.8,30.2 17,30.2 C14.2,30.2 12,28.5 12,25.5 L12,21 Z" />
     <path
-        android:fillColor="#0F172A"
-        android:pathData="M32.5,16 L35,16 L35,23 L32.5,23 L32.5,16 Z" />
+        android:fillColor="#002970"
+        android:pathData="M23.5,21 L28,21 C30.2,21 31.8,22.2 31.8,24.2 C31.8,26.2 30.2,27.4 28,27.4 L26,27.4 L26,30 L23.5,30 L23.5,21 Z M26,23 L26,25.4 L27.8,25.4 C28.8,25.4 29.3,24.9 29.3,24.2 C29.3,23.5 28.8,23 L27.8,23 L26,23 Z" />
+    <path
+        android:fillColor="#002970"
+        android:pathData="M33,21 L35.5,21 L35.5,30 L33,30 L33,21 Z" />
 </vector>

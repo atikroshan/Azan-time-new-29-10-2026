@@ -3,16 +3,16 @@
     android:height="48dp"
     android:viewportWidth="48"
     android:viewportHeight="48">
-    <!-- Purple background circle -->
+    <!-- Purple PhonePe background circle -->
     <path
         android:fillColor="#5F259F"
         android:pathData="M24,24m-22,0a22,22 0 1,0 44,0a22,22 0 1,0 -44,0" />
-    <!-- White PhonePe 'पे' emblem -->
+    <!-- White Official PhonePe 'पे' Mark -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M18,12 L26,12 C28.5,12 30.5,14 30.5,16.5 C30.5,19 28.5,21 26,21 L22,21 L22,25.5 L28,25.5 C29.5,25.5 30.5,26.5 30.5,28 C30.5,29.5 29.5,30.5 28,30.5 L18,30.5 C16.5,30.5 15.5,29.5 15.5,28 C15.5,26.5 16.5,25.5 18,25.5 L18,12 Z M22,16 L22,17.5 L25.5,17.5 C26.3,17.5 27,16.8 27,16 C27,15.2 26.3,14.5 25.5,14.5 L22,14.5 L22,16 Z" />
-    <!-- Diagonal slant stroke of PhonePe logo -->
+        android:pathData="M16,13 L25.5,13 C28,13 29.8,14.8 29.8,17.2 C29.8,19.6 28,21.4 25.5,21.4 L21,21.4 L21,34 L16,34 L16,13 Z M21,17.2 L21,17.2 L25,17.2 C25.8,17.2 26.3,16.7 26.3,16 C26.3,15.3 25.8,14.8 25,14.8 L21,14.8 L21,17.2 Z" />
+    <!-- Angled slant tail of PhonePe mark -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M22,25.5 L28,34 C28.5,34.7 29.5,35 30.2,34.5 C31,34 31.2,33 30.7,32.2 L24.5,23.5 L22,25.5 Z" />
+        android:pathData="M21,21.4 L31,34 L26,34 L18.5,24.5 L21,21.4 Z" />
 </vector>

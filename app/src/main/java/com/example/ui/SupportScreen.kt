@@ -144,7 +144,34 @@ fun SupportScreen(
 
     fun launchUpiForApp(packageName: String?, amount: Int) {
         val amStr = if (amount > 0) "&am=$amount" else ""
-        val uri = Uri.parse("upi://pay?pa=9960171516@ybl&pn=A-tek%20Printing%20Press${amStr}&cu=INR")
+        var targetVpa = "9960171516@ybl"
+        var targetName = "A-tek%20Printing%20Press"
+
+        try {
+            val customQrFile = java.io.File(context.filesDir, "custom_masjid_qr.jpg")
+            if (customQrFile.exists()) {
+                val bitmap = BitmapFactory.decodeFile(customQrFile.absolutePath)
+                if (bitmap != null) {
+                    val width = bitmap.width
+                    val height = bitmap.height
+                    val pixels = IntArray(width * height)
+                    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+                    val source = com.google.zxing.RGBLuminanceSource(width, height, pixels)
+                    val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
+                    val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
+                    val payload = result.text?.trim()
+                    if (!payload.isNullOrBlank() && payload.contains("pa=")) {
+                        val parsedUri = Uri.parse(if (payload.startsWith("upi://")) payload else "upi://pay?$payload")
+                        val pa = parsedUri.getQueryParameter("pa")
+                        val pn = parsedUri.getQueryParameter("pn")
+                        if (!pa.isNullOrBlank()) targetVpa = pa
+                        if (!pn.isNullOrBlank()) targetName = Uri.encode(pn)
+                    }
+                }
+            }
+        } catch (_: Throwable) {}
+
+        val uri = Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
         val intent = Intent(Intent.ACTION_VIEW, uri)
         if (!packageName.isNullOrBlank()) {
             intent.setPackage(packageName)
@@ -513,13 +540,24 @@ fun SupportScreen(
                             .fillMaxWidth()
                             .height(30.dp)
                     ) {
-                        Text(
-                            text = "Pay ₹$selectedContributionAmount via UPI (GPay, PhonePe, Paytm)",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = primaryGold,
-                            maxLines = 1
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_upi),
+                                contentDescription = "UPI Logo",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Pay ₹$selectedContributionAmount via UPI (GPay, PhonePe, Paytm)",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = primaryGold,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }

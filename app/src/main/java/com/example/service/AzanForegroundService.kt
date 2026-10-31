@@ -456,10 +456,15 @@ class AzanForegroundService : Service() {
         // Removed volume override to keep original system volume
         
         val audioManager = applicationContext.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-        if (audioManager?.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
-            android.util.Log.d("AzanForegroundService", "Device is in silent or vibrate mode, skipping audio.")
-            stopAzanAudio()
-            return
+        try {
+            @Suppress("DEPRECATION")
+            audioManager?.requestAudioFocus(
+                null,
+                AudioManager.STREAM_ALARM,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+            )
+        } catch (e: Throwable) {
+            android.util.Log.w("AzanForegroundService", "Could not request audio focus: ${e.message}")
         }
 
         try {

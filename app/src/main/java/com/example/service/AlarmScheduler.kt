@@ -53,23 +53,21 @@ class AlarmScheduler(private val context: Context) {
         }
 
         try {
+            val alarmClockInfo = AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        calendar.timeInMillis,
-                        pendingIntent
-                    )
+                    alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
                 } else {
-                    // For demo environment fallback to standard alarm if exact missing
                     alarmManager.setAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
                         calendar.timeInMillis,
                         pendingIntent
                     )
                 }
+            } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
             } else {
-                alarmManager.setExactAndAllowWhileIdle(
+                alarmManager.setExact(
                     AlarmManager.RTC_WAKEUP,
                     calendar.timeInMillis,
                     pendingIntent
@@ -77,6 +75,15 @@ class AlarmScheduler(private val context: Context) {
             }
         } catch (e: Throwable) {
             e.printStackTrace()
+            try {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    pendingIntent
+                )
+            } catch (ex: Throwable) {
+                ex.printStackTrace()
+            }
         }
     }
 

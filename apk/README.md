@@ -1,16 +1,9 @@
 # Offline Azan APK Releases
 
-### Current Version: v3.0.71 (versionCode: 231)
-- **Filename:** `app-v3.0.71.apk`
+### Current Version: v3.0.72 (versionCode: 232)
+- **Filename:** `app-v3.0.72.apk`
 - **Build Type:** Release / Signed Debug Keystore
 - **Changelog:**
-  - **Gentle & Luxurious 45-Degree Shimmer:** Slowed down the 45-degree diagonal shimmer animation duration to 8000ms for a smooth, subtle glide.
-  - **Warmer Darker Sheen Color:** Replaced the stark white highlight with a warm, subtle golden sheen (`Color(0x40F3DE8E)` / `Color(0x0FB38938)`) that blends naturally with the emerald green and gold squircle card.
-
----
-
-### Previous Version: v3.0.70 (versionCode: 230)
-- **Filename:** `app-v3.0.70.apk`
-- **Build Type:** Release / Signed Debug Keystore
-- **Changelog:**
-  - **Standardized Squircle Logo Container (`image_0af060ef.png`):** Replaced circular logo containers across all screens with the squircle card container style.
+  - **Fixed Silent/Vibrate Audio Skip Bug:** Removed `ringerMode` check in `AzanForegroundService.kt` that was skipping Azan playback when the phone was in Silent or Vibrate mode. Azan now plays out loud as an alarm even if the phone is on Silent or Vibrate!
+  - **Alarm Clock Precision API (`setAlarmClock`):** Upgraded `AlarmScheduler.kt` to use Android's highest-priority `AlarmManager.setAlarmClock()` API to guarantee exact-second Azan triggering even during deep Doze mode or OEM battery optimization.
+  - **Single Latest APK:** Cleaned up all older APK builds from the `/apk` directory.

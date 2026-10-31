@@ -11,6 +11,22 @@ data class MasjidTranslation(
 
 val masjidTranslations: Map<String, MasjidTranslation> = mapOf(
     // Google Sheet Masajid (Solapur)
+    "guest" to MasjidTranslation(
+        nameUr = "گیسٹ مسجد",
+        nameHi = "गेस्ट मस्जिद",
+        areaUr = "سولاپور شہر",
+        areaHi = "सोलापुर शहर",
+        cityUr = "سولاپور",
+        cityHi = "सोलापुर"
+    ),
+    "Guest" to MasjidTranslation(
+        nameUr = "گیسٹ مسجد",
+        nameHi = "गेस्ट मस्जिद",
+        areaUr = "سولاپور شہر",
+        areaHi = "सोलापुर शहर",
+        cityUr = "سولاپور",
+        cityHi = "सोलापुर"
+    ),
     "100111111" to MasjidTranslation(
         nameUr = "محمدیہ مسجد",
         nameHi = "मोहम्मदिया मस्जिद",
@@ -26,6 +42,30 @@ val masjidTranslations: Map<String, MasjidTranslation> = mapOf(
         areaHi = "ताई चौक",
         cityUr = "سولاپور",
         cityHi = "सोलापूर"
+    ),
+    "100111113" to MasjidTranslation(
+        nameUr = "ابو بکر صدیق مسجد",
+        nameHi = "अबू बकर सिद्दीक मस्जिद",
+        areaUr = "ممتاز نگر",
+        areaHi = "मुमताज़ नगर",
+        cityUr = "سولاپور",
+        cityHi = "सोलापुर"
+    ),
+    "100111114" to MasjidTranslation(
+        nameUr = "حضرت جنگ بہادر صلابت خاں مسجد",
+        nameHi = "हज़रत जंग बहादुर सलाबत खां मस्जिद",
+        areaUr = "بھیا چوک، ریلوے اسٹیشن گراؤنڈ",
+        areaHi = "भय्या चौक, रेलवे स्टेशन ग्राउंड",
+        cityUr = "سولاپور",
+        cityHi = "सोलापुर"
+    ),
+    "100111115" to MasjidTranslation(
+        nameUr = "مسجد (وائی)",
+        nameHi = "मस्जिद (वाई)",
+        areaUr = "ایچ، سولاپور",
+        areaHi = "एच, सोलापुर",
+        cityUr = "سولاپور",
+        cityHi = "सोलापुर"
     ),
 
     // Delhi
@@ -1343,29 +1383,206 @@ val masjidTranslations: Map<String, MasjidTranslation> = mapOf(
     )
 )
 
-fun MasjidItem.getLocalizedName(lang: String): String {
-    val tr = masjidTranslations[this.id]
-    return when (lang) {
-        "ur" -> tr?.nameUr ?: this.name
-        "hi" -> tr?.nameHi ?: this.name
-        else -> this.name
+// Common phrases dictionary (Urdu to Hindi)
+private val commonPhrases = listOf(
+    "guest masjid" to ("گیسٹ مسجد" to "गेस्ट मस्जिद"),
+    "railway station ground" to ("ریلوے اسٹیشن گراؤنڈ" to "रेलवे स्टेशन ग्राउंड"),
+    "railway station" to ("ریلوے اسٹیشن" to "रेलवे स्टेशन"),
+    "solapur city" to ("سولاپور شہر" to "सोलापुर शहर"),
+    "swagat nagar" to ("سواگت نگر" to "स्वागत नगर"),
+    "tai chowk" to ("تائی چوک" to "ताई चौक"),
+    "bhayya chowk" to ("بھیا چوک" to "भय्या चौक"),
+    "bhaiyya chowk" to ("بھیا چوک" to "भय्या चौक"),
+    "mumtaz nagar" to ("ممتاز نگر" to "मुमताज़ नगर"),
+    "hazrat jang bahadur salabat kha" to ("حضرت جنگ بہادر صلابت خاں مسجد" to "हज़रत जंग बहादुर सलाबत खां मस्जिद"),
+    "hazrat jang bahadur" to ("حضرت جنگ بہادر" to "हज़रत जंग बहादुर"),
+    "abu bakar siddique" to ("ابو بکر صدیق" to "अबू बकर सिद्दीक"),
+    "hazrat imam hussain" to ("حضرت امام حسین" to "हज़रत इमाम हुसैन"),
+    "mohammadiya masjid" to ("محمدیہ مسجد" to "मोहम्मदिया मस्जिद"),
+    "usman ghani" to ("عثمان غنی" to "उस्मान ग़नी"),
+    "umar farooq" to ("عمر فاروق" to "उमर फ़ारूक़"),
+    "ali murtaza" to ("علی مرتضیٰ" to "अली मुर्तज़ा")
+)
+
+// Common Islamic, geographical and general words dictionary (Urdu to Hindi)
+private val commonWords = mapOf(
+    "guest" to ("گیسٹ" to "गेस्ट"),
+    "masjid" to ("مسجد" to "मस्जिद"),
+    "mosque" to ("مسجد" to "मस्जिद"),
+    "hazrat" to ("حضرت" to "हज़रत"),
+    "hajrat" to ("حضرت" to "हज़रत"),
+    "jang" to ("جنگ" to "जंग"),
+    "bahadur" to ("بہادر" to "बहादुर"),
+    "salabat" to ("صلابت" to "सलाबत"),
+    "kha" to ("خاں" to "खां"),
+    "khan" to ("خان" to "खान"),
+    "imam" to ("امام" to "इमाम"),
+    "hussain" to ("حسین" to "हुसैन"),
+    "husain" to ("حسین" to "हुसैन"),
+    "hasan" to ("حسن" to "हसन"),
+    "hassan" to ("حسن" to "हसन"),
+    "abu" to ("ابو" to "अबू"),
+    "bakar" to ("بکر" to "बकर"),
+    "bakr" to ("بکر" to "बकर"),
+    "siddique" to ("صدیق" to "सिद्दीक"),
+    "siddiq" to ("صدیق" to "सिद्दीक"),
+    "siddiqui" to ("صدیقی" to "सिद्दीक़ी"),
+    "umar" to ("عمر" to "उमर"),
+    "omer" to ("عمر" to "उमर"),
+    "farooq" to ("فاروق" to "फ़ारूक़"),
+    "farooque" to ("فاروق" to "फ़ारूक़"),
+    "usman" to ("عثمان" to "उस्मान"),
+    "osman" to ("عثمان" to "उस्मान"),
+    "ghani" to ("غنی" to "ग़नी"),
+    "ali" to ("علی" to "अली"),
+    "murtaza" to ("مرتضیٰ" to "मुर्तज़ा"),
+    "bilal" to ("بلال" to "बिलाल"),
+    "bilaal" to ("بلال" to "बिलाल"),
+    "quba" to ("قباء" to "क़ुबा"),
+    "madina" to ("مدینہ" to "मदीना"),
+    "madinah" to ("مدینہ" to "मदीना"),
+    "makkah" to ("مکہ" to "मक्का"),
+    "mecca" to ("مکہ" to "मक्का"),
+    "aqsa" to ("اقصیٰ" to "अक़्सा"),
+    "noor" to ("نور" to "नूर"),
+    "noori" to ("نوری" to "नूरी"),
+    "mohammadiya" to ("محمدیہ" to "मोहम्मदिया"),
+    "mohammediya" to ("محمدیہ" to "मोहम्मदिया"),
+    "mohammadia" to ("محمدیہ" to "मोहम्मदिया"),
+    "mohammad" to ("محمد" to "मोहम्मद"),
+    "mohammed" to ("محمد" to "मोहम्मद"),
+    "jama" to ("جامع" to "जामा"),
+    "jamia" to ("جامعہ" to "जामिया"),
+    "badi" to ("بڑی" to "बड़ी"),
+    "bada" to ("بڑا" to "बड़ा"),
+    "choti" to ("چھوٹی" to "छोटी"),
+    "chota" to ("چھوٹا" to "छोटा"),
+    "chowk" to ("چوک" to "चौक"),
+    "tai" to ("تائی" to "ताई"),
+    "swagat" to ("سواگت" to "स्वागत"),
+    "mumtaz" to ("ممتاز" to "मुमताज़"),
+    "bhayya" to ("بھیا" to "भय्या"),
+    "bhaiyya" to ("بھیا" to "भय्या"),
+    "bhaiya" to ("بھیا" to "भय्या"),
+    "railway" to ("ریلوے" to "रेलवे"),
+    "station" to ("اسٹیشن" to "स्टेशन"),
+    "ground" to ("گراؤنڈ" to "ग्राउंड"),
+    "city" to ("شہر" to "शहर"),
+    "solapur" to ("سولاپور" to "सोलापुर"),
+    "sholapur" to ("سولاپور" to "सोलापुर"),
+    "nagar" to ("نگر" to "नगर"),
+    "road" to ("روڈ" to "रोड"),
+    "lane" to ("گلی" to "गली"),
+    "gali" to ("گلی" to "गली"),
+    "market" to ("مارکیٹ" to "मार्केट"),
+    "hospital" to ("ہسپتال" to "अस्पताल"),
+    "school" to ("اسکول" to "स्कूल"),
+    "bazar" to ("بازار" to "बाज़ार"),
+    "bazaar" to ("بازار" to "बाज़ार"),
+    "colony" to ("کالونی" to "कॉलोनी"),
+    "camp" to ("کیمپ" to "कैंप"),
+    "west" to ("مغرب" to "पश्चिम"),
+    "east" to ("مشرق" to "पूर्व"),
+    "north" to ("شمال" to "उत्तर"),
+    "south" to ("جنوب" to "दक्षिण"),
+    "near" to ("نزد" to "पास"),
+    "opp" to ("سامنے" to "के सामने"),
+    "opposite" to ("سامنے" to "के सामने"),
+    "behind" to ("پیچھے" to "के पीछे"),
+    "old" to ("پرانا" to "पुराना"),
+    "new" to ("نیا" to "नया"),
+    "gate" to ("گیٹ" to "गेट"),
+    "y" to ("وائی" to "वाई"),
+    "h" to ("ایچ" to "एच")
+)
+
+fun translateDynamicText(rawText: String, lang: String): String {
+    if (rawText.isBlank() || (lang != "hi" && lang != "ur")) return rawText
+    var text = rawText.trim()
+    val lower = text.lowercase()
+
+    // 1. Check exact phrase match
+    for ((phrase, translation) in commonPhrases) {
+        if (lower == phrase) {
+            return if (lang == "ur") translation.first else translation.second
+        }
     }
+
+    // 2. Replace known multi-word phrases inside text
+    for ((phrase, translation) in commonPhrases) {
+        if (text.contains(phrase, ignoreCase = true)) {
+            val rep = if (lang == "ur") translation.first else translation.second
+            text = text.replace(Regex("(?i)\\b$phrase\\b"), rep)
+        }
+    }
+
+    // 3. Replace individual words
+    val words = text.split(Regex("([\\s,.-]+)"))
+    var result = text
+    for (w in words) {
+        val clean = w.trim().lowercase()
+        val trans = commonWords[clean]
+        if (trans != null) {
+            val rep = if (lang == "ur") trans.first else trans.second
+            result = result.replace(Regex("(?i)\\b$clean\\b"), rep)
+        }
+    }
+    return result
+}
+
+fun findMasjidTranslation(id: String): MasjidTranslation? {
+    return masjidTranslations[id]
+        ?: masjidTranslations[id.lowercase()]
+        ?: masjidTranslations.entries.find { it.key.equals(id, ignoreCase = true) }?.value
+}
+
+fun MasjidItem.getLocalizedName(lang: String): String {
+    if (lang != "ur" && lang != "hi") return this.name
+    val tr = findMasjidTranslation(this.id)
+    val specific = when (lang) {
+        "ur" -> tr?.nameUr
+        "hi" -> tr?.nameHi
+        else -> null
+    }
+    if (!specific.isNullOrBlank()) return specific
+    if (this.id.equals("guest", ignoreCase = true) || this.name.contains("guest", ignoreCase = true)) {
+        return if (lang == "ur") "گیسٹ مسجد" else "गेस्ट मस्जिद"
+    }
+    return translateDynamicText(this.name, lang)
 }
 
 fun MasjidItem.getLocalizedArea(lang: String): String {
-    val tr = masjidTranslations[this.id]
-    return when (lang) {
-        "ur" -> tr?.areaUr ?: this.area
-        "hi" -> tr?.areaHi ?: this.area
-        else -> this.area
+    if (lang != "ur" && lang != "hi") return this.area
+    val tr = findMasjidTranslation(this.id)
+    val specific = when (lang) {
+        "ur" -> tr?.areaUr
+        "hi" -> tr?.areaHi
+        else -> null
     }
+    if (!specific.isNullOrBlank()) return specific
+    return translateDynamicText(this.area, lang)
 }
 
 fun MasjidItem.getLocalizedCity(lang: String): String {
-    val tr = masjidTranslations[this.id]
-    return when (lang) {
-        "ur" -> tr?.cityUr ?: this.city
-        "hi" -> tr?.cityHi ?: this.city
-        else -> this.city
+    if (lang != "ur" && lang != "hi") return this.city
+    val tr = findMasjidTranslation(this.id)
+    val specific = when (lang) {
+        "ur" -> tr?.cityUr
+        "hi" -> tr?.cityHi
+        else -> null
     }
+    if (!specific.isNullOrBlank()) return specific
+    return translateDynamicText(this.city, lang)
+}
+
+fun getStopLabel(lang: String): String = when (lang) {
+    "ur" -> "روکیں"
+    "hi" -> "रोकें"
+    else -> "Stop"
+}
+
+fun getMuteLabel(lang: String, isMuted: Boolean): String = when (lang) {
+    "ur" -> if (isMuted) "ان میوٹ" else "میوٹ"
+    "hi" -> if (isMuted) "अनम्यूट" else "म्यूट"
+    else -> if (isMuted) "Unmute" else "Mute"
 }

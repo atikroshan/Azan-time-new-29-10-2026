@@ -18,7 +18,7 @@ Masjid Name,Mohammadiya Masjid,,,,,
 Address,Swagat Nagar,,,,,
 ID,100111111,,,,,
 Masjid Photo,https://drive.google.com/file/d/1QP6elu7nlZwmrxjG4p-eyZWOrEaEdiwo/view?usp=drive_link,,,,,
-Masjid QR,,,,,,
+Masjid QR,https://drive.google.com/file/d/1V3IA8iNF5FJ-tT2zGMLYre5cebqbffpi/view?usp=drivesdk,,,,,
 ,Fajr,Zohar,Asr,Maghrib,Isha,Jummah
 Azan,05:10,01:15,04:30,06:06,07:30,12:30
 Jammat,05:40,01:30,04:45,06:09,07:45,01:30

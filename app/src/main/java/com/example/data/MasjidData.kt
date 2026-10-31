@@ -73,6 +73,7 @@ object MasjidRepository {
         city = "Solapur",
         state = "Maharashtra",
         photoUrl = "https://lh3.googleusercontent.com/d/1QP6elu7nlZwmrxjG4p-eyZWOrEaEdiwo=w600-rw",
+        qrUrl = "https://drive.google.com/file/d/1V3IA8iNF5FJ-tT2zGMLYre5cebqbffpi/view?usp=drivesdk",
         jumahAzanTime = "12:30",
         jumahJammatTime = "13:30",
         fajrAzanFixed = "05:40",

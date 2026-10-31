@@ -65,32 +65,9 @@ fun SplashScreen(onFinished: () -> Unit) {
                 .padding(24.dp)
                 .scale(scaleAnim)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(160.dp)
-                    .background(Color(0xFF0F382E), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(140.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color(0xFF0F382E), Color(0xFF061C16))
-                            ),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = "https://lh3.googleusercontent.com/aida-public/AB6AXuDzv4lkY-VFUwM4ArCsKdDYhYrOEkR0yJRLn90dBsI4QVDCmJfxrhTUN_ifTBx5Sny465t4O7nfAl1ledCCfRnazsPALOQH5KieopDQ63TlhSZ5lvlj-VduoZagDuoyE1F8Mg5jYoXhllceFatdiNcmzk9LgQKpfsKkeWAk_fzt0BX_MgGEBdo3msqbUW4SoujaKzTfdGc3JVLuWIjarh0cyjYcwJ_vBQNY8dvcnFo7hzgUeIhmLUBJGo8zRYLqLJgBAGE",
-                        contentDescription = "Logo",
-                        modifier = Modifier
-                            .size(90.dp)
-                            .padding(8.dp)
-                    )
-                }
-            }
+            AzanLogoCard(
+                size = 140.dp
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 

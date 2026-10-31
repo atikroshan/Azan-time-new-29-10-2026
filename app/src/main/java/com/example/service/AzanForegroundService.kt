@@ -19,7 +19,12 @@ import android.telephony.TelephonyManager
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
+import com.example.data.PreferencesRepository
+import com.example.data.getStopLabel
+import com.example.data.getMuteLabel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.runBlocking
 
 class AzanForegroundService : Service() {
     private var mediaPlayer: MediaPlayer? = null
@@ -256,7 +261,13 @@ class AzanForegroundService : Service() {
             }
             val mutePendingIntent = PendingIntent.getService(this, 1, muteIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
-            val muteLabel = if (isMuted.value) "Unmute" else "Mute"
+            val userLang = try {
+                runBlocking { PreferencesRepository(this@AzanForegroundService).languageFlow.firstOrNull() } ?: "en"
+            } catch (e: Exception) {
+                "en"
+            }
+            val stopLabel = getStopLabel(userLang)
+            val muteLabel = getMuteLabel(userLang, isMuted.value)
 
             val mainIntent = Intent(this, MainActivity::class.java).apply {
                 putExtra("FROM_ALARM", true)
@@ -274,7 +285,7 @@ class AzanForegroundService : Service() {
                 .setContentText(if (isMuted.value) "Azan is muted" else "Azan is playing")
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentIntent(mainPendingIntent)
-                .addAction(R.mipmap.ic_launcher, "Stop", stopPendingIntent)
+                .addAction(R.mipmap.ic_launcher, stopLabel, stopPendingIntent)
                 .addAction(R.mipmap.ic_launcher, muteLabel, mutePendingIntent)
                 .setOngoing(true)
                 .build()
@@ -333,8 +344,13 @@ class AzanForegroundService : Service() {
         }
         val mutePendingIntent = PendingIntent.getService(this, 1, muteIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
-        val currentMuted = isMuted.value
-        val muteLabel = if (currentMuted) "Unmute" else "Mute"
+        val userLang = try {
+            runBlocking { PreferencesRepository(this@AzanForegroundService).languageFlow.firstOrNull() } ?: "en"
+        } catch (e: Exception) {
+            "en"
+        }
+        val stopLabel = getStopLabel(userLang)
+        val muteLabel = getMuteLabel(userLang, isMuted.value)
 
         val mainIntent = Intent(this, MainActivity::class.java).apply {
             putExtra("FROM_ALARM", true)
@@ -353,7 +369,7 @@ class AzanForegroundService : Service() {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(mainPendingIntent)
             .setFullScreenIntent(mainPendingIntent, true)
-            .addAction(R.mipmap.ic_launcher, "Stop", stopPendingIntent)
+            .addAction(R.mipmap.ic_launcher, stopLabel, stopPendingIntent)
             .addAction(R.mipmap.ic_launcher, muteLabel, mutePendingIntent)
             .setOngoing(true)
             .build()

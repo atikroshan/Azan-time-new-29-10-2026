@@ -133,6 +133,8 @@ import com.example.data.MasjidItem
 import com.example.data.getLocalizedName
 import com.example.data.getLocalizedArea
 import com.example.data.getLocalizedCity
+import com.example.data.getStopLabel
+import com.example.data.getMuteLabel
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import com.example.ui.MasjidSelectorDropdown
@@ -882,39 +884,10 @@ fun AzanHomeContent(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
-                            // Circular Golden Medallion with Azan Time App Logo (Enlarged 2x for Home Screen)
-                            Box(
-                                modifier = Modifier
-                                    .size(148.dp)
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(Color(0xFF1E3328), Color(0xFF0D1712))
-                                        ),
-                                        shape = CircleShape
-                                    )
-                                    .border(
-                                        BorderStroke(
-                                            2.5.dp,
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    Color(0xFFF3DE8E),
-                                                    Color(0xFFF2CA50),
-                                                    Color(0xFFB37C3C)
-                                                )
-                                            )
-                                        ),
-                                        shape = CircleShape
-                                    )
-                                    .padding(10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.foreground),
-                                    contentDescription = "Azan Time Logo",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
+                            // Squircle Logo Card with 45-degree Shimmer (matching Support Screen / image_0af060ef.png)
+                            com.example.ui.AzanLogoCard(
+                                size = 110.dp
+                            )
 
                             com.example.ui.AzanTimeWordmark(
                                 height = 46.dp,
@@ -955,7 +928,7 @@ fun AzanHomeContent(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Stop", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(getStopLabel(uiState.language), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
 
                         Button(
@@ -969,7 +942,7 @@ fun AzanHomeContent(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text(if (isMuted) "Unmute" else "Mute", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(getMuteLabel(uiState.language, isMuted), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
 
@@ -2100,7 +2073,7 @@ fun AzanList(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("Stop", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(getStopLabel(uiState.language), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
@@ -2114,7 +2087,7 @@ fun AzanList(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text(if (isMuted) "Unmute" else "Mute", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(getMuteLabel(uiState.language, isMuted), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -3189,7 +3162,7 @@ fun AdminLoginDialog(
             colors = CardDefaults.cardColors(containerColor = Color(0xFF101625)),
             border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
             modifier = Modifier
-                .fillMaxWidth(0.92f)
+                .fillMaxWidth(0.88f)
                 .padding(vertical = 16.dp)
         ) {
             Column(
@@ -3498,7 +3471,12 @@ fun AdminPanelScreen(
                                     contentDescription = "Done",
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Text("DONE", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                val doneLabel = when (uiState.language) {
+                                    "ur" -> "مکمل"
+                                    "hi" -> "पूर्ण"
+                                    else -> "DONE"
+                                }
+                                Text(doneLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

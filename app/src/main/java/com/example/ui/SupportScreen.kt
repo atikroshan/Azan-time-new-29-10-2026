@@ -143,45 +143,14 @@ fun SupportScreen(
     }
 
     fun launchUpiForApp(packageName: String?, amount: Int) {
-        val amStr = if (amount > 0) "&am=$amount" else ""
-        var targetVpa = "9960171516@ybl"
-        var targetName = Uri.encode(uiState.selectedMasjid.name.ifBlank { "A-tek Printing Press" })
-
-        val selectedMasjid = uiState.selectedMasjid
-        if (selectedMasjid.qrUrl.contains("pa=")) {
-            val matchPa = "pa=([^&]+)".toRegex().find(selectedMasjid.qrUrl)?.groupValues?.getOrNull(1)
-            val matchPn = "pn=([^&]+)".toRegex().find(selectedMasjid.qrUrl)?.groupValues?.getOrNull(1)
-            if (!matchPa.isNullOrBlank()) targetVpa = matchPa
-            if (!matchPn.isNullOrBlank()) targetName = Uri.encode(matchPn)
-        } else if (selectedMasjid.adminPassword.trim().length == 10 && selectedMasjid.adminPassword.trim().all { it.isDigit() }) {
-            targetVpa = "${selectedMasjid.adminPassword.trim()}@ybl"
-        } else {
-            try {
-                val customQrFile = java.io.File(context.filesDir, "custom_masjid_qr.jpg")
-                if (customQrFile.exists()) {
-                    val bitmap = BitmapFactory.decodeFile(customQrFile.absolutePath)
-                    if (bitmap != null) {
-                        val width = bitmap.width
-                        val height = bitmap.height
-                        val pixels = IntArray(width * height)
-                        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-                        val source = com.google.zxing.RGBLuminanceSource(width, height, pixels)
-                        val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
-                        val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
-                        val payload = result.text?.trim()
-                        if (!payload.isNullOrBlank() && payload.contains("pa=")) {
-                            val parsedUri = Uri.parse(if (payload.startsWith("upi://")) payload else "upi://pay?$payload")
-                            val pa = parsedUri.getQueryParameter("pa")
-                            val pn = parsedUri.getQueryParameter("pn")
-                            if (!pa.isNullOrBlank()) targetVpa = pa
-                            if (!pn.isNullOrBlank()) targetName = Uri.encode(pn)
-                        }
-                    }
-                }
-            } catch (_: Throwable) {}
+        val masjidUpi = com.example.data.MasjidPaymentHelper.buildMasjidUpiUri(uiState.selectedMasjid, amount)
+        val uri: Uri = masjidUpi ?: run {
+            val amStr = if (amount > 0) "&am=$amount" else ""
+            val targetVpa = "9960171516@ybl"
+            val targetName = Uri.encode("Azan Time App Support")
+            Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
         }
 
-        val uri = Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
         val intent = Intent(Intent.ACTION_VIEW, uri)
         if (!packageName.isNullOrBlank()) {
             intent.setPackage(packageName)
@@ -248,25 +217,9 @@ fun SupportScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(vertical = 2.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color(0xFF0E2F23), Color(0xFF061A13))
-                            )
-                        )
-                        .border(1.dp, Color(0xFFE5B842).copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.foreground),
-                        contentDescription = "Azan App Icon",
-                        modifier = Modifier.size(52.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                }
+                AzanLogoCard(
+                    size = 80.dp
+                )
 
                 AzanTimeWordmark(
                     height = 38.dp,
@@ -735,7 +688,7 @@ fun SupportScreen(
             } else if (customQrFile != null && customQrFile.exists()) {
                 customQrFile
             } else {
-                R.drawable.qr_support_donate
+                null
             }
         }
 
@@ -796,34 +749,9 @@ fun SupportScreen(
                                 verticalArrangement = Arrangement.Center,
                                 modifier = Modifier.fillMaxSize().padding(4.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(Color(0xFF1E3328), Color(0xFF0D1712))
-                                            ),
-                                            shape = CircleShape
-                                        )
-                                        .border(
-                                            BorderStroke(
-                                                1.5.dp,
-                                                Brush.verticalGradient(
-                                                    listOf(Color(0xFFF3DE8E), Color(0xFFB37C3C))
-                                                )
-                                            ),
-                                            shape = CircleShape
-                                        )
-                                        .padding(6.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.foreground),
-                                        contentDescription = "Azan Time Logo",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
+                                AzanLogoCard(
+                                    size = 64.dp
+                                )
 
                                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -864,12 +792,28 @@ fun SupportScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "Rate Azan Time",
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = primaryGold
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Rate Azan Time",
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = primaryGold,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                        IconButton(
+                            onClick = { showRateUsDialog = false },
+                            modifier = Modifier.size(28.dp).align(Alignment.CenterEnd)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+
                     Text(
                         text = "Rate your experience. Submitting will save your rating and redirect to Google Play Store to review.",
                         fontSize = 11.5.sp,
@@ -940,7 +884,10 @@ fun SupportScreen(
                         enabled = !isSubmitting,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5B842)),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 52.dp)
                     ) {
                         if (isSubmitting) {
                             CircularProgressIndicator(
@@ -966,7 +913,10 @@ fun SupportScreen(
                                     text = "Submit & Rate on Play Store",
                                     color = Color(0xFF0F1713),
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 13.5.sp
+                                    fontSize = 12.5.sp,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    lineHeight = 16.sp
                                 )
                             }
                         }

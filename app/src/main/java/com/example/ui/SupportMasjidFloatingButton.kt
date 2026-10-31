@@ -59,10 +59,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import com.example.R
+import java.util.Locale
 
 /**
  * Custom Notification Bubble Shape matching the user's attachment (notification_64982e0c.jpg):
@@ -249,29 +251,21 @@ fun SupportMasjidPopup(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val prefs = remember { com.example.data.PreferencesRepository(context) }
-    val customQrPath by prefs.customMasjidQrPathFlow.collectAsState(initial = null)
-    val customQrFile = remember(customQrPath) {
-        customQrPath?.let { java.io.File(it) }?.takeIf { it.exists() }
-            ?: java.io.File(context.filesDir, "custom_masjid_qr.jpg").takeIf { it.exists() }
+    val hasValidQr = remember(selectedMasjid) {
+        com.example.data.MasjidPaymentHelper.hasValidQr(selectedMasjid)
     }
-    val isGuestMasjid = selectedMasjid != null && (
-        selectedMasjid.id.equals("guest", ignoreCase = true) ||
-        selectedMasjid.name.contains("guest", ignoreCase = true)
-    )
-    val effectiveQrUrl = qrUrl ?: selectedMasjid?.qrUrl ?: ""
-    val resolvedQrModel: Any? = remember(effectiveQrUrl, customQrFile, isGuestMasjid) {
-        if (isGuestMasjid) {
-            // Guest masjid explicitly has NO photo and NO QR
-            null
-        } else if (effectiveQrUrl.isNotBlank()) {
-            com.example.data.GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(effectiveQrUrl)
-        } else if (customQrFile != null && customQrFile.exists()) {
-            customQrFile
-        } else {
-            R.drawable.qr_support_donate
+    val resolvedQrModel: Any? = remember(selectedMasjid, qrUrl) {
+        com.example.data.MasjidPaymentHelper.getMasjidQrModel(selectedMasjid)
+    }
+
+    // Background decoding if a remote QR image needs to be parsed
+    LaunchedEffect(selectedMasjid) {
+        val remoteUrl = selectedMasjid?.qrUrl?.trim() ?: ""
+        if (remoteUrl.startsWith("http") && selectedMasjid?.id != "100111111") {
+            com.example.data.MasjidPaymentHelper.decodeAndCacheFromUrl(remoteUrl)
         }
     }
+
     var isVisible by remember { mutableStateOf(false) }
     var selectedAmount by remember { mutableIntStateOf(250) }
     var showOtherDialog by remember { mutableStateOf(false) }
@@ -283,7 +277,6 @@ fun SupportMasjidPopup(
     }
 
     // Dismiss with exit animation back into the button
-    val coroutineScope = rememberCoroutineScope()
     fun requestClose() {
         isVisible = false
     }
@@ -304,46 +297,13 @@ fun SupportMasjidPopup(
     }
 
     fun launchUpiForApp(packageName: String?, amount: Int) {
-        val amStr = if (amount > 0) "&am=$amount" else ""
-        
-        var targetVpa = "9960171516@ybl"
-        var targetName = Uri.encode(selectedMasjid?.name?.ifBlank { "Masjid Donation" } ?: "Masjid Donation")
-
-        if (selectedMasjid != null) {
-            val qr = selectedMasjid.qrUrl
-            if (qr.contains("pa=")) {
-                val matchPa = "pa=([^&]+)".toRegex().find(qr)?.groupValues?.getOrNull(1)
-                val matchPn = "pn=([^&]+)".toRegex().find(qr)?.groupValues?.getOrNull(1)
-                if (!matchPa.isNullOrBlank()) targetVpa = matchPa
-                if (!matchPn.isNullOrBlank()) targetName = Uri.encode(matchPn)
-            } else if (selectedMasjid.adminPassword.trim().length == 10 && selectedMasjid.adminPassword.trim().all { it.isDigit() }) {
-                targetVpa = "${selectedMasjid.adminPassword.trim()}@ybl"
-            }
-        } else if (customQrFile != null && customQrFile.exists()) {
-            try {
-                val bitmap = android.graphics.BitmapFactory.decodeFile(customQrFile.absolutePath)
-                if (bitmap != null) {
-                    val width = bitmap.width
-                    val height = bitmap.height
-                    val pixels = IntArray(width * height)
-                    bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-                    val source = com.google.zxing.RGBLuminanceSource(width, height, pixels)
-                    val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
-                    val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
-                    val payload = result.text?.trim()
-                    if (!payload.isNullOrBlank() && payload.contains("pa=")) {
-                        val parsedUri = Uri.parse(if (payload.startsWith("upi://")) payload else "upi://pay?$payload")
-                        val pa = parsedUri.getQueryParameter("pa")
-                        val pn = parsedUri.getQueryParameter("pn")
-                        if (!pa.isNullOrBlank()) targetVpa = pa
-                        if (!pn.isNullOrBlank()) targetName = Uri.encode(pn)
-                    }
-                }
-            } catch (_: Throwable) {}
+        val upiUri = com.example.data.MasjidPaymentHelper.buildMasjidUpiUri(selectedMasjid, amount)
+        if (upiUri == null) {
+            Toast.makeText(context, "QR code not available for this masjid", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        val uri = Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
-        val intent = Intent(Intent.ACTION_VIEW, uri)
+        val intent = Intent(Intent.ACTION_VIEW, upiUri)
         if (!packageName.isNullOrBlank()) {
             intent.setPackage(packageName)
         }
@@ -351,7 +311,7 @@ fun SupportMasjidPopup(
             context.startActivity(intent)
         } catch (e: Exception) {
             try {
-                val fallbackIntent = Intent(Intent.ACTION_VIEW, uri)
+                val fallbackIntent = Intent(Intent.ACTION_VIEW, upiUri)
                 context.startActivity(Intent.createChooser(fallbackIntent, "Pay with UPI"))
             } catch (e2: Exception) {
                 Toast.makeText(context, "No UPI app found. Please scan the QR code.", Toast.LENGTH_LONG).show()
@@ -414,15 +374,33 @@ fun SupportMasjidPopup(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "SUPPORT MASJID",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF3DE8E),
-                            textAlign = TextAlign.Center,
-                            letterSpacing = 1.sp,
-                            modifier = Modifier.padding(horizontal = 36.dp)
-                        )
+                        val masjidTitle = selectedMasjid?.name?.uppercase(Locale.ROOT)?.ifBlank { "SUPPORT MASJID" } ?: "SUPPORT MASJID"
+                        val masjidLoc = selectedMasjid?.address ?: ""
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 36.dp)
+                        ) {
+                            Text(
+                                text = masjidTitle,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF3DE8E),
+                                textAlign = TextAlign.Center,
+                                letterSpacing = 0.8.sp,
+                                maxLines = 1
+                            )
+                            if (masjidLoc.isNotBlank()) {
+                                Text(
+                                    text = masjidLoc,
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.72f),
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1
+                                )
+                            }
+                        }
 
                         IconButton(
                             onClick = { requestClose() },
@@ -441,8 +419,6 @@ fun SupportMasjidPopup(
 
                     HorizontalDivider(color = Color.White.copy(alpha = 0.10f))
 
-                    val hasValidQr = resolvedQrModel != null
-
                     // Upper Section: QR Code (Double Size: 310.dp) or Azan Time Logo & Punchline if no QR
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -456,13 +432,22 @@ fun SupportMasjidPopup(
                                 .padding(12.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (hasValidQr) {
-                                AsyncImage(
-                                    model = resolvedQrModel,
-                                    contentDescription = "Masjid Donation QR Code",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
-                                )
+                            if (hasValidQr && resolvedQrModel != null) {
+                                if (resolvedQrModel is android.graphics.Bitmap) {
+                                    Image(
+                                        bitmap = resolvedQrModel.asImageBitmap(),
+                                        contentDescription = "Masjid Donation QR Code",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                } else {
+                                    AsyncImage(
+                                        model = resolvedQrModel,
+                                        contentDescription = "Masjid Donation QR Code",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                }
                             } else {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,

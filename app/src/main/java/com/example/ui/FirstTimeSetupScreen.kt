@@ -61,6 +61,7 @@ import com.example.R
 import com.example.data.MasjidItem
 import com.example.data.getLocalizedArea
 import com.example.data.getLocalizedName
+import com.example.data.getLocalizedCity
 import com.example.LanguageCirclesRow
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -166,14 +167,53 @@ fun FirstTimeSetupScreen(
         } else {
             val q = searchQuery.trim().lowercase()
             nonGuestList.filter { m ->
-                m.name.lowercase().contains(q) ||
-                m.area.lowercase().contains(q) ||
-                m.city.lowercase().contains(q) ||
-                m.state.lowercase().contains(q) ||
-                m.id.lowercase().contains(q) ||
-                m.getLocalizedName(uiState.language).lowercase().contains(q) ||
-                m.getLocalizedArea(uiState.language).lowercase().contains(q)
-            }
+                val nameEn = m.name.lowercase().trim()
+                val nameUr = m.getLocalizedName("ur").lowercase().trim()
+                val nameHi = m.getLocalizedName("hi").lowercase().trim()
+                val idStr = m.id.lowercase().trim()
+
+                if (q.length <= 2) {
+                    nameEn == q ||
+                    nameEn.startsWith(q) ||
+                    nameEn.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } ||
+                    nameUr == q ||
+                    nameUr.startsWith(q) ||
+                    nameUr.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } ||
+                    nameHi == q ||
+                    nameHi.startsWith(q) ||
+                    nameHi.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } ||
+                    idStr == q ||
+                    idStr.startsWith(q)
+                } else {
+                    val areaEn = m.area.lowercase()
+                    val areaUr = m.getLocalizedArea("ur").lowercase()
+                    val areaHi = m.getLocalizedArea("hi").lowercase()
+                    val cityEn = m.city.lowercase()
+                    val cityUr = m.getLocalizedCity("ur").lowercase()
+                    val cityHi = m.getLocalizedCity("hi").lowercase()
+                    val stateStr = m.state.lowercase()
+
+                    nameEn.contains(q) || nameUr.contains(q) || nameHi.contains(q) ||
+                    idStr.contains(q) ||
+                    areaEn.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } ||
+                    areaUr.contains(q) || areaHi.contains(q) ||
+                    cityEn.startsWith(q) || cityUr.contains(q) || cityHi.contains(q) ||
+                    stateStr.startsWith(q)
+                }
+            }.sortedWith(compareBy<MasjidItem> { m ->
+                val nEn = m.name.lowercase().trim()
+                val idS = m.id.lowercase().trim()
+                when {
+                    nEn == q -> 0
+                    nEn.startsWith(q) -> 1
+                    nEn.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } -> 2
+                    nEn.contains(q) -> 3
+                    idS == q -> 4
+                    idS.startsWith(q) -> 5
+                    idS.contains(q) -> 6
+                    else -> 7
+                }
+            })
         }
     }
 
@@ -217,43 +257,10 @@ fun FirstTimeSetupScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Golden Circular Medallion with Mosque Logo
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(
-                                        Color(0xFF0F2B1D),
-                                        Color(0xFF071710),
-                                        Color(0xFF020705)
-                                    )
-                                ),
-                                shape = CircleShape
-                            )
-                            .border(
-                                BorderStroke(
-                                    2.dp,
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            Color(0xFFF3DE8E),
-                                            Color(0xFFF2CA50),
-                                            Color(0xFFB37C3C)
-                                        )
-                                    )
-                                ),
-                                shape = CircleShape
-                            )
-                            .padding(10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.foreground),
-                            contentDescription = "Azan Time Logo",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    // Squircle Logo Card with 45-degree Shimmer (matching Support Screen / image_0af060ef.png)
+                    AzanLogoCard(
+                        size = 90.dp
+                    )
 
                     AzanTimeWordmark(
                         height = 40.dp,

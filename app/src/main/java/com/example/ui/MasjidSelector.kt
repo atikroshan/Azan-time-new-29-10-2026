@@ -24,20 +24,28 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Mosque
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.core.content.ContextCompat
 import java.util.Locale
 import com.example.LanguageCirclesRow
@@ -45,6 +53,7 @@ import com.example.data.MasjidItem
 import com.example.data.getLocalizedName
 import com.example.data.getLocalizedArea
 import com.example.data.getLocalizedCity
+import com.example.data.masjidTranslations
 
 private class MasjidSelectorStrings(val lang: String) {
     val timetableHeader = when (lang) {
@@ -101,6 +110,41 @@ private class MasjidSelectorStrings(val lang: String) {
         "ur" -> "مقام"
         "hi" -> "स्थान"
         else -> "Location"
+    }
+    val noResults = when (lang) {
+        "ur" -> "کوئی مسجد نہیں ملی"
+        "hi" -> "कोई मस्जिद नहीं मिली"
+        else -> "No masjid found matching search"
+    }
+    val confirmTitle = when (lang) {
+        "ur" -> "مسجد کے انتخاب کی تصدیق"
+        "hi" -> "मस्जिद चयन की पुष्टि करें"
+        else -> "Confirm Masjid Selection"
+    }
+    val confirmBtn = when (lang) {
+        "ur" -> "ہاں / تصدیق کریں"
+        "hi" -> "हाँ / पुष्टि करें"
+        else -> "Confirm"
+    }
+    val cancelBtn = when (lang) {
+        "ur" -> "منسوخ کریں"
+        "hi" -> "रद्द करें"
+        else -> "Cancel"
+    }
+    val micPrompt = when (lang) {
+        "ur" -> "مسجد کا نام یا علاقہ بولیں..."
+        "hi" -> "मस्जिद का नाम या इलाका बोलें..."
+        else -> "Speak masjid name, area or ID..."
+    }
+    val micPermissionToast = when (lang) {
+        "ur" -> "آواز سے تلاش کے لیے مائیکروفون کی اجازت ضروری ہے"
+        "hi" -> "आवाज़ से खोजने के लिए माइक की अनुमति आवश्यक है"
+        else -> "Microphone permission is needed for voice search"
+    }
+    val noSpeechSupportToast = when (lang) {
+        "ur" -> "اس ڈیوائس پر آواز کی شناخت کی سہولت نہیں ہے"
+        "hi" -> "इस डिवाइस पर आवाज़ से खोजना समर्थित नहीं है"
+        else -> "Speech recognition is not supported on this device"
     }
 }
 
@@ -282,11 +326,11 @@ fun MasjidSelectionDialog(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            launchVoiceSearch(context, speechLauncher)
+            launchVoiceSearch(context, speechLauncher, strings.micPrompt)
         } else {
             Toast.makeText(
                 context,
-                "Microphone permission is needed for voice search",
+                strings.micPermissionToast,
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -298,7 +342,7 @@ fun MasjidSelectionDialog(
             Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
         if (hasPermission) {
-            launchVoiceSearch(context, speechLauncher)
+            launchVoiceSearch(context, speechLauncher, strings.micPrompt)
         } else {
             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
@@ -310,15 +354,57 @@ fun MasjidSelectionDialog(
             allMasajid
         } else {
             allMasajid.filter { m ->
-                m.name.lowercase().contains(q) ||
-                m.area.lowercase().contains(q) ||
-                m.city.lowercase().contains(q) ||
-                m.state.lowercase().contains(q) ||
-                m.id.lowercase().contains(q) ||
-                m.getLocalizedName(language).lowercase().contains(q) ||
-                m.getLocalizedArea(language).lowercase().contains(q) ||
-                m.getLocalizedCity(language).lowercase().contains(q)
-            }
+                val nameEn = m.name.lowercase().trim()
+                val nameUr = m.getLocalizedName("ur").lowercase().trim()
+                val nameHi = m.getLocalizedName("hi").lowercase().trim()
+                val idStr = m.id.lowercase().trim()
+
+                if (q.length <= 2) {
+                    // For short queries (1 or 2 characters, like "y"):
+                    // Only match if masjid name is exact, starts with query, has a word starting with query,
+                    // or ID is exact or starts with query. Never match middle characters in city/area!
+                    nameEn == q ||
+                    nameEn.startsWith(q) ||
+                    nameEn.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } ||
+                    nameUr == q ||
+                    nameUr.startsWith(q) ||
+                    nameUr.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } ||
+                    nameHi == q ||
+                    nameHi.startsWith(q) ||
+                    nameHi.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } ||
+                    idStr == q ||
+                    idStr.startsWith(q)
+                } else {
+                    // For longer queries (3+ characters):
+                    val areaEn = m.area.lowercase()
+                    val areaUr = m.getLocalizedArea("ur").lowercase()
+                    val areaHi = m.getLocalizedArea("hi").lowercase()
+                    val cityEn = m.city.lowercase()
+                    val cityUr = m.getLocalizedCity("ur").lowercase()
+                    val cityHi = m.getLocalizedCity("hi").lowercase()
+                    val stateStr = m.state.lowercase()
+
+                    nameEn.contains(q) || nameUr.contains(q) || nameHi.contains(q) ||
+                    idStr.contains(q) ||
+                    areaEn.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } ||
+                    areaUr.contains(q) || areaHi.contains(q) ||
+                    cityEn.startsWith(q) || cityUr.contains(q) || cityHi.contains(q) ||
+                    stateStr.startsWith(q)
+                }
+            }.sortedWith(compareBy<MasjidItem> { m ->
+                val nEn = m.name.lowercase().trim()
+                val idS = m.id.lowercase().trim()
+                when {
+                    nEn == q -> 0
+                    nEn.startsWith(q) -> 1
+                    nEn.split(Regex("[\\s-_,]+")).any { it.startsWith(q) } -> 2
+                    nEn.contains(q) -> 3
+                    idS == q -> 4
+                    idS.startsWith(q) -> 5
+                    idS.contains(q) -> 6
+                    else -> 7
+                }
+            })
         }
     }
 
@@ -576,8 +662,13 @@ fun MasjidSelectionDialog(
                                                 .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.4f), RoundedCornerShape(6.dp))
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
+                                            val idPrefix = when (language) {
+                                                "ur" -> "آئی ڈی"
+                                                "hi" -> "आईडी"
+                                                else -> "ID"
+                                            }
                                             Text(
-                                                text = "ID: #${masjid.id}",
+                                                text = "$idPrefix: #${masjid.id}",
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFFF3DE8E)
@@ -609,100 +700,205 @@ fun MasjidSelectionDialog(
         }
     }
 
-    // Confirmation Pop-up Dialog with Confirm / Cancel
+    // Selected Masjid Confirmation with Photo/Logo Card + CANCEL and CONFIRM (matches Setup Screen popup)
     val targetMasjid = pendingSelectedMasjid
     if (targetMasjid != null) {
-        AlertDialog(
-            onDismissRequest = { pendingSelectedMasjid = null },
-            modifier = Modifier.border(1.5.dp, Color(0xFFF3DE8E), RoundedCornerShape(20.dp)),
-            containerColor = Color(0xFF0F1E17),
-            shape = RoundedCornerShape(20.dp),
-            icon = {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .background(Color(0xFF1E3A2E), CircleShape)
-                        .border(1.dp, Color(0xFFF3DE8E), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Mosque,
-                        contentDescription = "Mosque",
-                        tint = Color(0xFFF3DE8E),
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            },
-            title = {
-                Text(
-                    text = when (language) {
-                        "ur" -> "مسجد کے انتخاب کی تصدیق"
-                        "hi" -> "मस्जिद चयन की पुष्टि करें"
-                        else -> "Confirm Masjid Selection"
-                    },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    color = Color(0xFFF3DE8E)
-                )
-            },
-            text = {
-                val name = targetMasjid.getLocalizedName(language)
-                val area = targetMasjid.getLocalizedArea(language)
-                val city = targetMasjid.getLocalizedCity(language)
-                val locationStr = listOf(area, city).filter { it.isNotBlank() }.joinToString(", ")
+        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+        val photoHeight = (screenHeight * 0.40f).coerceAtLeast(280.dp)
 
-                Text(
-                    text = when (language) {
-                        "ur" -> "کیا آپ $name ($locationStr) کو منتخب کرنا چاہتے ہیں؟"
-                        "hi" -> "क्या आप $name ($locationStr) को चुनना चाहते हैं?"
-                        else -> "Are you sure you want to select $name ($locationStr)?"
-                    },
-                    fontSize = 13.5.sp,
-                    color = Color.White.copy(alpha = 0.9f),
-                    lineHeight = 18.sp
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val m = targetMasjid
-                        pendingSelectedMasjid = null
-                        onSelectMasjid(m)
-                        onDismiss()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF3DE8E)),
-                    shape = RoundedCornerShape(10.dp)
+        Dialog(
+            onDismissRequest = { pendingSelectedMasjid = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F151C)),
+                border = BorderStroke(1.5.dp, Color(0xFFF2CA50).copy(alpha = 0.55f))
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = when (language) {
-                            "ur" -> "ہاں / تصدیق کریں"
-                            "hi" -> "हाँ / पुष्टि करें"
-                            else -> "Confirm"
-                        },
-                        color = Color(0xFF0F1713),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { pendingSelectedMasjid = null },
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                ) {
-                    Text(
-                        text = when (language) {
-                            "ur" -> "منسوخ کریں"
-                            "hi" -> "रद्द करें"
-                            else -> "Cancel"
-                        },
-                        fontSize = 13.sp
-                    )
+                    // 1. TOP: Only Masjid Photo (Taking at least 40% of screen height)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(photoHeight)
+                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                            .background(Color(0xFF0A0F14))
+                    ) {
+                        if (!targetMasjid.photoUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(targetMasjid.photoUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = targetMasjid.getLocalizedName(language),
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            // Fallback Mosque Illustration Background
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Mosque,
+                                        contentDescription = null,
+                                        tint = Color(0xFFF2CA50).copy(alpha = 0.50f),
+                                        modifier = Modifier.size(80.dp)
+                                    )
+                                    Text(
+                                        text = targetMasjid.getLocalizedName(language),
+                                        fontSize = 15.sp,
+                                        color = Color(0xFFD0C5AF).copy(alpha = 0.70f),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(horizontal = 20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. BOTTOM: Details and Buttons
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Masjid Name and ID badge
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = targetMasjid.getLocalizedName(language),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        Color(0xFF1E293B),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        Color(0xFFF2CA50).copy(alpha = 0.40f),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "#${targetMasjid.id}",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFF2CA50)
+                                )
+                            }
+                        }
+
+                        // Location
+                        val loc = listOf(
+                            targetMasjid.getLocalizedArea(language),
+                            targetMasjid.city,
+                            targetMasjid.state
+                        ).filter { it.isNotBlank() }.joinToString(", ")
+
+                        if (loc.isNotBlank()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = null,
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = loc,
+                                    fontSize = 12.5.sp,
+                                    color = Color(0xFFCBD5E1),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        // Action Buttons (CANCEL & CONFIRM)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // CANCEL BUTTON
+                            OutlinedButton(
+                                onClick = { pendingSelectedMasjid = null },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color(0xFF1E293B),
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // CONFIRM BUTTON
+                            Button(
+                                onClick = {
+                                    val m = targetMasjid
+                                    pendingSelectedMasjid = null
+                                    onSelectMasjid(m)
+                                    onDismiss()
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFF2CA50),
+                                    contentColor = Color(0xFF0F172A)
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp)
+                            ) {
+                                Text(
+                                    text = "CONFIRM",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 }
 
@@ -711,7 +907,8 @@ fun MasjidSelectionDialog(
  */
 private fun launchVoiceSearch(
     context: Context,
-    launcher: androidx.activity.result.ActivityResultLauncher<Intent>
+    launcher: androidx.activity.result.ActivityResultLauncher<Intent>,
+    promptText: String = "Speak masjid name, area or ID..."
 ) {
     try {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -722,7 +919,7 @@ private fun launchVoiceSearch(
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
             putExtra(
                 RecognizerIntent.EXTRA_PROMPT,
-                "Speak masjid name, area or ID..."
+                promptText
             )
         }
         launcher.launch(intent)

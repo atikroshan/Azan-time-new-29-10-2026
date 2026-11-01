@@ -45,7 +45,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.layout.ContentScale
@@ -431,9 +437,30 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
             AnimatedContent(
                 targetState = selectedTab,
                 transitionSpec = {
-                    fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                    // Target bottom button X pivot based on destination tab
+                    val targetPivotX = when (initialState) {
+                        "support" -> 0.18f  // Source is Support button
+                        "ramazan" -> 0.82f  // Source is Ramazan button
+                        else -> 0.50f       // Source is Home button
+                    }
+
+                    // For Exit: Minimize to bottom button
+                    val exitTransition = scaleOut(
+                        animationSpec = tween(700, easing = FastOutSlowInEasing),
+                        targetScale = 0.01f,
+                        transformOrigin = TransformOrigin(targetPivotX, 1.0f)
+                    ) + fadeOut(animationSpec = tween(400))
+
+                    // For Enter: Maximize from bottom button
+                    val enterTransition = scaleIn(
+                        animationSpec = tween(700, easing = FastOutSlowInEasing),
+                        initialScale = 0.01f,
+                        transformOrigin = TransformOrigin(targetPivotX, 1.0f)
+                    ) + fadeIn(animationSpec = tween(400))
+
+                    enterTransition togetherWith exitTransition
                 },
-                label = "screenTransition"
+                label = "macOsGenieTransition"
             ) { tab ->
                 when (tab) {
                     "support" -> {
@@ -3158,9 +3185,9 @@ fun AdminLoginDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF101625)),
-            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E17)),
+            border = BorderStroke(1.5.dp, Color(0xFFE5B842).copy(alpha = 0.70f)),
             modifier = Modifier
                 .fillMaxWidth(0.88f)
                 .padding(vertical = 16.dp)
@@ -3171,35 +3198,29 @@ fun AdminLoginDialog(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AdminPanelSettings,
-                        contentDescription = "Admin",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
+                // App Logo emblem without wordmark or punchline
+                com.example.ui.AzanLogoCard(
+                    size = 64.dp
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
                     text = "ADMIN LOGIN",
-                    fontSize = 17.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.secondary,
-                    letterSpacing = 1.sp
+                    color = Color(0xFFF3DE8E),
+                    letterSpacing = 1.2.sp
                 )
+
                 Text(
                     text = if (selectedMasjid != null) "Enter ID & Password for ${selectedMasjid.name}" else "Enter ID & Password to edit prayer timings",
                     fontSize = 11.5.sp,
-                    color = TextMuted,
+                    color = Color.White.copy(alpha = 0.75f),
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 OutlinedTextField(
                     value = adminId,
@@ -3213,15 +3234,16 @@ fun AdminLoginDialog(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedLabelColor = TextMuted
+                        focusedBorderColor = Color(0xFFF3DE8E),
+                        unfocusedBorderColor = Color(0xFFE5B842).copy(alpha = 0.4f),
+                        focusedLabelColor = Color(0xFFF3DE8E),
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.6f),
+                        cursorColor = Color(0xFFF3DE8E)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = password,
@@ -3237,7 +3259,7 @@ fun AdminLoginDialog(
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                 contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                                tint = Color.White.copy(alpha = 0.7f)
+                                tint = Color(0xFFF3DE8E)
                             )
                         }
                     },
@@ -3245,26 +3267,27 @@ fun AdminLoginDialog(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedBorderColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                        focusedLabelColor = MaterialTheme.colorScheme.secondary,
-                        unfocusedLabelColor = TextMuted
+                        focusedBorderColor = Color(0xFFF3DE8E),
+                        unfocusedBorderColor = Color(0xFFE5B842).copy(alpha = 0.4f),
+                        focusedLabelColor = Color(0xFFF3DE8E),
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.6f),
+                        cursorColor = Color(0xFFF3DE8E)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 if (isError) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = if (selectedMasjid != null) "Incorrect ID or Password for ${selectedMasjid.name}" else "Incorrect ID or Password",
                         color = Color(0xFFEF4444),
-                        fontSize = 11.sp,
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -3272,11 +3295,14 @@ fun AdminLoginDialog(
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.7f))
+                        border = BorderStroke(1.2.dp, Color(0xFFE5B842).copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF3DE8E))
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
                     }
 
                     Button(
@@ -3299,14 +3325,16 @@ fun AdminLoginDialog(
                                 isError = true
                             }
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = Color(0xFF0F172A)
+                            containerColor = Color(0xFFF3DE8E),
+                            contentColor = Color(0xFF0F1713)
                         )
                     ) {
-                        Text("Login", fontWeight = FontWeight.Bold)
+                        Text("Login", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }

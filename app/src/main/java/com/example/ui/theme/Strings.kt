@@ -274,7 +274,7 @@ val HindiStrings = AppStrings(
     azanLabel = "अज़ान",
     jammatLabel = "जमात",
     next = "अगला",
-    markPrayed = "नमाज़ पढ़ी के रूप में मार्क करें",
+    markPrayed = "नमाज़ पढ़ी हुई मार्क करें",
     toggleAudio = "अज़ान आवाज़ बदलें",
 
     // Rak'ats Breakdown
@@ -548,7 +548,7 @@ val UrduStrings = AppStrings(
     totalRozaPoints = "کل روزہ پوائنٹس",
     cannotTickBeforeDateToast = "تاریخ آنے سے پہلے نشان نہیں لگا سکتے",
     rozaCompletedLabel = "مکمل",
-    rozaMissedLabel = "چھوٹا ہوا",
+    rozaMissedLabel = "قضا",
     todayBadge = "آج",
 
     // Ramazan Duas

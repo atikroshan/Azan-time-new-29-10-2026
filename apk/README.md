@@ -1,9 +1,7 @@
 # Offline Azan APK Releases
 
-### Current Version: v3.0.72 (versionCode: 232)
-- **Filename:** `app-v3.0.72.apk`
+### Current Version: v3.0.80 (versionCode: 240)
+- **Filename:** `app-v3.0.80.apk`
 - **Build Type:** Release / Signed Debug Keystore
 - **Changelog:**
-  - **Fixed Silent/Vibrate Audio Skip Bug:** Removed `ringerMode` check in `AzanForegroundService.kt` that was skipping Azan playback when the phone was in Silent or Vibrate mode. Azan now plays out loud as an alarm even if the phone is on Silent or Vibrate!
-  - **Alarm Clock Precision API (`setAlarmClock`):** Upgraded `AlarmScheduler.kt` to use Android's highest-priority `AlarmManager.setAlarmClock()` API to guarantee exact-second Azan triggering even during deep Doze mode or OEM battery optimization.
-  - **Single Latest APK:** Cleaned up all older APK builds from the `/apk` directory.
+  - **MacOS-Style Genie Transition:** Removed previous cloth-like transition. Implemented a new "Genie-effect" (inspired by macOS minimize/maximize window effect). When switching pages, the current page rapidly scales and skews towards the target navigation button (Support/Home/Ramazan) at the bottom before disappearing, while the new page scales up from the target button.

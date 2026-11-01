@@ -730,10 +730,10 @@ fun SupportScreen(
 
                     Box(
                         modifier = Modifier
-                            .size(310.dp)
+                            .size(200.dp)
                             .background(if (dialogQrModel != null) Color.White else Color(0xFF0F1A15), RoundedCornerShape(14.dp))
                             .border(1.5.dp, primaryGold.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
-                            .padding(12.dp),
+                            .padding(10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         if (dialogQrModel != null) {

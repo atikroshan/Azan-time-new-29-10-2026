@@ -1337,7 +1337,8 @@ fun AzanHomeContent(
                                 )
                             }
 
-                            // AiStudioLoadingFooter removed from home page as requested
+                            Spacer(modifier = Modifier.height(12.dp))
+                            AiStudioLoadingFooter()
                         }
                     } else {
                         // When pulled up (default): full accordion will show
@@ -1357,7 +1358,8 @@ fun AzanHomeContent(
                                 enabled = true
                             )
 
-                            // AiStudioLoadingFooter removed from home page as requested
+                            Spacer(modifier = Modifier.height(12.dp))
+                            AiStudioLoadingFooter()
                         }
                     }
                 }

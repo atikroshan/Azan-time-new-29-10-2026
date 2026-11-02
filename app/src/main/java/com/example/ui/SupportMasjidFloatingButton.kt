@@ -731,7 +731,7 @@ fun AnimatedTopQrIconButton(
 
     LaunchedEffect(Unit) {
         while (true) {
-            kotlinx.coroutines.delay(4500L)
+            kotlinx.coroutines.delay(1900L)
             currentIndex = (currentIndex + 1) % 2
         }
     }
@@ -752,12 +752,12 @@ fun AnimatedTopQrIconButton(
             transitionSpec = {
                 (androidx.compose.animation.slideInVertically(
                     initialOffsetY = { -it },
-                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
-                ) + androidx.compose.animation.fadeIn(animationSpec = tween(400))) togetherWith
+                    animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                ) + androidx.compose.animation.fadeIn(animationSpec = tween(200))) togetherWith
                 (androidx.compose.animation.slideOutVertically(
                     targetOffsetY = { it },
-                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
-                ) + androidx.compose.animation.fadeOut(animationSpec = tween(400)))
+                    animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                ) + androidx.compose.animation.fadeOut(animationSpec = tween(200)))
             },
             label = "topHomeQrButtonSpin"
         ) { index ->

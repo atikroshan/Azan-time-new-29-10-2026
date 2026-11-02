@@ -206,17 +206,18 @@ fun SupportScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .navigationBarsPadding()
-                .padding(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 4.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Top Bar: Language Buttons (Homepage size & style)
+            // 1. Top Bar: Language Buttons on Left
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 2.dp),
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.Start
             ) {
                 LanguageCirclesRow(
                     currentLang = uiState.language,
@@ -224,19 +225,20 @@ fun SupportScreen(
                 )
             }
 
-            // 2. Top Center App Logo, AZAN TIME & Punchline (Preserving exact size)
+            // 2. Centered Logo, AZAN TIME & Punchline Header
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(vertical = 2.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 AzanLogoCard(
-                    size = 80.dp
+                    size = 84.dp
                 )
-
                 AzanTimeWordmark(
-                    height = 38.dp,
-                    topPadding = 14.dp,
-                    bottomPadding = 8.dp
+                    height = 36.dp,
+                    topPadding = 6.dp,
+                    bottomPadding = 4.dp
                 )
             }
 
@@ -508,7 +510,7 @@ fun SupportScreen(
                 }
             }
 
-            // 6. Combined Follow Us (Left) & Rate Us (Right) Divided Card
+            // 6. Combined Follow Us (Left ~38%) & Rate Us (Right ~58%) Card matching reference image
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -522,23 +524,26 @@ fun SupportScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Left Section: Follow Us (Text + 4 circular brand badges)
+                    // Left Side: Follow Us (~38%)
                     Column(
-                        modifier = Modifier.weight(1.1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier
+                            .weight(0.38f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalAlignment = Alignment.Start
                     ) {
                         Text(
                             text = when (uiState.language) {
                                 "ur" -> "ہمیں فالو کریں :"
-                                "hi" -> "फ़ॉلو کریں :"
+                                "hi" -> "फ़ॉलो करें :"
                                 else -> "Follow us :"
                             },
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1
                         )
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             SocialCircleButton(
@@ -572,29 +577,29 @@ fun SupportScreen(
                         }
                     }
 
-                    // Middle Vertical Divider Line
+                    // Vertical Divider
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 8.dp)
                             .width(1.dp)
-                            .height(44.dp)
+                            .height(48.dp)
                             .background(Color(0xFF1B3B2E))
                     )
 
-                    // Right Section: Rate Us
+                    // Right Side: Rate Us (~58%)
+                    val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
                     Column(
-                        modifier = Modifier.weight(0.9f),
+                        modifier = Modifier
+                            .weight(0.58f),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
                                 text = String.format(Locale.US, "%.1f", appRatingDisplay),
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
                                 color = primaryGold
                             )
@@ -605,7 +610,7 @@ fun SupportScreen(
                                         appRatingDisplay >= i - 0.5 -> 0.5f
                                         else -> 0f
                                     }
-                                    StarIconDisplay(fillRatio = fillRatio, size = 10.dp)
+                                    StarIconDisplay(fillRatio = fillRatio, size = 12.dp)
                                 }
                             }
                         }
@@ -613,12 +618,12 @@ fun SupportScreen(
                         Button(
                             onClick = { showRateUsDialog = true },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF142E22)),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFFE5B842).copy(alpha = 0.7f)),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(9.dp),
+                            border = BorderStroke(1.2.dp, Color(0xFFE5B842).copy(alpha = 0.8f)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(32.dp)
+                                .height(34.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -628,14 +633,15 @@ fun SupportScreen(
                                     imageVector = Icons.Default.Star,
                                     contentDescription = "Rate Us",
                                     tint = primaryGold,
-                                    modifier = Modifier.size(12.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
-                                Spacer(modifier = Modifier.width(3.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = "Rate Us 5★",
-                                    fontSize = 11.sp,
+                                    fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = primaryGold
+                                    color = primaryGold,
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -2262,7 +2268,7 @@ private fun SocialCircleButton(
 ) {
     Box(
         modifier = Modifier
-            .size(38.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -2282,7 +2288,7 @@ private fun SocialCircleButton(
 private fun SocialFacebookIcon() {
     Box(
         modifier = Modifier
-            .size(38.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .background(Color(0xFF1877F2)),
         contentAlignment = Alignment.Center
@@ -2290,10 +2296,10 @@ private fun SocialFacebookIcon() {
         Text(
             text = "f",
             color = Color.White,
-            fontSize = 24.sp,
+            fontSize = 17.sp,
             fontWeight = FontWeight.Black,
             fontFamily = FontFamily.SansSerif,
-            modifier = Modifier.offset(x = 1.dp, y = (-2).dp)
+            modifier = Modifier.offset(x = 0.5.dp, y = (-1).dp)
         )
     }
 }
@@ -2305,7 +2311,7 @@ private fun SocialFacebookIcon() {
 private fun SocialInstagramIcon() {
     Box(
         modifier = Modifier
-            .size(38.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(
@@ -2318,12 +2324,12 @@ private fun SocialInstagramIcon() {
             ),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(20.dp)) {
-            val strokePx = 2.dp.toPx()
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(15.dp)) {
+            val strokePx = 1.8.dp.toPx()
             // Outer rounded rect
             drawRoundRect(
                 color = Color.White,
-                cornerRadius = CornerRadius(5.5.dp.toPx()),
+                cornerRadius = CornerRadius(4.dp.toPx()),
                 style = Stroke(width = strokePx)
             )
             // Inner circle
@@ -2335,7 +2341,7 @@ private fun SocialInstagramIcon() {
             // Top-right dot
             drawCircle(
                 color = Color.White,
-                radius = 1.8.dp.toPx(),
+                radius = 1.5.dp.toPx(),
                 center = Offset(size.width * 0.73f, size.height * 0.27f)
             )
         }
@@ -2349,12 +2355,12 @@ private fun SocialInstagramIcon() {
 private fun SocialYouTubeIcon() {
     Box(
         modifier = Modifier
-            .size(38.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .background(Color(0xFFFF0000)),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(14.dp)) {
             val path = Path().apply {
                 moveTo(size.width * 0.32f, size.height * 0.2f)
                 lineTo(size.width * 0.82f, size.height * 0.5f)
@@ -2373,12 +2379,12 @@ private fun SocialYouTubeIcon() {
 private fun SocialTelegramIcon() {
     Box(
         modifier = Modifier
-            .size(38.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .background(Color(0xFF229ED9)),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(14.dp)) {
             val path = Path().apply {
                 moveTo(size.width * 0.15f, size.height * 0.5f)
                 lineTo(size.width * 0.85f, size.height * 0.18f)

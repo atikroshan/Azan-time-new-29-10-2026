@@ -1052,7 +1052,7 @@ fun AzanHomeContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 5.dp, bottom = 0.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp)
                     .onSizeChanged { langRowHeightPx = it.height },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
@@ -1337,9 +1337,7 @@ fun AzanHomeContent(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(2.dp))
-
-                            AiStudioLoadingFooter()
+                            // AiStudioLoadingFooter removed from home page as requested
                         }
                     } else {
                         // When pulled up (default): full accordion will show
@@ -1359,9 +1357,7 @@ fun AzanHomeContent(
                                 enabled = true
                             )
 
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            AiStudioLoadingFooter()
+                            // AiStudioLoadingFooter removed from home page as requested
                         }
                     }
                 }
@@ -3758,104 +3754,7 @@ fun AdminPanelScreen(
                     }
                 }
 
-                // Info footer card filling bottom space elegantly
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF111827).copy(alpha = 0.8f)),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = Color(0xFF86EFAC),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Timings saved here reflect immediately on the Home screen clock, Namaz cards, and Azan alarms.",
-                            fontSize = 11.5.sp,
-                            color = TextColor.copy(alpha = 0.85f),
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(14.dp))
-
-                Button(
-                    onClick = {
-                        val configuredUrl = uiState.appsScriptUrl.trim()
-                        if (configuredUrl.isBlank()) {
-                            showAppsScriptSettingsDialog = true
-                            android.widget.Toast.makeText(
-                                context,
-                                strings.connect,
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            isSyncingNow = true
-                            scope.launch {
-                                val (success, msg) = viewModel.syncMasjidToSheet(uiState.selectedMasjid)
-                                isSyncingNow = false
-                                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                    if (success) {
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "✅ ${strings.timeUpdated}",
-                                            android.widget.Toast.LENGTH_SHORT
-                                        ).show()
-                                        onBack()
-                                    } else {
-                                        syncStatusErrorDialog = msg
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    enabled = !isSyncingNow,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = Color(0xFF0F172A)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) {
-                    if (isSyncingNow) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.5.dp,
-                            color = Color(0xFF0F172A)
-                        )
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Done",
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "DONE / SAVE TIMINGS",
-                                fontSize = 14.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
 

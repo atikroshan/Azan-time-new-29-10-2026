@@ -731,7 +731,7 @@ fun AnimatedTopQrIconButton(
 
     LaunchedEffect(Unit) {
         while (true) {
-            kotlinx.coroutines.delay(1900L)
+            kotlinx.coroutines.delay(4000L)
             currentIndex = (currentIndex + 1) % 2
         }
     }

@@ -284,7 +284,7 @@ private fun NavBarItem(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                enabled = enabled && !isBusy,
+                enabled = !isBusy,
                 onClick = {
                     if (!isBusy) {
                         onClick()

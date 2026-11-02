@@ -29,6 +29,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.animation.AnimatedContent
@@ -319,8 +321,11 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
     var showAdminPanel by remember { mutableStateOf(false) }
     var showMasjidSelectorScreen by remember { mutableStateOf(false) }
     var showSplash by remember { mutableStateOf(false) }
+    val ramazanPrefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
     var ramazanTapCount by remember { mutableIntStateOf(0) }
-    var forcedRamazanActive by remember { mutableStateOf(false) }
+    var forcedRamazanActive by remember {
+        mutableStateOf(ramazanPrefs.getBoolean("pref_ramazan_force_active", false))
+    }
     val effectiveRamazanActive = isRamazanActive || forcedRamazanActive
 
     val prefersReducedMotion = com.example.ui.rememberPrefersReducedMotion()
@@ -470,20 +475,29 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     },
                     onRamazanTap = {
                         if (isGenieBusy) return@AnimatedCurvedNavBar
-                        ramazanTapCount++
-                        if (!effectiveRamazanActive && ramazanTapCount >= 5) {
-                            forcedRamazanActive = true
-                            android.widget.Toast.makeText(context, "Ramazan section activated!", android.widget.Toast.LENGTH_SHORT).show()
-                        }
                         if (effectiveRamazanActive) {
                             triggerTabSwitch("ramazan")
-                        } else {
-                            val msg = when (uiState.language) {
-                                "ur" -> "رمضان سیکشن 5 فروری 2027 سے دستیاب ہوگا"
-                                "hi" -> "रमज़ान सेक्शन 5 फ़रवरी 2027 से शुरू होगा"
-                                else -> "Ramazan section will be available from 5 Feb 2027"
+                            return@AnimatedCurvedNavBar
+                        }
+                        ramazanTapCount++
+                        if (ramazanTapCount >= 5) {
+                            forcedRamazanActive = true
+                            ramazanPrefs.edit().putBoolean("pref_ramazan_force_active", true).apply()
+                            val activatedMsg = when (uiState.language) {
+                                "ur" -> "رمضان سیکشن فعال ہو گیا!"
+                                "hi" -> "रमज़ान सेक्शन चालू हो गया!"
+                                else -> "Ramazan section activated!"
                             }
-                            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, activatedMsg, android.widget.Toast.LENGTH_SHORT).show()
+                            triggerTabSwitch("ramazan")
+                        } else {
+                            val remaining = 5 - ramazanTapCount
+                            val tapMsg = when (uiState.language) {
+                                "ur" -> "رمضان سیکشن فعال کرنے کے لیے مزید $remaining بار ٹیپ کریں"
+                                "hi" -> "रमज़ान सेक्शन चालू करने के लिए $remaining बार और टैپ करें"
+                                else -> "Tap $remaining more times to activate Ramazan section"
+                            }
+                            android.widget.Toast.makeText(context, tapMsg, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 )
@@ -2317,6 +2331,85 @@ fun AzanList(
                 showPrayerToggle = false
             )
         }
+
+        // Ramazan Timing Slot below Isha on Homepage
+        val homePrefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+        val rDate = homePrefs.getString("pref_admin_ramazan_date", "18 Feb 2027") ?: "18 Feb 2027"
+        val rDay = homePrefs.getString("pref_admin_ramazan_day", "Thursday") ?: "Thursday"
+        val rSehar = homePrefs.getString("pref_admin_ramazan_sehar", "05:15 AM") ?: "05:15 AM"
+        val rIftar = homePrefs.getString("pref_admin_ramazan_iftar", "06:35 PM") ?: "06:35 PM"
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1522).copy(alpha = 0.90f)),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.35f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
+                            .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.NightsStay,
+                            contentDescription = null,
+                            tint = Color(0xFFF3DE8E),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Column {
+                        val rTitle = when (uiState.language) {
+                            "ur" -> "رمضان المبارک"
+                            "hi" -> "रमज़ान"
+                            else -> "RAMAZAN"
+                        }
+                        Text(
+                            text = rTitle,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF3DE8E)
+                        )
+                        val locDay = getLocalizedDayString(rDay, uiState.language)
+                        Text(
+                            text = "$rDate • $locDay",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val sLbl = when (uiState.language) { "ur" -> "سحری"; "hi" -> "सहरी"; else -> "SEHAR" }
+                        Text(text = sLbl, fontSize = 9.5.sp, color = Color(0xFFF3DE8E).copy(alpha = 0.85f))
+                        Text(text = rSehar, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val iLbl = when (uiState.language) { "ur" -> "افطار"; "hi" -> "इफ्तार"; else -> "IFTAR" }
+                        Text(text = iLbl, fontSize = 9.5.sp, color = Color(0xFF25D366).copy(alpha = 0.9f))
+                        Text(text = rIftar, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -3485,6 +3578,22 @@ fun AdminPanelScreen(
         AdminPrayerItem("Isha", strings.isha.uppercase(), Icons.Outlined.Nightlight, ishaAzan, ishaJammat)
     )
 
+    val adminPrefs = remember { context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE) }
+    var ramazanDate by remember {
+        mutableStateOf(adminPrefs.getString("pref_admin_ramazan_date", "18 Feb 2027") ?: "18 Feb 2027")
+    }
+    var ramazanDay by remember {
+        val calculated = calculateDayFromDate(ramazanDate).ifBlank { "Thursday" }
+        mutableStateOf(adminPrefs.getString("pref_admin_ramazan_day", calculated) ?: calculated)
+    }
+    var ramazanSehar by remember {
+        mutableStateOf(adminPrefs.getString("pref_admin_ramazan_sehar", "05:15 AM") ?: "05:15 AM")
+    }
+    var ramazanIftar by remember {
+        mutableStateOf(adminPrefs.getString("pref_admin_ramazan_iftar", "06:35 PM") ?: "06:35 PM")
+    }
+    var showEditRamazanDialog by remember { mutableStateOf(false) }
+
     var editingPrayer by remember { mutableStateOf<AdminPrayerItem?>(null) }
     var showEditMasjidDialog by remember { mutableStateOf(false) }
     var showAddMasjidDialog by remember { mutableStateOf(false) }
@@ -3756,6 +3865,147 @@ fun AdminPanelScreen(
                     }
                 }
 
+                // RAMAZAN (SEHAR & IFTAR) CARD BELOW ISHA
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1522).copy(alpha = 0.92f)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.45f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Left: Icon + Title & Date/Auto Day
+                            Row(
+                                modifier = Modifier.weight(1f, fill = false),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .background(Color(0xFF1E293B), RoundedCornerShape(10.dp))
+                                        .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.NightsStay,
+                                        contentDescription = "Ramazan",
+                                        tint = Color(0xFFF3DE8E),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+
+                                Column {
+                                    val ramazanTitle = when (uiState.language) {
+                                        "ur" -> "رمضان المبارک"
+                                        "hi" -> "रमज़ान"
+                                        else -> "RAMAZAN"
+                                    }
+                                    Text(
+                                        text = ramazanTitle,
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFF3DE8E)
+                                    )
+                                    val localizedDay = getLocalizedDayString(ramazanDay, uiState.language)
+                                    Text(
+                                        text = "$ramazanDate • $localizedDay",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.White.copy(alpha = 0.85f)
+                                    )
+                                }
+                            }
+
+                            // Right: Edit pencil button
+                            IconButton(
+                                onClick = { showEditRamazanDialog = true },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
+                                    .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit Ramazan Timings",
+                                    tint = Color(0xFFF3DE8E),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        // Sehar & Iftar Time Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF141D2E), RoundedCornerShape(10.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // Sehar
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                val seharLabel = when (uiState.language) {
+                                    "ur" -> "سحری"
+                                    "hi" -> "सहरी"
+                                    else -> "SEHAR"
+                                }
+                                Text(
+                                    text = seharLabel,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFF3DE8E).copy(alpha = 0.85f)
+                                )
+                                Text(
+                                    text = ramazanSehar,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(26.dp)
+                                    .background(Color.White.copy(alpha = 0.15f))
+                            )
+
+                            // Iftar
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                val iftarLabel = when (uiState.language) {
+                                    "ur" -> "افطار"
+                                    "hi" -> "इफ्तार"
+                                    else -> "IFTAR"
+                                }
+                                Text(
+                                    text = iftarLabel,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF25D366).copy(alpha = 0.9f)
+                                )
+                                Text(
+                                    text = ramazanIftar,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
             }
         }
@@ -3775,6 +4025,37 @@ fun AdminPanelScreen(
                         }
                     }
                     editingPrayer = null
+                }
+            )
+        }
+
+        // Edit Ramazan Timings Dialog
+        if (showEditRamazanDialog) {
+            EditRamazanTimingDialog(
+                initialDate = ramazanDate,
+                initialDay = ramazanDay,
+                initialSehar = ramazanSehar,
+                initialIftar = ramazanIftar,
+                language = uiState.language,
+                onDismiss = { showEditRamazanDialog = false },
+                onSave = { newDate, newDay, newSehar, newIftar ->
+                    ramazanDate = newDate
+                    ramazanDay = newDay
+                    ramazanSehar = newSehar
+                    ramazanIftar = newIftar
+                    adminPrefs.edit()
+                        .putString("pref_admin_ramazan_date", newDate)
+                        .putString("pref_admin_ramazan_day", newDay)
+                        .putString("pref_admin_ramazan_sehar", newSehar)
+                        .putString("pref_admin_ramazan_iftar", newIftar)
+                        .apply()
+                    val savedMsg = when (uiState.language) {
+                        "ur" -> "رمضان کے اوقات محفوظ کر لیے گئے!"
+                        "hi" -> "रमज़ान के समय सुरक्षित हो गए!"
+                        else -> "Ramazan timings saved successfully!"
+                    }
+                    Toast.makeText(context, savedMsg, Toast.LENGTH_SHORT).show()
+                    showEditRamazanDialog = false
                 }
             )
         }
@@ -4919,6 +5200,644 @@ fun NavCircleItem(
             },
             textAlign = TextAlign.Center
         )
+    }
+}
+
+fun calculateDayFromDate(dateStr: String): String {
+    val clean = dateStr.trim()
+    if (clean.isBlank()) return ""
+    val formats = listOf(
+        java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("dd MMMM yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US),
+        java.text.SimpleDateFormat("MMMM d, yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("d-M-yyyy", java.util.Locale.US),
+        java.text.SimpleDateFormat("d/M/yyyy", java.util.Locale.US)
+    )
+    for (fmt in formats) {
+        try {
+            fmt.isLenient = false
+            val date = fmt.parse(clean)
+            if (date != null) {
+                return java.text.SimpleDateFormat("EEEE", java.util.Locale.ENGLISH).format(date)
+            }
+        } catch (_: Throwable) {}
+    }
+    return ""
+}
+
+fun getLocalizedDayString(englishDay: String, lang: String): String {
+    return when (englishDay.trim().lowercase()) {
+        "monday" -> when (lang) { "ur" -> "پیر"; "hi" -> "सोमवार"; else -> "Monday" }
+        "tuesday" -> when (lang) { "ur" -> "منگل"; "hi" -> "मंगलवार"; else -> "Tuesday" }
+        "wednesday" -> when (lang) { "ur" -> "بدھ"; "hi" -> "बुधवार"; else -> "Wednesday" }
+        "thursday" -> when (lang) { "ur" -> "جمعرات"; "hi" -> "गुरुवार"; else -> "Thursday" }
+        "friday" -> when (lang) { "ur" -> "جمعہ"; "hi" -> "शुक्रवार"; else -> "Friday" }
+        "saturday" -> when (lang) { "ur" -> "ہفتہ"; "hi" -> "शनिवार"; else -> "Saturday" }
+        "sunday" -> when (lang) { "ur" -> "اتوار"; "hi" -> "रविवार"; else -> "Sunday" }
+        else -> englishDay
+    }
+}
+
+@Composable
+fun EditRamazanTimingDialog(
+    initialDate: String,
+    initialDay: String,
+    initialSehar: String,
+    initialIftar: String,
+    language: String,
+    onDismiss: () -> Unit,
+    onSave: (date: String, day: String, sehar: String, iftar: String) -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var dateText by remember { mutableStateOf(initialDate) }
+    var dayText by remember { mutableStateOf(initialDay.ifBlank { calculateDayFromDate(initialDate).ifBlank { "Thursday" } }) }
+
+    fun parseTimeParts(rawTime: String, fallbackPm: Boolean): Triple<String, String, Boolean> {
+        val clean = rawTime.trim().uppercase()
+        val isExplicitPm = clean.endsWith("PM")
+        val isExplicitAm = clean.endsWith("AM")
+        val stripped = clean.replace("AM", "").replace("PM", "").trim()
+        val parts = stripped.split(":")
+        val rawH = parts.getOrNull(0)?.toIntOrNull() ?: if (fallbackPm) 6 else 5
+        val rawM = parts.getOrNull(1)?.toIntOrNull() ?: if (fallbackPm) 35 else 15
+        val isPm = when {
+            isExplicitPm -> true
+            isExplicitAm -> false
+            rawH >= 12 -> true
+            else -> fallbackPm
+        }
+        val h12 = when {
+            rawH == 0 -> 12
+            rawH > 12 -> rawH - 12
+            else -> rawH
+        }
+        return Triple(
+            String.format(java.util.Locale.US, "%02d", h12),
+            String.format(java.util.Locale.US, "%02d", rawM),
+            isPm
+        )
+    }
+
+    val (initSH, initSM, initSPm) = remember { parseTimeParts(initialSehar, false) }
+    val (initIH, initIM, initIPm) = remember { parseTimeParts(initialIftar, true) }
+
+    var seharHours by remember { mutableStateOf(initSH) }
+    var seharMinutes by remember { mutableStateOf(initSM) }
+    var seharIsPm by remember { mutableStateOf(initSPm) }
+
+    var iftarHours by remember { mutableStateOf(initIH) }
+    var iftarMinutes by remember { mutableStateOf(initIM) }
+    var iftarIsPm by remember { mutableStateOf(initIPm) }
+
+    var errorText by remember { mutableStateOf("") }
+
+    fun openDatePickerDialog() {
+        val calendar = java.util.Calendar.getInstance()
+        val formats = listOf(
+            java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.US),
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US),
+            java.text.SimpleDateFormat("dd-MM-yyyy", java.util.Locale.US)
+        )
+        for (f in formats) {
+            try {
+                val d = f.parse(dateText.trim())
+                if (d != null) {
+                    calendar.time = d
+                    break
+                }
+            } catch (_: Throwable) {}
+        }
+
+        val dpd = android.app.DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val pickedCal = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.YEAR, year)
+                    set(java.util.Calendar.MONTH, month)
+                    set(java.util.Calendar.DAY_OF_MONTH, dayOfMonth)
+                }
+                val formatted = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.US).format(pickedCal.time)
+                dateText = formatted
+                // AUTO DAY SET
+                val autoDay = java.text.SimpleDateFormat("EEEE", java.util.Locale.US).format(pickedCal.time)
+                dayText = autoDay
+                errorText = ""
+            },
+            calendar.get(java.util.Calendar.YEAR),
+            calendar.get(java.util.Calendar.MONTH),
+            calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        )
+        dpd.show()
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF101625)),
+            border = BorderStroke(1.5.dp, Color(0xFFF3DE8E).copy(alpha = 0.6f)),
+            modifier = Modifier
+                .fillMaxWidth(0.94f)
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .background(Color(0xFF1E293B), CircleShape)
+                            .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.5f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.NightsStay,
+                            contentDescription = null,
+                            tint = Color(0xFFF3DE8E),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column {
+                        val headerTitle = when (language) {
+                            "ur" -> "رمضان المبارک کے اوقات"
+                            "hi" -> "रमज़ान समय सेटिंग्स"
+                            else -> "RAMAZAN TIMINGS"
+                        }
+                        Text(
+                            text = headerTitle,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color(0xFFF3DE8E)
+                        )
+                        Text(
+                            text = "Date, Sehar & Iftar timings",
+                            fontSize = 11.5.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+
+                // 1. DATE & AUTO DAY SECTION
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131D2E)),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "RAMAZAN DATE & DAY",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF3DE8E),
+                            letterSpacing = 0.8.sp
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = dateText,
+                                onValueChange = { newText ->
+                                    dateText = newText
+                                    val auto = calculateDayFromDate(newText)
+                                    if (auto.isNotBlank()) {
+                                        dayText = auto
+                                    }
+                                    errorText = ""
+                                },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                label = { Text("Date (e.g. 18 Feb 2027)", color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp) },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = Color(0xFFF3DE8E),
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
+                                    focusedContainerColor = Color(0xFF1E293B),
+                                    unfocusedContainerColor = Color(0xFF1E293B)
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+
+                            IconButton(
+                                onClick = { openDatePickerDialog() },
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .background(Color(0xFF1E293B), RoundedCornerShape(10.dp))
+                                    .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = "Select Date",
+                                    tint = Color(0xFFF3DE8E),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+
+                        // Auto Day Computed Badge
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFF19253A), RoundedCornerShape(8.dp))
+                                .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF25D366),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Auto Day:",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.75f)
+                                )
+                            }
+                            val locDay = getLocalizedDayString(dayText, language)
+                            Text(
+                                text = locDay,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFF3DE8E)
+                            )
+                        }
+                    }
+                }
+
+                // 2. SEHAR TIME SECTION
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131D2E)),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val seharTitle = when (language) { "ur" -> "سحری کا وقت"; "hi" -> "सहरी का समय"; else -> "SEHAR TIME" }
+                            Text(
+                                text = seharTitle,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF3DE8E),
+                                letterSpacing = 0.8.sp
+                            )
+                            val sHInt = seharHours.toIntOrNull() ?: 5
+                            val sMInt = seharMinutes.toIntOrNull() ?: 15
+                            val previewS = String.format(java.util.Locale.US, "%02d:%02d %s", sHInt, sMInt, if (seharIsPm) "PM" else "AM")
+                            Text(
+                                text = previewS,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF3DE8E)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                OutlinedTextField(
+                                    value = seharHours,
+                                    onValueChange = {
+                                        if (it.length <= 2 && it.all { c -> c.isDigit() }) {
+                                            seharHours = it
+                                            errorText = ""
+                                        }
+                                    },
+                                    placeholder = { Text("05", fontSize = 18.sp, color = Color.White.copy(alpha = 0.3f), textAlign = TextAlign.Center) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center
+                                    ),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        focusedBorderColor = Color(0xFFF3DE8E),
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
+                                        focusedContainerColor = Color(0xFF1E293B),
+                                        unfocusedContainerColor = Color(0xFF1E293B)
+                                    ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.width(72.dp)
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text("HRS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF3DE8E))
+                            }
+
+                            Text(
+                                text = ":",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFFF3DE8E),
+                                modifier = Modifier.padding(start = 6.dp, end = 6.dp, bottom = 14.dp)
+                            )
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                OutlinedTextField(
+                                    value = seharMinutes,
+                                    onValueChange = {
+                                        if (it.length <= 2 && it.all { c -> c.isDigit() }) {
+                                            seharMinutes = it
+                                            errorText = ""
+                                        }
+                                    },
+                                    placeholder = { Text("15", fontSize = 18.sp, color = Color.White.copy(alpha = 0.3f), textAlign = TextAlign.Center) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center
+                                    ),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        focusedBorderColor = Color(0xFFF3DE8E),
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
+                                        focusedContainerColor = Color(0xFF1E293B),
+                                        unfocusedContainerColor = Color(0xFF1E293B)
+                                    ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.width(72.dp)
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text("MIN", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF3DE8E))
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Surface(
+                                color = if (!seharIsPm) Color(0xFFF3DE8E) else Color(0xFF1E293B),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.5f)),
+                                modifier = Modifier
+                                    .padding(bottom = 14.dp)
+                                    .clickable { seharIsPm = !seharIsPm }
+                            ) {
+                                Text(
+                                    text = if (seharIsPm) "PM" else "AM",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (!seharIsPm) Color(0xFF0F172A) else Color(0xFFF3DE8E),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 3. IFTAR TIME SECTION
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF131D2E)),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val iftarTitle = when (language) { "ur" -> "افطار کا وقت"; "hi" -> "इफ्तार का समय"; else -> "IFTAR TIME" }
+                            Text(
+                                text = iftarTitle,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF25D366),
+                                letterSpacing = 0.8.sp
+                            )
+                            val iHInt = iftarHours.toIntOrNull() ?: 6
+                            val iMInt = iftarMinutes.toIntOrNull() ?: 35
+                            val previewI = String.format(java.util.Locale.US, "%02d:%02d %s", iHInt, iMInt, if (iftarIsPm) "PM" else "AM")
+                            Text(
+                                text = previewI,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF25D366)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                OutlinedTextField(
+                                    value = iftarHours,
+                                    onValueChange = {
+                                        if (it.length <= 2 && it.all { c -> c.isDigit() }) {
+                                            iftarHours = it
+                                            errorText = ""
+                                        }
+                                    },
+                                    placeholder = { Text("06", fontSize = 18.sp, color = Color.White.copy(alpha = 0.3f), textAlign = TextAlign.Center) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center
+                                    ),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        focusedBorderColor = Color(0xFF25D366),
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
+                                        focusedContainerColor = Color(0xFF1E293B),
+                                        unfocusedContainerColor = Color(0xFF1E293B)
+                                    ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.width(72.dp)
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text("HRS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF25D366))
+                            }
+
+                            Text(
+                                text = ":",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF25D366),
+                                modifier = Modifier.padding(start = 6.dp, end = 6.dp, bottom = 14.dp)
+                            )
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                OutlinedTextField(
+                                    value = iftarMinutes,
+                                    onValueChange = {
+                                        if (it.length <= 2 && it.all { c -> c.isDigit() }) {
+                                            iftarMinutes = it
+                                            errorText = ""
+                                        }
+                                    },
+                                    placeholder = { Text("35", fontSize = 18.sp, color = Color.White.copy(alpha = 0.3f), textAlign = TextAlign.Center) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        textAlign = TextAlign.Center
+                                    ),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        focusedBorderColor = Color(0xFF25D366),
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
+                                        focusedContainerColor = Color(0xFF1E293B),
+                                        unfocusedContainerColor = Color(0xFF1E293B)
+                                    ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.width(72.dp)
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text("MIN", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF25D366))
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Surface(
+                                color = if (iftarIsPm) Color(0xFF25D366) else Color(0xFF1E293B),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.5f)),
+                                modifier = Modifier
+                                    .padding(bottom = 14.dp)
+                                    .clickable { iftarIsPm = !iftarIsPm }
+                            ) {
+                                Text(
+                                    text = if (iftarIsPm) "PM" else "AM",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (iftarIsPm) Color(0xFF0F172A) else Color(0xFF25D366),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (errorText.isNotEmpty()) {
+                    Text(
+                        text = errorText,
+                        color = Color(0xFFEF4444),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f)),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Button(
+                        onClick = {
+                            val sH = seharHours.trim().toIntOrNull()
+                            val sM = seharMinutes.trim().toIntOrNull()
+                            val iH = iftarHours.trim().toIntOrNull()
+                            val iM = iftarMinutes.trim().toIntOrNull()
+
+                            if (sH == null || sH !in 1..12 || sM == null || sM !in 0..59) {
+                                errorText = "Please enter valid Sehar time (HH:MM)"
+                                return@Button
+                            }
+                            if (iH == null || iH !in 1..12 || iM == null || iM !in 0..59) {
+                                errorText = "Please enter valid Iftar time (HH:MM)"
+                                return@Button
+                            }
+                            if (dateText.isBlank()) {
+                                errorText = "Date cannot be empty"
+                                return@Button
+                            }
+
+                            val seharFormatted = String.format(java.util.Locale.US, "%02d:%02d %s", sH, sM, if (seharIsPm) "PM" else "AM")
+                            val iftarFormatted = String.format(java.util.Locale.US, "%02d:%02d %s", iH, iM, if (iftarIsPm) "PM" else "AM")
+                            val computedDay = dayText.ifBlank { calculateDayFromDate(dateText).ifBlank { "Thursday" } }
+
+                            onSave(dateText.trim(), computedDay, seharFormatted, iftarFormatted)
+                        },
+                        modifier = Modifier.weight(1.3f),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Save Timings", color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
 

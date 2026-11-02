@@ -156,7 +156,9 @@ fun MasjidSelectorDropdown(
     onSelectMasjid: (MasjidItem) -> Unit,
     onLanguageSelect: (String) -> Unit,
     onChangeClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    containerColor: Color = Color(0xFF091712),
+    borderColor: Color = Color(0xFF1B3B2E)
 ) {
     var showDialog by remember { mutableStateOf(false) }
     val strings = remember(language) { MasjidSelectorStrings(language) }
@@ -168,8 +170,8 @@ fun MasjidSelectorDropdown(
                 if (onChangeClick != null) onChangeClick() else showDialog = true
             },
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF091712)),
-        border = BorderStroke(1.dp, Color(0xFF1B3B2E)),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = BorderStroke(1.dp, borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(

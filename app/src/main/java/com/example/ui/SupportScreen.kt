@@ -2177,42 +2177,22 @@ data class QrButtonTheme(
  * 1. Theme Golden/Yellow background + Black text & icon
  * 2. White background + Black text & icon
  */
+/**
+ * QR Code Button in Support App section:
+ * Fixed Golden background + Black text & icon, slightly rounded corners.
+ */
 @Composable
 fun AnimatedSupportQrButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val themes = remember {
-        listOf(
-            // 1. Golden background + black text
-            QrButtonTheme(
-                backgroundColor = Color(0xFFF3DE8E),
-                contentColor = Color(0xFF071711),
-                borderColor = Color(0xFFE5B842)
-            ),
-            // 2. White background + black text
-            QrButtonTheme(
-                backgroundColor = Color(0xFFFFFFFF),
-                contentColor = Color(0xFF000000),
-                borderColor = Color(0xFFE2E8F0)
-            )
-        )
-    }
-
-    var currentIndex by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(4500L) // Slower, relaxed interval between theme transitions
-            currentIndex = (currentIndex + 1) % 2
-        }
-    }
-
     Box(
         modifier = modifier
             .width(88.dp)
             .height(32.dp)
-            .clip(RoundedCornerShape(50))
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFFF3DE8E))
+            .border(1.dp, Color(0xFFE5B842), RoundedCornerShape(10.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(bounded = true),
@@ -2220,47 +2200,22 @@ fun AnimatedSupportQrButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        AnimatedContent(
-            targetState = currentIndex,
-            transitionSpec = {
-                // Slower spinning top to bottom
-                (slideInVertically(
-                    initialOffsetY = { -it },
-                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(400))) togetherWith
-                (slideOutVertically(
-                    targetOffsetY = { it },
-                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
-                ) + fadeOut(animationSpec = tween(400)))
-            },
-            label = "qrButtonSpinTopToBottom"
-        ) { index ->
-            val theme = themes[index]
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(theme.backgroundColor)
-                    .border(1.dp, theme.borderColor, RoundedCornerShape(50)),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCode,
-                        contentDescription = "QR Code",
-                        tint = theme.contentColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "QR Code",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = theme.contentColor
-                    )
-                }
-            }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.QrCode,
+                contentDescription = "QR Code",
+                tint = Color(0xFF071711),
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = "QR Code",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF071711)
+            )
         }
     }
 }

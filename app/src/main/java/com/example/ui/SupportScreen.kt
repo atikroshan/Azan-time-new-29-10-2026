@@ -17,6 +17,15 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -35,6 +44,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -399,39 +411,10 @@ fun SupportScreen(
                             )
                         }
 
-                        // Right: Larger QR Code button (thoda bada!)
-                        Box(
-                            modifier = Modifier
-                                .width(88.dp)
-                                .height(32.dp)
-                                .clip(RoundedCornerShape(50))
-                                .background(Color(0xFF162D22))
-                                .border(1.dp, Color(0xFF2E533F), RoundedCornerShape(50))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = ripple(bounded = true, color = primaryGold),
-                                    onClick = { showQrDialog = true }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.QrCode,
-                                    contentDescription = "QR Code",
-                                    tint = primaryGold,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = "QR Code",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = primaryGold
-                                )
-                            }
-                        }
+                        // Right: Spinning 3-color top-to-bottom QR Code button (White -> Theme Yellow -> Black loop)
+                        AnimatedSupportQrButton(
+                            onClick = { showQrDialog = true }
+                        )
                     }
 
                     // Amounts (Enlarged)
@@ -492,12 +475,12 @@ fun SupportScreen(
                         }
                     }
 
-                    // Pay UPI Button (Enlarged)
+                    // Pay UPI Button (Black background, white text, golden outline)
                     Button(
                         onClick = { showUpiAppChooserDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF123425)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                         shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.2.dp, primaryGold.copy(alpha = 0.65f)),
+                        border = BorderStroke(1.2.dp, Color(0xFFF3DE8E)),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -517,7 +500,7 @@ fun SupportScreen(
                                 text = "Pay ₹$selectedContributionAmount via UPI (GPay, PhonePe, Paytm)",
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = primaryGold,
+                                color = Color.White,
                                 maxLines = 1
                             )
                         }
@@ -525,67 +508,137 @@ fun SupportScreen(
                 }
             }
 
-            // 6. Rating Summary Card
+            // 6. Combined Follow Us (Left) & Rate Us (Right) Divided Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF071711)),
                 border = BorderStroke(1.dp, Color(0xFF1B3B2E))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(Color(0xFF1A271B))
-                            .border(1.dp, Color(0xFFE5B842).copy(alpha = 0.5f), RoundedCornerShape(50))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = true, color = Color(0xFFE5B842)),
-                                onClick = { showRateUsDialog = true }
-                            )
-                            .padding(horizontal = 12.dp, vertical = 5.dp),
-                        contentAlignment = Alignment.Center
+                    // Left Section: Follow Us (Text + 4 circular brand badges)
+                    Column(
+                        modifier = Modifier.weight(1.1f),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "Rate Us →",
-                            fontSize = 11.5.sp,
+                            text = when (uiState.language) {
+                                "ur" -> "ہمیں فالو کریں :"
+                                "hi" -> "फ़ॉلو کریں :"
+                                else -> "Follow us :"
+                            },
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = primaryGold
-                        )
-                    }
-
-                    val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.8
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = String.format(Locale.US, "%.1f", appRatingDisplay),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Black,
                             color = Color.White
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(1.5.dp)) {
-                            for (i in 1..5) {
-                                val fillRatio = when {
-                                    appRatingDisplay >= i -> 1f
-                                    appRatingDisplay >= i - 0.5 -> 0.5f
-                                    else -> 0f
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SocialCircleButton(
+                                title = "Facebook",
+                                icon = { SocialFacebookIcon() },
+                                onClick = {
+                                    Toast.makeText(context, "Facebook link coming soon!", Toast.LENGTH_SHORT).show()
                                 }
-                                StarIconDisplay(fillRatio = fillRatio, size = 13.dp)
+                            )
+                            SocialCircleButton(
+                                title = "Instagram",
+                                icon = { SocialInstagramIcon() },
+                                onClick = {
+                                    Toast.makeText(context, "Instagram link coming soon!", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                            SocialCircleButton(
+                                title = "YouTube",
+                                icon = { SocialYouTubeIcon() },
+                                onClick = {
+                                    Toast.makeText(context, "YouTube link coming soon!", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                            SocialCircleButton(
+                                title = "Telegram",
+                                icon = { SocialTelegramIcon() },
+                                onClick = {
+                                    Toast.makeText(context, "Telegram link coming soon!", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                    }
+
+                    // Middle Vertical Divider Line
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .width(1.dp)
+                            .height(44.dp)
+                            .background(Color(0xFF1B3B2E))
+                    )
+
+                    // Right Section: Rate Us
+                    Column(
+                        modifier = Modifier.weight(0.9f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                text = String.format(Locale.US, "%.1f", appRatingDisplay),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                color = primaryGold
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                                for (i in 1..5) {
+                                    val fillRatio = when {
+                                        appRatingDisplay >= i -> 1f
+                                        appRatingDisplay >= i - 0.5 -> 0.5f
+                                        else -> 0f
+                                    }
+                                    StarIconDisplay(fillRatio = fillRatio, size = 10.dp)
+                                }
                             }
                         }
-                        Text(
-                            text = "• 1000+ users",
-                            fontSize = 10.sp,
-                            color = Color.White.copy(alpha = 0.65f)
-                        )
+
+                        Button(
+                            onClick = { showRateUsDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF142E22)),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE5B842).copy(alpha = 0.7f)),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(32.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = "Rate Us",
+                                    tint = primaryGold,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = "Rate Us 5★",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = primaryGold
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -2111,3 +2164,278 @@ fun UpiAppOptionItem(
         }
     }
 }
+
+data class QrButtonTheme(
+    val backgroundColor: Color,
+    val contentColor: Color,
+    val borderColor: Color
+)
+
+/**
+ * Animated QR Code Button in Support App section
+ * Cycles in a continuous top-to-bottom spin loop across 2 distinct color styles:
+ * 1. Theme Golden/Yellow background + Black text & icon
+ * 2. White background + Black text & icon
+ */
+@Composable
+fun AnimatedSupportQrButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val themes = remember {
+        listOf(
+            // 1. Golden background + black text
+            QrButtonTheme(
+                backgroundColor = Color(0xFFF3DE8E),
+                contentColor = Color(0xFF071711),
+                borderColor = Color(0xFFE5B842)
+            ),
+            // 2. White background + black text
+            QrButtonTheme(
+                backgroundColor = Color(0xFFFFFFFF),
+                contentColor = Color(0xFF000000),
+                borderColor = Color(0xFFE2E8F0)
+            )
+        )
+    }
+
+    var currentIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(4500L) // Slower, relaxed interval between theme transitions
+            currentIndex = (currentIndex + 1) % 2
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .width(88.dp)
+            .height(32.dp)
+            .clip(RoundedCornerShape(50))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true),
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedContent(
+            targetState = currentIndex,
+            transitionSpec = {
+                // Slower spinning top to bottom
+                (slideInVertically(
+                    initialOffsetY = { -it },
+                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
+                ) + fadeIn(animationSpec = tween(400))) togetherWith
+                (slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
+                ) + fadeOut(animationSpec = tween(400)))
+            },
+            label = "qrButtonSpinTopToBottom"
+        ) { index ->
+            val theme = themes[index]
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(theme.backgroundColor)
+                    .border(1.dp, theme.borderColor, RoundedCornerShape(50)),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCode,
+                        contentDescription = "QR Code",
+                        tint = theme.contentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "QR Code",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.contentColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Social Media Icon Button with title label
+ */
+@Composable
+private fun SocialIconButton(
+    title: String,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true, color = Color.White),
+                onClick = onClick
+            )
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+    ) {
+        icon()
+        Text(
+            text = title,
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White.copy(alpha = 0.85f)
+        )
+    }
+}
+
+/**
+ * Circular Social Media Button wrapper
+ */
+@Composable
+private fun SocialCircleButton(
+    title: String,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true, color = Color.White),
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        icon()
+    }
+}
+
+/**
+ * Official Facebook Brand Badge
+ */
+@Composable
+private fun SocialFacebookIcon() {
+    Box(
+        modifier = Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF1877F2)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "f",
+            color = Color.White,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = FontFamily.SansSerif,
+            modifier = Modifier.offset(x = 1.dp, y = (-2).dp)
+        )
+    }
+}
+
+/**
+ * Official Instagram Brand Badge with Gradient & Camera glyph
+ */
+@Composable
+private fun SocialInstagramIcon() {
+    Box(
+        modifier = Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color(0xFF833AB4),
+                        Color(0xFFFD1D1D),
+                        Color(0xFFF77737)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(20.dp)) {
+            val strokePx = 2.dp.toPx()
+            // Outer rounded rect
+            drawRoundRect(
+                color = Color.White,
+                cornerRadius = CornerRadius(5.5.dp.toPx()),
+                style = Stroke(width = strokePx)
+            )
+            // Inner circle
+            drawCircle(
+                color = Color.White,
+                radius = size.width * 0.23f,
+                style = Stroke(width = strokePx)
+            )
+            // Top-right dot
+            drawCircle(
+                color = Color.White,
+                radius = 1.8.dp.toPx(),
+                center = Offset(size.width * 0.73f, size.height * 0.27f)
+            )
+        }
+    }
+}
+
+/**
+ * Official YouTube Brand Badge
+ */
+@Composable
+private fun SocialYouTubeIcon() {
+    Box(
+        modifier = Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(Color(0xFFFF0000)),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
+            val path = Path().apply {
+                moveTo(size.width * 0.32f, size.height * 0.2f)
+                lineTo(size.width * 0.82f, size.height * 0.5f)
+                lineTo(size.width * 0.32f, size.height * 0.8f)
+                close()
+            }
+            drawPath(path, Color.White)
+        }
+    }
+}
+
+/**
+ * Official Telegram Brand Badge
+ */
+@Composable
+private fun SocialTelegramIcon() {
+    Box(
+        modifier = Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(Color(0xFF229ED9)),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(18.dp)) {
+            val path = Path().apply {
+                moveTo(size.width * 0.15f, size.height * 0.5f)
+                lineTo(size.width * 0.85f, size.height * 0.18f)
+                lineTo(size.width * 0.68f, size.height * 0.82f)
+                lineTo(size.width * 0.48f, size.height * 0.62f)
+                lineTo(size.width * 0.38f, size.height * 0.75f)
+                lineTo(size.width * 0.36f, size.height * 0.58f)
+                close()
+            }
+            drawPath(path, Color.White)
+        }
+    }
+}
+
+

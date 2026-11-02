@@ -124,6 +124,110 @@ object AppUpdateManager {
     }
 
     /**
+     * Fetches all available versions from GitHub Releases or Apps Script for selection, preview, and restore.
+     */
+    suspend fun fetchAllAvailableVersions(
+        currentVersionCode: Int = BuildConfig.VERSION_CODE,
+        currentVersionName: String = BuildConfig.VERSION_NAME
+    ): List<UpdateInfo> = withContext(Dispatchers.IO) {
+        val versions = mutableListOf<UpdateInfo>()
+        // 1. Try Google Apps Script / Google Sheet first
+        try {
+            val scriptUrl = "${GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL}?action=checkUpdate"
+            val conn = (URL(scriptUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 6000
+                readTimeout = 6000
+                instanceFollowRedirects = true
+            }
+            if (conn.responseCode in 200..399) {
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                if (body.contains("latestVersion") || body.contains("versions")) {
+                    val json = JSONObject(body)
+                    if (json.has("versions")) {
+                        val arr = json.getJSONArray("versions")
+                        for (i in 0 until arr.length()) {
+                            val vObj = arr.getJSONObject(i)
+                            val vName = vObj.optString("versionName", vObj.optString("version", ""))
+                            val vCode = vObj.optInt("versionCode", 0)
+                            val dUrl = vObj.optString("downloadUrl", "")
+                            val cLog = vObj.optString("changelog", "Timetable & feature updates")
+                            if (vName.isNotBlank() && dUrl.isNotBlank()) {
+                                versions.add(UpdateInfo(true, vName, vCode, dUrl, cLog))
+                            }
+                        }
+                    } else {
+                        val remoteVersionName = json.optString("latestVersionName", json.optString("latestVersion", ""))
+                        val remoteVersionCode = json.optInt("latestVersionCode", 0)
+                        val downloadUrl = json.optString("downloadUrl", "")
+                        val changelog = json.optString("changelog", "Bug fixes and improvements")
+                        if (remoteVersionName.isNotBlank() && downloadUrl.isNotBlank()) {
+                            versions.add(UpdateInfo(true, remoteVersionName, remoteVersionCode, downloadUrl, changelog))
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {}
+
+        // 2. Try GitHub Releases API (fetches all releases)
+        try {
+            val githubApiUrl = "https://api.github.com/repos/$GITHUB_REPO_OWNER/$GITHUB_REPO_NAME/releases"
+            val conn = (URL(githubApiUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", "AzanTimeApp")
+                setRequestProperty("Accept", "application/vnd.github.v3+json")
+                connectTimeout = 6000
+                readTimeout = 6000
+            }
+            if (conn.responseCode == 200) {
+                val response = conn.inputStream.bufferedReader().use { it.readText() }
+                val jsonArray = org.json.JSONArray(response)
+                for (i in 0 until jsonArray.length()) {
+                    val rel = jsonArray.getJSONObject(i)
+                    val tagName = rel.optString("tag_name", "").removePrefix("v").trim()
+                    val body = rel.optString("body", "Version release notes and timetable updates")
+                    
+                    var apkUrl = ""
+                    val assets = rel.optJSONArray("assets")
+                    if (assets != null) {
+                        for (j in 0 until assets.length()) {
+                            val asset = assets.getJSONObject(j)
+                            val name = asset.optString("name", "")
+                            if (name.endsWith(".apk", ignoreCase = true)) {
+                                apkUrl = asset.optString("browser_download_url", "")
+                                break
+                            }
+                        }
+                    }
+                    if (apkUrl.isBlank()) {
+                        apkUrl = rel.optString("html_url", "")
+                    }
+
+                    if (tagName.isNotBlank() && apkUrl.isNotBlank()) {
+                        if (!versions.any { it.latestVersionName == tagName }) {
+                            versions.add(UpdateInfo(true, tagName, 100 - i, apkUrl, body))
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {}
+
+        // Always include current version as an option
+        if (!versions.any { it.latestVersionName == currentVersionName }) {
+            versions.add(
+                UpdateInfo(
+                    false,
+                    currentVersionName,
+                    currentVersionCode,
+                    "",
+                    "Current active installed version ($currentVersionName)"
+                )
+            )
+        }
+        versions
+    }
+
+    /**
      * Compares semver strings (e.g. "2.6.16" > "2.6.15")
      */
     fun isVersionNewer(remoteVersion: String, currentVersion: String): Boolean {

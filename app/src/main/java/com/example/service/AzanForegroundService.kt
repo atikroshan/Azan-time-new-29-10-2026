@@ -445,6 +445,10 @@ class AzanForegroundService : Service() {
     }
 
     private fun playAzan() {
+        val azanName = currentPlayingPrayerName.value ?: "Azan"
+        val isFajr = azanName.equals("fajr", ignoreCase = true)
+        val resourceId = if (isFajr) R.raw.fajr_azan else R.raw.azan
+
         try {
             mediaPlayer?.reset()
             mediaPlayer?.release()
@@ -478,7 +482,7 @@ class AzanForegroundService : Service() {
 
             // Tier 1: Try MediaPlayer.create with USAGE_ALARM
             try {
-                player = MediaPlayer.create(applicationContext, R.raw.azan, audioAttributes, 0)
+                player = MediaPlayer.create(applicationContext, resourceId, audioAttributes, 0)
             } catch (e: Throwable) {
                 android.util.Log.w("AzanForegroundService", "Tier 1 MediaPlayer.create failed: ${e.message}")
             }
@@ -486,7 +490,7 @@ class AzanForegroundService : Service() {
             // Tier 2: Open raw resource file descriptor and prepare properly before closing FD
             if (player == null) {
                 try {
-                    val afd = resources.openRawResourceFd(R.raw.azan)
+                    val afd = resources.openRawResourceFd(resourceId)
                     if (afd != null) {
                         val p = MediaPlayer()
                         p.setAudioAttributes(audioAttributes)
@@ -503,7 +507,7 @@ class AzanForegroundService : Service() {
             // Tier 3: Standard MediaPlayer.create fallback
             if (player == null) {
                 try {
-                    player = MediaPlayer.create(applicationContext, R.raw.azan)
+                    player = MediaPlayer.create(applicationContext, resourceId)
                 } catch (e: Throwable) {
                     android.util.Log.w("AzanForegroundService", "Tier 3 default create failed: ${e.message}")
                 }

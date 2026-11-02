@@ -13,6 +13,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.ui.FirstTimeSetupScreen
@@ -321,6 +323,63 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
     var forcedRamazanActive by remember { mutableStateOf(false) }
     val effectiveRamazanActive = isRamazanActive || forcedRamazanActive
 
+    val prefersReducedMotion = com.example.ui.rememberPrefersReducedMotion()
+    val pageGraphicsLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
+    val tabTargets = remember { mutableStateMapOf<String, com.example.ui.TabTarget>() }
+    var isGenieBusy by remember { mutableStateOf(false) }
+    var outgoingTab by remember { mutableStateOf<String?>(null) }
+    var outgoingBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    val genieProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    var containerWidthPx by remember { mutableFloatStateOf(0f) }
+    var containerHeightPx by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
+
+    val triggerTabSwitch: (String) -> Unit = { targetTab ->
+        if (!isGenieBusy && targetTab != selectedTab) {
+            val prevTab = selectedTab
+            isGenieBusy = true
+            coroutineScope.launch {
+                val snapshot = try {
+                    pageGraphicsLayer.toImageBitmap().asAndroidBitmap()
+                } catch (_: Exception) {
+                    null
+                }
+
+                outgoingTab = prevTab
+                outgoingBitmap = snapshot
+                selectedTab = targetTab
+                if (targetTab == "home") {
+                    viewModel.selectToday()
+                }
+
+                if (snapshot != null && !prefersReducedMotion) {
+                    genieProgress.snapTo(0f)
+                    genieProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = androidx.compose.animation.core.tween(
+                            durationMillis = com.example.ui.GENIE_DUR.toInt(),
+                            easing = androidx.compose.animation.core.LinearEasing
+                        )
+                    )
+                } else {
+                    genieProgress.snapTo(0f)
+                    genieProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = androidx.compose.animation.core.tween(
+                            durationMillis = 260,
+                            easing = androidx.compose.animation.core.LinearEasing
+                        )
+                    )
+                }
+
+                outgoingTab = null
+                outgoingBitmap = null
+                isGenieBusy = false
+            }
+        }
+    }
+
     var showUpdateDialog by remember { mutableStateOf(false) }
     var availableUpdateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
 
@@ -399,23 +458,25 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                 com.example.ui.AnimatedCurvedNavBar(
                     selectedTab = selectedTab,
                     onSelectTab = { tab ->
-                        selectedTab = tab
-                        if (tab == "home") {
-                            viewModel.selectToday()
-                        }
+                        triggerTabSwitch(tab)
                     },
                     supportLabel = supportLabel,
                     homeLabel = homeLabel,
                     ramazanLabel = ramazanLabel,
                     isRamazanEnabled = effectiveRamazanActive,
+                    isBusy = isGenieBusy,
+                    onTabTargetMeasured = { tabKey, target ->
+                        tabTargets[tabKey] = target
+                    },
                     onRamazanTap = {
+                        if (isGenieBusy) return@AnimatedCurvedNavBar
                         ramazanTapCount++
                         if (!effectiveRamazanActive && ramazanTapCount >= 5) {
                             forcedRamazanActive = true
                             android.widget.Toast.makeText(context, "Ramazan section activated!", android.widget.Toast.LENGTH_SHORT).show()
                         }
                         if (effectiveRamazanActive) {
-                            selectedTab = "ramazan"
+                            triggerTabSwitch("ramazan")
                         } else {
                             val msg = when (uiState.language) {
                                 "ur" -> "رمضان سیکشن 5 فروری 2027 سے دستیاب ہوگا"
@@ -427,75 +488,137 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     }
                 )
             }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .appBackground()
-                .padding(innerPadding)
-        ) {
-            AnimatedContent(
-                targetState = selectedTab,
-                transitionSpec = {
-                    // Target bottom button X pivot based on destination tab
-                    val targetPivotX = when (initialState) {
-                        "support" -> 0.18f  // Source is Support button
-                        "ramazan" -> 0.82f  // Source is Ramazan button
-                        else -> 0.50f       // Source is Home button
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .appBackground()
+                    .onSizeChanged { size ->
+                        containerWidthPx = size.width.toFloat()
+                        containerHeightPx = size.height.toFloat()
                     }
-
-                    // For Exit: Minimize to bottom button
-                    val exitTransition = scaleOut(
-                        animationSpec = tween(700, easing = FastOutSlowInEasing),
-                        targetScale = 0.01f,
-                        transformOrigin = TransformOrigin(targetPivotX, 1.0f)
-                    ) + fadeOut(animationSpec = tween(400))
-
-                    // For Enter: Maximize from bottom button
-                    val enterTransition = scaleIn(
-                        animationSpec = tween(700, easing = FastOutSlowInEasing),
-                        initialScale = 0.01f,
-                        transformOrigin = TransformOrigin(targetPivotX, 1.0f)
-                    ) + fadeIn(animationSpec = tween(400))
-
-                    enterTransition togetherWith exitTransition
-                },
-                label = "macOsGenieTransition"
-            ) { tab ->
-                when (tab) {
-                    "support" -> {
-                        com.example.ui.SupportScreen(
-                            uiState = uiState,
-                            onBack = { selectedTab = "home" },
-                            onLangSelect = { viewModel.setLanguage(it) },
-                            onMasjidSubmitted = { viewModel.syncGoogleSheet() },
-                            onChangeMasjid = { showMasjidSelectorScreen = true },
-                            onSelectMasjid = { masjid ->
-                                viewModel.selectMasjid(masjid.id)
-                                selectedTab = "home"
+            ) {
+                // Layer 1: Newly selected incoming page (rendered immediately underneath)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .drawWithContent {
+                            pageGraphicsLayer.record {
+                                this@drawWithContent.drawContent()
                             }
+                            drawContent()
+                        }
+                ) {
+                    when (selectedTab) {
+                        "support" -> {
+                            com.example.ui.SupportScreen(
+                                uiState = uiState,
+                                onBack = { triggerTabSwitch("home") },
+                                onLangSelect = { viewModel.setLanguage(it) },
+                                onMasjidSubmitted = { viewModel.syncGoogleSheet() },
+                                onChangeMasjid = { showMasjidSelectorScreen = true },
+                                onSelectMasjid = { masjid ->
+                                    viewModel.selectMasjid(masjid.id)
+                                    triggerTabSwitch("home")
+                                }
+                            )
+                        }
+                        "ramazan" -> {
+                            com.example.ui.RamazanScreenContent(
+                                uiState = uiState,
+                                onLanguageSelect = { viewModel.setLanguage(it) }
+                            )
+                        }
+                        else -> {
+                            AzanHomeContent(
+                                viewModel = viewModel,
+                                uiState = uiState,
+                                onOpenAdminLogin = { showAdminLoginDialog = true },
+                                onChangeMasjid = { showMasjidSelectorScreen = true },
+                                onShowAdminPanel = { showAdminPanel = it },
+                                onSupportClick = { triggerTabSwitch("support") }
+                            )
+                        }
+                    }
+                }
+
+                // Layer 2: Outgoing page kept mounted during the animation until finished
+                val currentOutgoingTab = outgoingTab
+                if (currentOutgoingTab != null && outgoingBitmap == null) {
+                    // Reduced motion / simple fade fallback
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .alpha((1f - genieProgress.value).coerceIn(0f, 1f))
+                    ) {
+                        when (currentOutgoingTab) {
+                            "support" -> {
+                                com.example.ui.SupportScreen(
+                                    uiState = uiState,
+                                    onBack = {},
+                                    onLangSelect = {},
+                                    onMasjidSubmitted = {},
+                                    onChangeMasjid = {},
+                                    onSelectMasjid = {}
+                                )
+                            }
+                            "ramazan" -> {
+                                com.example.ui.RamazanScreenContent(
+                                    uiState = uiState,
+                                    onLanguageSelect = {}
+                                )
+                            }
+                            else -> {
+                                AzanHomeContent(
+                                    viewModel = viewModel,
+                                    uiState = uiState,
+                                    onOpenAdminLogin = {},
+                                    onChangeMasjid = {},
+                                    onShowAdminPanel = {},
+                                    onSupportClick = {}
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Layer 3: macOS Genie Fold overlay layer (strip-based 2D matrix transform)
+                val currentOutgoingBitmap = outgoingBitmap
+                val outgoingKey = outgoingTab
+                if (isGenieBusy && currentOutgoingBitmap != null && outgoingKey != null) {
+                    val measuredTarget = tabTargets[outgoingKey]
+                    val fallbackTarget = remember(outgoingKey, containerWidthPx, containerHeightPx) {
+                        val w = containerWidthPx
+                        val h = containerHeightPx
+                        val tabW = w / 3f
+                        val cx = when (outgoingKey) {
+                            "support" -> tabW * 0.5f
+                            "ramazan" -> tabW * 2.5f
+                            else -> tabW * 1.5f
+                        }
+                        val barH = with(density) { 72.dp.toPx() }
+                        com.example.ui.TabTarget(
+                            centerX = cx,
+                            centerY = h - (barH / 2f),
+                            width = tabW,
+                            height = barH
                         )
                     }
-                    "ramazan" -> {
-                        com.example.ui.RamazanScreenContent(
-                            uiState = uiState,
-                            onLanguageSelect = { viewModel.setLanguage(it) }
-                        )
-                    }
-                    else -> {
-                        AzanHomeContent(
-                            viewModel = viewModel,
-                            uiState = uiState,
-                            onOpenAdminLogin = { showAdminLoginDialog = true },
-                            onChangeMasjid = { showMasjidSelectorScreen = true },
-                            onShowAdminPanel = { showAdminPanel = it },
-                            onSupportClick = { selectedTab = "support" }
-                        )
-                    }
+                    val target = measuredTarget ?: fallbackTarget
+
+                    com.example.ui.GenieFoldOverlay(
+                        bitmap = currentOutgoingBitmap,
+                        progress = genieProgress.value,
+                        target = target,
+                        containerWidth = containerWidthPx,
+                        containerHeight = containerHeightPx,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
-    }
     }
 
     if (showAdminLoginDialog) {
@@ -974,26 +1097,10 @@ fun AzanHomeContent(
                     }
 
                     if (!isPlayingAzan || !isPulledDown) {
-                        // Support Masjid QR Button (square shape with rounded corners, placed to the left of Admin button)
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFF3DE8E))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = ripple(bounded = true),
-                                    onClick = { showSupportPopup = true }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.QrCode,
-                                contentDescription = "Support Masjid QR",
-                                tint = Color.Black,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        // Support Masjid QR Button (Animated spin loop matching Support page QR button)
+                        com.example.ui.AnimatedTopQrIconButton(
+                            onClick = { showSupportPopup = true }
+                        )
 
                         // Admin icon button (Profile/Avatar)
                         Box(

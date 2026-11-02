@@ -12,8 +12,8 @@ android {
         applicationId = "com.aistudio.offlineazan.egypxe"
         minSdk = 24
         targetSdk = 35
-        versionCode = 240
-        versionName = "3.0.80"
+        versionCode = 243
+        versionName = "3.0.83"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -81,4 +81,5 @@ dependencies {
     implementation(libs.moshi)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.zxing.core)
+    testImplementation("junit:junit:4.13.2")
 }

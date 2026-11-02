@@ -12,7 +12,15 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -236,6 +245,8 @@ fun SupportMasjidFloatingButton(
     }
 }
 
+
+
 /**
  * Animated Support Masjid Popup:
  * - Animated origin expands out from the button on open, and shrinks back into the button on close
@@ -339,7 +350,6 @@ fun SupportMasjidPopup(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Popup Card with origin expanding from and shrinking back into the button (TopEnd ~ x: 0.90, y: 0.40)
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF071711)),
@@ -573,12 +583,12 @@ fun SupportMasjidPopup(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (hasValidQr) Color(0xFF123425) else Color(0xFF141F1A),
+                            containerColor = if (hasValidQr) Color.Black else Color(0xFF141F1A),
                             disabledContainerColor = Color(0xFF141F1A)
                         ),
                         enabled = hasValidQr,
                         shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.2.dp, if (hasValidQr) Color(0xFFE5B842) else Color(0xFF1E3328)),
+                        border = BorderStroke(1.2.dp, if (hasValidQr) Color(0xFFF3DE8E) else Color(0xFF1E3328)),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -600,7 +610,7 @@ fun SupportMasjidPopup(
                                 text = if (hasValidQr) "Pay ₹$selectedAmount via UPI (GPay, PhonePe, Paytm)" else "QR Code Not Available",
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (hasValidQr) Color(0xFFF3DE8E) else Color.White.copy(alpha = 0.4f),
+                                color = if (hasValidQr) Color.White else Color.White.copy(alpha = 0.4f),
                                 maxLines = 1
                             )
                         }
@@ -693,5 +703,79 @@ fun SupportMasjidPopup(
                 launchUpiForApp(pkg, selectedAmount)
             }
         )
+    }
+}
+
+/**
+ * Animated Top QR Code Icon Button for Home Page top bar:
+ * Cycles in a continuous top-to-bottom spin loop across 2 distinct color themes:
+ * 1. Golden background + Black text & icon
+ * 2. White background + Black text & icon
+ * Uses 4.5s delay and 850ms smooth spin transition matching Support page QR button.
+ */
+@Composable
+fun AnimatedTopQrIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val themes = remember {
+        listOf(
+            // 1. Golden background + black icon
+            Pair(Color(0xFFF3DE8E), Color(0xFF071711)),
+            // 2. White background + black icon
+            Pair(Color(0xFFFFFFFF), Color(0xFF000000))
+        )
+    }
+
+    var currentIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(4500L)
+            currentIndex = (currentIndex + 1) % 2
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .size(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true),
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.animation.AnimatedContent(
+            targetState = currentIndex,
+            transitionSpec = {
+                (androidx.compose.animation.slideInVertically(
+                    initialOffsetY = { -it },
+                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
+                ) + androidx.compose.animation.fadeIn(animationSpec = tween(400))) togetherWith
+                (androidx.compose.animation.slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = tween(durationMillis = 850, easing = FastOutSlowInEasing)
+                ) + androidx.compose.animation.fadeOut(animationSpec = tween(400)))
+            },
+            label = "topHomeQrButtonSpin"
+        ) { index ->
+            val (bgColor, iconColor) = themes[index]
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(bgColor)
+                    .border(1.dp, if (bgColor == Color(0xFFFFFFFF)) Color(0xFFE2E8F0) else Color(0xFFE5B842), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.QrCode,
+                    contentDescription = "Support Masjid QR",
+                    tint = iconColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
     }
 }

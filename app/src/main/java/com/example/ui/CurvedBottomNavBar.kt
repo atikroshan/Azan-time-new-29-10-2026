@@ -37,6 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.sp
 
 /**
@@ -54,6 +56,8 @@ fun AnimatedCurvedNavBar(
     ramazanLabel: String,
     isRamazanEnabled: Boolean,
     onRamazanTap: () -> Unit,
+    isBusy: Boolean = false,
+    onTabTargetMeasured: ((tabKey: String, target: TabTarget) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val selectedIndex = when (selectedTab) {
@@ -202,8 +206,10 @@ fun AnimatedCurvedNavBar(
                     selected = selectedIndex == 0,
                     icon = Icons.Outlined.HeadsetMic,
                     label = supportLabel,
-                    onClick = { onSelectTab("support") },
+                    onClick = { if (!isBusy) onSelectTab("support") },
                     testTag = "nav_support_button",
+                    isBusy = isBusy,
+                    onPositionMeasured = { target -> onTabTargetMeasured?.invoke("support", target) },
                     modifier = Modifier.weight(1f)
                 )
 
@@ -212,8 +218,10 @@ fun AnimatedCurvedNavBar(
                     selected = selectedIndex == 1,
                     icon = Icons.Outlined.Home,
                     label = homeLabel,
-                    onClick = { onSelectTab("home") },
+                    onClick = { if (!isBusy) onSelectTab("home") },
                     testTag = "nav_home_button",
+                    isBusy = isBusy,
+                    onPositionMeasured = { target -> onTabTargetMeasured?.invoke("home", target) },
                     modifier = Modifier.weight(1f)
                 )
 
@@ -222,9 +230,11 @@ fun AnimatedCurvedNavBar(
                     selected = selectedIndex == 2,
                     icon = Icons.Outlined.NightsStay,
                     label = ramazanLabel,
-                    onClick = onRamazanTap,
+                    onClick = { if (!isBusy) onRamazanTap() },
                     testTag = "nav_ramazan_button",
                     enabled = isRamazanEnabled,
+                    isBusy = isBusy,
+                    onPositionMeasured = { target -> onTabTargetMeasured?.invoke("ramazan", target) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -240,6 +250,8 @@ private fun NavBarItem(
     onClick: () -> Unit,
     testTag: String,
     enabled: Boolean = true,
+    isBusy: Boolean = false,
+    onPositionMeasured: ((TabTarget) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val iconScale by animateFloatAsState(
@@ -258,10 +270,26 @@ private fun NavBarItem(
         verticalArrangement = Arrangement.Bottom,
         modifier = modifier
             .fillMaxHeight()
+            .onGloballyPositioned { coords ->
+                val bounds = coords.boundsInRoot()
+                onPositionMeasured?.invoke(
+                    TabTarget(
+                        centerX = bounds.center.x,
+                        centerY = bounds.center.y,
+                        width = bounds.width,
+                        height = bounds.height
+                    )
+                )
+            }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick
+                enabled = enabled && !isBusy,
+                onClick = {
+                    if (!isBusy) {
+                        onClick()
+                    }
+                }
             )
             .testTag(testTag)
             .padding(bottom = 10.dp)

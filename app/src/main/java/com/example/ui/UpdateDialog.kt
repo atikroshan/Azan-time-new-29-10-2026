@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,9 +36,22 @@ fun UpdateDialog(
     val coroutineScope = rememberCoroutineScope()
     val primaryGold = Color(0xFFF3DE8E)
 
+    var availableVersions by remember { mutableStateOf(listOf(updateInfo)) }
+    var selectedVersion by remember { mutableStateOf(updateInfo) }
+    var isLoadingVersions by remember { mutableStateOf(true) }
+
     var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableIntStateOf(0) }
     var downloadError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val fetched = AppUpdateManager.fetchAllAvailableVersions()
+        if (fetched.isNotEmpty()) {
+            availableVersions = fetched
+            selectedVersion = fetched.firstOrNull { it.latestVersionName == updateInfo.latestVersionName } ?: fetched.first()
+        }
+        isLoadingVersions = false
+    }
 
     Dialog(onDismissRequest = {
         if (!isDownloading) onDismiss()
@@ -66,7 +81,7 @@ fun UpdateDialog(
                 ) {
                     Icon(
                         imageVector = Icons.Default.SystemUpdate,
-                        contentDescription = "Update Available",
+                        contentDescription = "Version Manager & Restore",
                         tint = primaryGold,
                         modifier = Modifier.size(28.dp)
                     )
@@ -75,9 +90,9 @@ fun UpdateDialog(
                 // Title
                 Text(
                     text = when (language) {
-                        "ur" -> "نیا اپ ڈیٹ دستیاب ہے (v${updateInfo.latestVersionName})"
-                        "hi" -> "नया अपडेट उपलब्ध है (v${updateInfo.latestVersionName})"
-                        else -> "Update Available (v${updateInfo.latestVersionName})"
+                        "ur" -> "ورژن مینیجر اور ریستور (v${selectedVersion.latestVersionName})"
+                        "hi" -> "वर्जन मैनेजर और रीस्टोर (v${selectedVersion.latestVersionName})"
+                        else -> "Version Manager & Restore (v${selectedVersion.latestVersionName})"
                     },
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
@@ -85,25 +100,89 @@ fun UpdateDialog(
                     textAlign = TextAlign.Center
                 )
 
-                // Subtitle / Description
-                Text(
-                    text = if (updateInfo.changelog.isNotBlank()) {
-                        updateInfo.changelog
-                    } else {
-                        when (language) {
-                            "ur" -> "ایپ کا نیا ورژن دستیاب ہے۔ بہتر کارکردگی اور اوقات کے لیے ابھی اپ ڈیٹ کریں۔"
-                            "hi" -> "ऐप का नया वर्जन उपलब्ध है। बेहतर प्रदर्शन और नए फीचर्स के लिए अभी अपडेट करें।"
-                            else -> "A new version of Azan Time Solapur is available with improvements and timetable updates."
+                // Version Selection Selector
+                if (isLoadingVersions) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                        color = primaryGold
+                    )
+                } else if (availableVersions.size > 1) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = when (language) {
+                                "ur" -> "ورژن منتخب کریں (Select Version):"
+                                "hi" -> "वर्जन चुनें (Select Version):"
+                                else -> "Select Version to Preview & Restore:"
+                            },
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(availableVersions, key = { it.latestVersionName }) { ver ->
+                                val isSelected = ver.latestVersionName == selectedVersion.latestVersionName
+                                Surface(
+                                    onClick = { selectedVersion = ver },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) primaryGold else Color(0xFF1E293B),
+                                    border = BorderStroke(1.dp, if (isSelected) primaryGold else Color.White.copy(alpha = 0.2f))
+                                ) {
+                                    Text(
+                                        text = "v${ver.latestVersionName}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) Color(0xFF0F172A) else Color.White,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
                         }
-                    },
-                    fontSize = 12.5.sp,
-                    color = Color.White.copy(alpha = 0.85f),
-                    textAlign = TextAlign.Center,
-                    lineHeight = 17.sp
-                )
+                    }
+                }
+
+                // Preview Box (Changelog / Release Notes as per selected version)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF162238)),
+                    border = BorderStroke(1.dp, primaryGold.copy(alpha = 0.3f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = when (language) {
+                                "ur" -> "پیش نظارہ (Preview & Changelog):"
+                                "hi" -> "प्रीव्यू (Preview & Changelog):"
+                                else -> "Preview & Release Notes:"
+                            },
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = primaryGold
+                        )
+                        Text(
+                            text = if (selectedVersion.changelog.isNotBlank()) {
+                                selectedVersion.changelog
+                            } else {
+                                "No release notes available for version v${selectedVersion.latestVersionName}."
+                            },
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.85f),
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
 
                 if (isDownloading) {
-                    // Progress Bar
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -118,7 +197,7 @@ fun UpdateDialog(
                             trackColor = Color.White.copy(alpha = 0.2f)
                         )
                         Text(
-                            text = "Downloading... $downloadProgress%",
+                            text = "Restoring / Downloading v${selectedVersion.latestVersionName}... $downloadProgress%",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF10B981)
@@ -138,13 +217,12 @@ fun UpdateDialog(
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
 
-                // Actions: Update and Cancel
+                // Actions: Restore / Update and Cancel
                 if (!isDownloading) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Cancel Button
                         OutlinedButton(
                             onClick = onDismiss,
                             modifier = Modifier.weight(1f),
@@ -163,15 +241,18 @@ fun UpdateDialog(
                             )
                         }
 
-                        // Update Button
                         Button(
                             onClick = {
+                                if (selectedVersion.downloadUrl.isBlank()) {
+                                    downloadError = "This is the current active version or no download URL is available."
+                                    return@Button
+                                }
                                 isDownloading = true
                                 downloadError = null
                                 coroutineScope.launch {
-                                    val destination = File(context.cacheDir, "AzanTime_v${updateInfo.latestVersionName}.apk")
+                                    val destination = File(context.cacheDir, "AzanTime_v${selectedVersion.latestVersionName}.apk")
                                     val success = AppUpdateManager.downloadApk(
-                                        downloadUrl = updateInfo.downloadUrl,
+                                        downloadUrl = selectedVersion.downloadUrl,
                                         destinationFile = destination,
                                         onProgress = { percent ->
                                             downloadProgress = percent
@@ -182,21 +263,22 @@ fun UpdateDialog(
                                         onDismiss()
                                         AppUpdateManager.installApk(context, destination)
                                     } else {
-                                        downloadError = "Download failed. Please check internet connection."
+                                        downloadError = "Restore / Download failed for v${selectedVersion.latestVersionName}."
                                     }
                                 }
                             },
-                            modifier = Modifier.weight(1.2f),
+                            modifier = Modifier.weight(1.3f),
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            enabled = selectedVersion.downloadUrl.isNotBlank()
                         ) {
                             Text(
                                 text = when (language) {
-                                    "ur" -> "اپ ڈیٹ کریں"
-                                    "hi" -> "अपडेट करें"
-                                    else -> "Update"
+                                    "ur" -> "بحال / اپ ڈیٹ کریں"
+                                    "hi" -> "रीस्टोर / अपडेट करें"
+                                    else -> "Restore v${selectedVersion.latestVersionName}"
                                 },
-                                fontSize = 13.sp,
+                                fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )

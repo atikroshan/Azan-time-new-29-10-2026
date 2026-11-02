@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Genie Tab Navigation</title>
+<style>
+:root{--solid:#f4f5f9;--card:#fff;--text:#16171b;--sub:#6b6f7a;--tab:rgba(255,255,255,.72);--tabbtn:#eceef5;--accent:#4f6bff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--solid:#15161a;--card:#202228;--text:#f3f4f7;--sub:#9a9fab;--tab:rgba(32,34,40,.72);--tabbtn:#2b2d35;--accent:#7b8fff}}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:var(--text);background:#0d0e12}
+.app{position:relative;height:100%;max-width:430px;margin:0 auto;overflow:hidden;background:var(--solid)}
+@media (min-width:600px){.app{height:min(860px,94vh);margin-top:3vh;border-radius:38px;box-shadow:0 0 0 10px #000,0 30px 80px rgba(0,0,0,.6)}}
+.page{position:absolute;inset:0;background:var(--solid);visibility:hidden;z-index:1}
+.page.show{visibility:visible;z-index:2}
+.page.top{z-index:3}
+.scroll{height:100%;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 28px) 20px 130px}
+.hero{border-radius:22px;padding:24px;color:#fff;margin-bottom:18px}
+.hero h1{font-size:28px;margin-bottom:6px}
+.hero p{opacity:.9;font-size:14px;line-height:1.5}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card b{display:block;margin-bottom:4px}
+.card span{font-size:13px;color:var(--sub);line-height:1.5}
+.layer{position:absolute;inset:0;z-index:50;pointer-events:none}
+.strip{position:absolute;left:0;top:0;overflow:hidden;transform-origin:0 0;will-change:transform}
+.tabbar{position:absolute;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:100;display:flex;justify-content:space-around;padding:10px;border-radius:26px;background:var(--tab);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);box-shadow:0 8px 30px rgba(0,0,0,.25),0 0 0 .5px rgba(128,128,128,.3)}
+.tab{width:60px;height:56px;border:0;border-radius:18px;background:transparent;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;cursor:pointer;transition:background .25s,color .25s,transform .25s}
+.tab i{font-style:normal;font-size:22px}
+.tab.on{background:var(--tabbtn);color:var(--accent);transform:translateY(-3px)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <section class="page show top" data-i="0">
+    <div class="scroll">
+      <div class="hero" style="background:linear-gradient(135deg,#4f6bff,#8a5cff)"><h1>Home</h1><p>Neeche Support tab dabao. Home apne 🏠 button mein fold hokar jayega aur Support peeche se dikhega.</p></div>
+      <div class="card"><b>Welcome back</b><span>Yahan apna home content aayega.</span></div>
+      <div class="card"><b>Recent activity</b><span>Orders, notifications ya kuch bhi.</span></div>
+      <div class="card"><b>Offers</b><span>Aaj ke special deals.</span></div>
+      <div class="card"><b>News</b><span>Latest updates.</span></div>
+    </div>
+  </section>
+
+  <section class="page" data-i="1">
+    <div class="scroll">
+      <div class="hero" style="background:linear-gradient(135deg,#00b894,#00cec9)"><h1>Support</h1><p>Humari team aapki madad ke liye hai. Tab badlo to ye page apne 💬 button mein fold hoga.</p></div>
+      <div class="card"><b>Live chat</b><span>Agent se turant baat karo.</span></div>
+      <div class="card"><b>FAQs</b><span>Aam sawaalon ke jawab.</span></div>
+      <div class="card"><b>Raise a ticket</b><span>Problem ki details bhejo.</span></div>
+    </div>
+  </section>
+
+  <section class="page" data-i="2">
+    <div class="scroll">
+      <div class="hero" style="background:linear-gradient(135deg,#ff7a59,#ff4d8d)"><h1>Profile</h1><p>Aapki account details yahan hain.</p></div>
+      <div class="card"><b>Personal info</b><span>Naam, email, phone.</span></div>
+      <div class="card"><b>Saved addresses</b><span>Delivery addresses manage karo.</span></div>
+      <div class="card"><b>Payments</b><span>Cards aur UPI.</span></div>
+    </div>
+  </section>
+
+  <section class="page" data-i="3">
+    <div class="scroll">
+      <div class="hero" style="background:linear-gradient(135deg,#2d3436,#636e72)"><h1>Settings</h1><p>App ko apne hisaab se set karo.</p></div>
+      <div class="card"><b>Notifications</b><span>Alerts on/off karo.</span></div>
+      <div class="card"><b>Language</b><span>App ki bhasha chuno.</span></div>
+      <div class="card"><b>Privacy</b><span>Data aur permissions.</span></div>
+    </div>
+  </section>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab on" data-i="0"><i>🏠</i>Home</button>
+    <button class="tab" data-i="1"><i>💬</i>Support</button>
+    <button class="tab" data-i="2"><i>👤</i>Profile</button>
+    <button class="tab" data-i="3"><i>⚙️</i>Settings</button>
+  </nav>
+</div>
+
+<script>
+(function(){
+  var app=document.getElementById('app'),
+      pages=[].slice.call(document.querySelectorAll('.page')),
+      tabs=[].slice.call(document.querySelectorAll('.tab')),
+      cur=0,busy=false,N=56,DUR=780;
+
+  function ease(q){return q*q*(3-2*q);}
+
+  // purana page apne tab button mein cloth/genie ki tarah fold hota hai
+  function clamp(x){return x<0?0:x>1?1:x;}
+  function ss(x){x=clamp(x);return x*x*(3-2*x);}
+
+  function fold(i,done){
+    var w=pages[i],ar=app.getBoundingClientRect(),
+        tr=tabs[i].getBoundingClientRect(),
+        W=ar.width,H=ar.height,
+        tx=tr.left+tr.width/2-ar.left,ty=tr.top+tr.height/2-ar.top,cx=W/2,
+        minS=Math.max(tr.width*.55/W,.03),sh=H/N,span=ty,
+        saved=w.querySelector('.scroll').scrollTop,
+        layer=document.createElement('div'),strips=[],k,s,c;
+    layer.className='layer';
+    for(k=0;k<N;k++){
+      s=document.createElement('div');s.className='strip';
+      s.style.width=W+'px';s.style.height=sh+'px';
+      c=w.cloneNode(true);
+      c.className='page show';
+      c.style.cssText='position:absolute;inset:auto;left:0;top:'+(-k*sh)+'px;width:'+W+'px;height:'+H+'px;';
+      s.appendChild(c);layer.appendChild(s);strips.push(s);
+    }
+    // funnel: screen mein fixed S-curve. width aur center y ke hisaab se badalte hain
+    function profile(y,n){
+      var t=clamp(y/span);
+      return {f:1+(minS-1)*ss((t-.1)/.9)*n, c:cx+(tx-cx)*ss(t)*n};
+    }
+    function render(p){
+      // phase 1: neeche ka kinara icon tak jaata hai aur funnel banta hai
+      // phase 2: upar ka kinara neeche aata hai, page funnel mein se beh jaata hai
+      var n=ss(p/.55),
+          yt=ty*ss((p-.28)/.72),
+          yb=H+(ty-H)*n,
+          y0=yt,pr=profile(y0,n),y1,cu,a,dc,sy,j;
+      for(j=0;j<N;j++){
+        y1=yt+(yb-yt)*((j+1)/N);
+        cu=profile(y1,n);
+        a=(pr.f+cu.f)/2;
+        dc=cu.c-pr.c;
+        sy=Math.max(.001,(y1-y0+.8)/sh);
+        strips[j].style.transform='matrix('+a+',0,'+(dc/sh)+','+sy+','+((pr.c+cu.c)/2-a*W/2-dc/2)+','+y0+')';
+        y0=y1;pr=cu;
+      }
+      layer.style.opacity=p>.94?Math.max(0,(1-p)/.06):1;
+    }
+    render(0);
+    app.appendChild(layer);
+    for(k=0;k<N;k++){strips[k].querySelector('.scroll').scrollTop=saved;}
+    w.classList.remove('show','top');
+    var t0=performance.now();
+    (function frame(now){
+      var u=Math.min(1,((now||performance.now())-t0)/DUR);
+      render(.5-.5*Math.cos(Math.PI*u)); // sine ease-in-out: nikalte waqt smooth
+      if(u<1)requestAnimationFrame(frame);
+      else{layer.remove();done();}
+    })(t0);
+  }
+
+  function go(n){
+    if(n===cur||busy)return;
+    busy=true;
+    var old=cur;
+    cur=n;
+    tabs.forEach(function(b,i){b.classList.toggle('on',i===n);});
+    // naya page pehle se peeche khula hai
+    pages[n].classList.add('show','top');
+    pages[n].scrollTop=0;
+    fold(old,function(){busy=false;});
+  }
+
+  tabs.forEach(function(b){
+    b.addEventListener('click',function(){go(+b.dataset.i);});
+  });
+})();
+</script>
+</body>
+</html>

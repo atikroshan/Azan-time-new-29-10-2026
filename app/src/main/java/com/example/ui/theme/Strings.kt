@@ -188,7 +188,14 @@ data class AppStrings(
     val noMasjidFoundTitle: String = "No masjid found for \"%s\"",
     val noMasjidFoundHint: String = "Try searching by Location name or 9-digit Masjid ID",
     val matchingMasajid: String = "MATCHING MASAJID (%d)",
-    val tapToSelect: String = "Tap to select"
+    val tapToSelect: String = "Tap to select",
+
+    // Support Menu
+    val requestMasjid: String = "Request Masjid",
+    val changeMasjid: String = "Change Masjid",
+    val feedback: String = "Feedback",
+    val rateUs: String = "Rate Us",
+    val support: String = "Support"
 ) {
     fun getMonthFullName(month: Int): String = when (month) {
         1 -> jan
@@ -439,7 +446,14 @@ val HindiStrings = AppStrings(
     noMasjidFoundTitle = "\"%s\" के लिए कोई मस्जिद नहीं मिली",
     noMasjidFoundHint = "स्थान के नाम या 9-अंकों की मस्जिद ID से खोजें",
     matchingMasajid = "मिली हुई मस्जिदें (%d)",
-    tapToSelect = "चुनने के लिए टैप करें"
+    tapToSelect = "चुनने के लिए टैप करें",
+
+    // Support Menu
+    requestMasjid = "मस्जिद के लिए अनुरोध",
+    changeMasjid = "मस्जिद बदलें",
+    feedback = "सुझाव (फीडबैक)",
+    rateUs = "हमें रेटिंग दें",
+    support = "सहायता (सपोर्ट)"
 )
 
 val UrduStrings = AppStrings(
@@ -628,7 +642,14 @@ val UrduStrings = AppStrings(
     noMasjidFoundTitle = "\"%s\" کے لیے کوئی مسجد نہیں ملی",
     noMasjidFoundHint = "مقام کے نام یا 9 ہندسوں کی مسجد آئی ڈی سے تلاش کریں",
     matchingMasajid = "ملتی جلتی مساجد (%d)",
-    tapToSelect = "منتخب کرنے کے لیے ٹیپ کریں"
+    tapToSelect = "منتخب کرنے کے لیے ٹیپ کریں",
+
+    // Support Menu
+    requestMasjid = "مسجد کی درخواست",
+    changeMasjid = "مسجد تبدیل کریں",
+    feedback = "فیڈ بیک",
+    rateUs = "ہمیں ریٹ کریں",
+    support = "سپورٹ"
 )
 
 val LocalAppStrings = staticCompositionLocalOf { EnglishStrings }

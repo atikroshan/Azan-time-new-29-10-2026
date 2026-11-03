@@ -55,7 +55,7 @@ object MasjidLocalCacheManager {
      * Resolves the model to pass to Coil AsyncImage for a masjid photo.
      * Returns the local File if photo.webp exists locally, otherwise returns the direct URL or fallback drawable.
      */
-    fun getPhotoModel(context: Context, masjidId: String, remoteUrl: String): Any {
+    fun getPhotoModel(context: Context, masjidId: String, remoteUrl: String): Any? {
         val file = getLocalPhotoFile(context, masjidId)
         if (file.exists() && file.length() > 0) {
             return file
@@ -64,7 +64,7 @@ object MasjidLocalCacheManager {
         if (directUrl.isNotBlank()) {
             return directUrl
         }
-        return R.drawable.img_makkah_light
+        return null
     }
 
     /**

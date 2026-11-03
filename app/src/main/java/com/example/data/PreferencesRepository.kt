@@ -47,21 +47,29 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
+    private val KEY_LAST_SETUP_VERSION = androidx.datastore.preferences.core.intPreferencesKey("last_setup_version")
+
     fun isSetupCompletedSync(): Boolean {
         return try {
-            context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
-                .getBoolean("setup_completed", false)
+            val sp = context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
+            val lastVer = sp.getInt("last_setup_version", 0)
+            if (lastVer < com.example.BuildConfig.VERSION_CODE) {
+                false
+            } else {
+                sp.getBoolean("setup_completed", false)
+            }
         } catch (e: Exception) {
             false
         }
     }
 
     val isSetupCompletedFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        val dsVal = prefs[KEY_SETUP_COMPLETED]
-        if (dsVal != null) {
-            dsVal
+        val sp = try { context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE) } catch (_: Exception) { null }
+        val lastVer = prefs[KEY_LAST_SETUP_VERSION] ?: (sp?.getInt("last_setup_version", 0) ?: 0)
+        if (lastVer < com.example.BuildConfig.VERSION_CODE) {
+            false
         } else {
-            isSetupCompletedSync()
+            prefs[KEY_SETUP_COMPLETED] ?: isSetupCompletedSync()
         }
     }
 
@@ -70,12 +78,14 @@ class PreferencesRepository(private val context: Context) {
             context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .putBoolean("setup_completed", completed)
+                .putInt("last_setup_version", if (completed) com.example.BuildConfig.VERSION_CODE else 0)
                 .commit()
         } catch (e: Exception) {
             e.printStackTrace()
         }
         context.dataStore.edit { prefs ->
             prefs[KEY_SETUP_COMPLETED] = completed
+            prefs[KEY_LAST_SETUP_VERSION] = if (completed) com.example.BuildConfig.VERSION_CODE else 0
         }
     }
 

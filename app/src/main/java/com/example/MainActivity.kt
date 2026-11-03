@@ -984,25 +984,19 @@ fun AzanHomeContent(
             ) {
                 var imageLoadError by remember(photoUrl, uiState.selectedMasjid.id) { mutableStateOf(false) }
 
-                if (hasMasjidPhoto) {
-                    val localOrRemoteModel = remember(photoUrl, uiState.selectedMasjid.id) {
-                        com.example.data.MasjidLocalCacheManager.getPhotoModel(context, uiState.selectedMasjid.id, photoUrl)
-                    }
+                val localOrRemoteModel = remember(photoUrl, uiState.selectedMasjid.id) {
+                    com.example.data.MasjidLocalCacheManager.getPhotoModel(context, uiState.selectedMasjid.id, photoUrl)
+                }
+                val hasValidPhoto = hasMasjidPhoto && localOrRemoteModel != null && !imageLoadError
 
-                    val finalPhotoModel = if (!imageLoadError) {
-                        ImageRequest.Builder(context)
-                            .data(localOrRemoteModel)
-                            .placeholder(R.drawable.img_makkah_light)
-                            .error(R.drawable.img_makkah_light)
-                            .fallback(R.drawable.img_makkah_light)
-                            .diskCachePolicy(coil.request.CachePolicy.ENABLED)
-                            .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
-                            .crossfade(true)
-                            .listener(onError = { _, _ -> imageLoadError = true })
-                            .build()
-                    } else {
-                        R.drawable.img_makkah_light
-                    }
+                if (hasValidPhoto) {
+                    val finalPhotoModel = ImageRequest.Builder(context)
+                        .data(localOrRemoteModel)
+                        .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .crossfade(true)
+                        .listener(onError = { _, _ -> imageLoadError = true })
+                        .build()
 
                     // Subtle ambient background fill for wide/square letterboxed margins
                     AsyncImage(

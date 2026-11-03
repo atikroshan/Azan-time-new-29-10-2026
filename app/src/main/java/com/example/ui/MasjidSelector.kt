@@ -46,6 +46,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.request.CachePolicy
+import com.example.R
 import androidx.core.content.ContextCompat
 import java.util.Locale
 import com.example.LanguageCirclesRow
@@ -731,48 +733,21 @@ fun MasjidSelectionDialog(
                             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                             .background(Color(0xFF0A0F14))
                     ) {
-                        if (!targetMasjid.photoUrl.isNullOrBlank()) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(targetMasjid.photoUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = targetMasjid.getLocalizedName(language),
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            // Fallback Mosque Illustration Background
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(Color(0xFF1E293B), Color(0xFF0F172A))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Mosque,
-                                        contentDescription = null,
-                                        tint = Color(0xFFF2CA50).copy(alpha = 0.50f),
-                                        modifier = Modifier.size(80.dp)
-                                    )
-                                    Text(
-                                        text = targetMasjid.getLocalizedName(language),
-                                        fontSize = 15.sp,
-                                        color = Color(0xFFD0C5AF).copy(alpha = 0.70f),
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(horizontal = 20.dp)
-                                    )
-                                }
-                            }
-                        }
+                        val photoData: Any = com.example.data.MasjidLocalCacheManager.getPhotoModel(context, targetMasjid.id, targetMasjid.photoUrl)
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(photoData)
+                                .placeholder(R.drawable.img_makkah_light)
+                                .error(R.drawable.img_makkah_light)
+                                .fallback(R.drawable.img_makkah_light)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = targetMasjid.getLocalizedName(language),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
                     // 2. BOTTOM: Details and Buttons

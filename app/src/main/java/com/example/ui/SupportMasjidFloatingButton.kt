@@ -266,7 +266,7 @@ fun SupportMasjidPopup(
         com.example.data.MasjidPaymentHelper.hasValidQr(selectedMasjid)
     }
     val resolvedQrModel: Any? = remember(selectedMasjid, qrUrl) {
-        com.example.data.MasjidPaymentHelper.getMasjidQrModel(selectedMasjid)
+        com.example.data.MasjidPaymentHelper.getMasjidQrModel(selectedMasjid, context)
     }
 
     // Background decoding if a remote QR image needs to be parsed

@@ -214,47 +214,47 @@ fun SupportScreen(
     ) {
         val screenHeight = maxHeight
         val verticalSpacing = when {
-            screenHeight >= 760.dp -> 16.dp
-            screenHeight >= 700.dp -> 14.dp
-            screenHeight >= 640.dp -> 11.dp
-            else -> 9.dp
+            screenHeight >= 720.dp -> 3.dp
+            screenHeight >= 640.dp -> 2.dp
+            else -> 1.dp
         }
 
         val logoSize = when {
-            screenHeight >= 760.dp -> 96.dp
-            screenHeight >= 700.dp -> 90.dp
-            else -> 80.dp
+            screenHeight >= 720.dp -> 66.dp
+            screenHeight >= 640.dp -> 60.dp
+            else -> 54.dp
         }
         val wordmarkHeight = when {
-            screenHeight >= 760.dp -> 50.dp
-            screenHeight >= 700.dp -> 44.dp
-            else -> 38.dp
+            screenHeight >= 720.dp -> 32.dp
+            screenHeight >= 640.dp -> 28.dp
+            else -> 24.dp
         }
         val actionCardHeight = when {
-            screenHeight >= 760.dp -> 74.dp
-            screenHeight >= 700.dp -> 70.dp
-            else -> 64.dp
+            screenHeight >= 720.dp -> 50.dp
+            screenHeight >= 640.dp -> 46.dp
+            else -> 42.dp
         }
         val amountChipHeight = when {
-            screenHeight >= 760.dp -> 52.dp
-            screenHeight >= 700.dp -> 48.dp
-            else -> 44.dp
+            screenHeight >= 720.dp -> 34.dp
+            screenHeight >= 640.dp -> 31.dp
+            else -> 28.dp
         }
         val upiButtonHeight = when {
-            screenHeight >= 760.dp -> 56.dp
-            screenHeight >= 700.dp -> 52.dp
-            else -> 48.dp
+            screenHeight >= 720.dp -> 38.dp
+            screenHeight >= 640.dp -> 35.dp
+            else -> 32.dp
         }
         val rateButtonHeight = when {
-            screenHeight >= 760.dp -> 38.dp
-            else -> 35.dp
+            screenHeight >= 720.dp -> 28.dp
+            screenHeight >= 640.dp -> 26.dp
+            else -> 24.dp
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 4.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 0.dp, bottom = 2.dp),
             verticalArrangement = Arrangement.spacedBy(verticalSpacing),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -262,7 +262,7 @@ fun SupportScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 0.dp),
+                    .padding(top = 0.dp, bottom = 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start
             ) {
@@ -272,23 +272,24 @@ fun SupportScreen(
                 )
             }
 
-            // 2. Center: Logo & AZAN TIME with ample breathing padding, wordmark positioned lower down
+            // 2. Center: Logo & AZAN TIME shifted slightly upwards for compact fit
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 0.dp, bottom = 2.dp),
+                    .offset(y = (-4).dp)
+                    .padding(top = 0.dp, bottom = 0.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 AzanLogoCard(
                     size = logoSize,
-                    modifier = Modifier.offset(y = (-6).dp)
+                    modifier = Modifier.offset(y = (-2).dp)
                 )
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(1.dp))
                 AzanTimeWordmark(
                     height = wordmarkHeight,
-                    topPadding = 4.dp,
-                    bottomPadding = 4.dp
+                    topPadding = 0.dp,
+                    bottomPadding = 0.dp
                 )
             }
 
@@ -427,8 +428,8 @@ fun SupportScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Header row: Balanced Center SADAQAH JARIYAH (in CAPS) + Larger QR Code button on Right
                     Row(
@@ -580,7 +581,7 @@ fun SupportScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 13.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -641,7 +642,7 @@ fun SupportScreen(
                     Box(
                         modifier = Modifier
                             .width(1.dp)
-                            .height(48.dp)
+                            .height(34.dp)
                             .background(Color(0x40F3DE8E))
                     )
 

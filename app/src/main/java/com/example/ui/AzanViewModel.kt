@@ -85,11 +85,35 @@ class AzanViewModel(
                     if (currentSelectedId == null || parsed.none { it.id == currentSelectedId }) {
                         prefs.setSelectedMasjidId(parsed.first().id)
                     }
+                    preloadMasjidPhotos(parsed)
                 }
             } catch (e: Exception) {
                 // Ignore
             }
             syncGoogleSheet()
+        }
+    }
+
+    private fun preloadMasjidPhotos(masajid: List<MasjidItem>) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                // 1. Save WebP photos and QR codes into local folders /files/masjids/{id}/
+                com.example.data.MasjidLocalCacheManager.syncAllMasjidImages(context, masajid)
+
+                // 2. Pre-cache in Coil ImageLoader
+                val imageLoader = coil.Coil.imageLoader(context)
+                for (masjid in masajid) {
+                    val url = masjid.photoUrl
+                    if (!url.isNullOrBlank() && url.startsWith("http")) {
+                        val request = coil.request.ImageRequest.Builder(context)
+                            .data(url)
+                            .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                            .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                            .build()
+                        imageLoader.enqueue(request)
+                    }
+                }
+            } catch (_: Throwable) {}
         }
     }
 
@@ -122,6 +146,7 @@ class AzanViewModel(
                     if (targetMasjid.jumahJammatTime.isNotBlank()) {
                         prefs.setCustomJammatTime("jumah", targetMasjid.jumahJammatTime)
                     }
+                    preloadMasjidPhotos(parsed)
                 }
             } catch (e: Exception) {
                 // Fallback to offline / cached

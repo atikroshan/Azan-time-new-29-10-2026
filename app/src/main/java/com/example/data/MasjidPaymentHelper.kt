@@ -134,11 +134,18 @@ object MasjidPaymentHelper {
      * - The direct image URL if not yet recreated into a bitmap
      * - null if the masjid has no QR code (triggering the Guest Masjid deactivated UI)
      */
-    fun getMasjidQrModel(masjid: MasjidItem?): Any? {
+    fun getMasjidQrModel(masjid: MasjidItem?, context: Context? = null): Any? {
         if (!hasValidQr(masjid) || masjid == null) return null
 
         val mId = masjid.id.trim()
         val mName = masjid.name.trim()
+
+        if (context != null) {
+            val localFile = MasjidLocalCacheManager.getLocalQrFile(context, mId)
+            if (localFile.exists() && localFile.length() > 0) {
+                return localFile
+            }
+        }
 
         // 1. Mohammadiya Masjid: return the recreated, upright, high-contrast QR Bitmap
         if (mId == MOHAMMADIYA_ID ||

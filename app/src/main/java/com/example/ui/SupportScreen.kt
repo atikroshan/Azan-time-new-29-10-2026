@@ -223,55 +223,55 @@ fun SupportScreen(
         }
 
         val logoSize = when {
-            screenHeight >= 720.dp -> 58.dp
-            isUltraCompact -> 38.dp
-            isCompact -> 44.dp
-            else -> 50.dp
+            screenHeight >= 720.dp -> 76.dp
+            isUltraCompact -> 58.dp
+            isCompact -> 64.dp
+            else -> 72.dp
         }
         val wordmarkHeight = when {
-            screenHeight >= 720.dp -> 28.dp
-            isUltraCompact -> 18.dp
-            isCompact -> 20.dp
-            else -> 24.dp
+            screenHeight >= 720.dp -> 38.dp
+            isUltraCompact -> 28.dp
+            isCompact -> 32.dp
+            else -> 36.dp
         }
         val actionCardHeight = when {
-            screenHeight >= 720.dp -> 46.dp
-            isUltraCompact -> 34.dp
-            isCompact -> 38.dp
-            else -> 42.dp
+            screenHeight >= 720.dp -> 50.dp
+            isUltraCompact -> 38.dp
+            isCompact -> 42.dp
+            else -> 46.dp
         }
         val amountChipHeight = when {
-            screenHeight >= 720.dp -> 32.dp
-            isUltraCompact -> 22.dp
-            isCompact -> 25.dp
-            else -> 28.dp
-        }
-        val upiButtonHeight = when {
-            screenHeight >= 720.dp -> 36.dp
+            screenHeight >= 720.dp -> 34.dp
             isUltraCompact -> 26.dp
             isCompact -> 28.dp
             else -> 32.dp
         }
+        val upiButtonHeight = when {
+            screenHeight >= 720.dp -> 38.dp
+            isUltraCompact -> 30.dp
+            isCompact -> 32.dp
+            else -> 36.dp
+        }
         val rateButtonHeight = when {
-            screenHeight >= 720.dp -> 26.dp
-            isUltraCompact -> 18.dp
-            isCompact -> 21.dp
-            else -> 24.dp
+            screenHeight >= 720.dp -> 28.dp
+            isUltraCompact -> 20.dp
+            isCompact -> 22.dp
+            else -> 26.dp
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .then(if (screenHeight < 380.dp) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                .padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .verticalScroll(rememberScrollState())
+                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. Top Bar: Language Buttons at top
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 0.dp, bottom = 0.dp),
+                    .padding(top = 2.dp, bottom = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start
             ) {
@@ -281,137 +281,26 @@ fun SupportScreen(
                 )
             }
 
-            // 2. Center: Logo & AZAN TIME shifted slightly upwards for compact fit
+            // 2. Center: Prominent, Spacious Logo & AZAN TIME Wordmark with Punchline
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-4).dp)
-                    .padding(top = 0.dp, bottom = 0.dp),
+                    .padding(top = 2.dp, bottom = 2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 AzanLogoCard(
-                    size = logoSize,
-                    modifier = Modifier.offset(y = (-2).dp)
+                    size = logoSize
                 )
-                Spacer(modifier = Modifier.height(1.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 AzanTimeWordmark(
                     height = wordmarkHeight,
-                    topPadding = 0.dp,
-                    bottomPadding = 0.dp
+                    topPadding = 4.dp,
+                    bottomPadding = 4.dp
                 )
             }
 
-            // 3. Divided 2-Column Slot: Support & Feedback / Request Add Masjid (Transparent Glass Effect)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 1.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Left: Support & Feedback (WhatsApp - Transparent Glass)
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(actionCardHeight)
-                        .clickable { openWhatsApp() },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                    border = BorderStroke(1.2.dp, Color(0x734ADE80))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_whatsapp),
-                            contentDescription = "WhatsApp",
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "سپورٹ اور فیڈبیک"
-                                    "hi" -> "सपोर्ट और सुझाव"
-                                    else -> "Support & Feedback"
-                                },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "فوری واٹس ایپ"
-                                    "hi" -> "इंस्टेंट व्हाट्सएप"
-                                    else -> "Instant WhatsApp"
-                                },
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF4ADE80),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-
-                // Right: Request Add Masjid (Transparent Glass)
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(actionCardHeight)
-                        .clickable { showAddMasjidDialog = true },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                    border = BorderStroke(1.2.dp, Color(0x73E5B842))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Mosque,
-                            contentDescription = "Request Add Masjid",
-                            tint = primaryGold,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "نئی مسجد شامل کریں"
-                                    "hi" -> "नई मस्जिद जोड़ें"
-                                    else -> "Request Add Masjid"
-                                },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "اوقاتِ نماز درج کریں"
-                                    "hi" -> "लोकल टाइमिंग भेजें"
-                                    else -> "Submit Local Timings"
-                                },
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFE5B842),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 4. Change Slot (Selected Masjid - Transparent Glass Effect)
+            // Slot 1: Masjid Change (Selected Masjid Dropdown)
             Box(modifier = Modifier.padding(vertical = 0.dp)) {
                 MasjidSelectorDropdown(
                     selectedMasjid = uiState.selectedMasjid,
@@ -421,9 +310,59 @@ fun SupportScreen(
                     onLanguageSelect = onLangSelect,
                     containerColor = Color(0x380C261D),
                     borderColor = Color(0x663DB88F),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = if (isCompact) 4.dp else 8.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+
+            // Slot 2: Request Add Masjid
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showAddMasjidDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
+                border = BorderStroke(1.2.dp, Color(0x73E5B842))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Mosque,
+                        contentDescription = "Request Add Masjid",
+                        tint = primaryGold,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "نئی مسجد شامل کریں"
+                                "hi" -> "नई मस्जिद जोड़ें"
+                                else -> "Request Add Masjid"
+                            },
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "اوقاتِ نماز درج کریں"
+                                "hi" -> "लोکل टाइमिंग भेजें"
+                                else -> "Submit Local Timings"
+                            },
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFE5B842),
+                            maxLines = 1
+                        )
+                    }
+                }
             }
 
             // 5. Main Donation Card (Sadaqah Jariyah - Transparent Glass Effect)
@@ -438,115 +377,88 @@ fun SupportScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = if (isCompact) 4.dp else 7.dp),
-                    verticalArrangement = Arrangement.spacedBy(if (isCompact) 3.dp else 5.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Header row: Balanced Center SADAQAH JARIYAH (in CAPS) + Larger QR Code button on Right
-                    Row(
+                    // Header: SUPPORT APP (CAPS and Centered)
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Left balanced spacer matching QR button width for true center alignment
-                        Spacer(modifier = Modifier.width(88.dp))
-
-                        // Center: SUPPORT APP (CAPS and Centered)
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "ایپ سپورٹ"
-                                    "hi" -> "ऐप सपोर्ट"
-                                    else -> "SUPPORT APP"
-                                },
-                                fontSize = 13.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                letterSpacing = 0.8.sp,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "ثوابِ جاریہ"
-                                    "hi" -> "सवाब-ए-जारिया"
-                                    else -> "Sawab-e-Jariyah"
-                                },
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF4ADE80),
-                                textAlign = TextAlign.Center,
-                                maxLines = 1
-                            )
-                        }
-
-                        // Right: Spinning 3-color top-to-bottom QR Code button
-                        AnimatedSupportQrButton(
-                            onClick = { showQrDialog = true }
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "ایپ سپورٹ"
+                                "hi" -> "ऐप सपोर्ट"
+                                else -> "SUPPORT APP"
+                            },
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            letterSpacing = 0.8.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "ثوابِ جاریہ"
+                                "hi" -> "सवाब-ए-जारिया"
+                                else -> "Sawab-e-Jariyah"
+                            },
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF4ADE80),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
                         )
                     }
 
-                    // Amounts (Enlarged with Transparent Glass Effect)
-                    val amounts = listOf(50, 100, 250, 500)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        amounts.forEach { amt ->
-                            val isSelected = selectedContributionAmount == amt
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(amountChipHeight)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) Color(0xE6E5B842) else Color(0x2E113627))
-                                    .border(
-                                        width = 1.2.dp,
-                                        color = if (isSelected) Color(0xFFFFE082) else Color(0x593DB88F),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .clickable {
-                                        selectedContributionAmount = amt
-                                        showUpiAppChooserDialog = true
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "₹$amt",
-                                    fontSize = 14.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) Color(0xFF0F1713) else primaryGold
-                                )
-                            }
-                        }
-
-                        val isOtherSelected = !amounts.contains(selectedContributionAmount)
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(amountChipHeight)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isOtherSelected) Color(0xE6E5B842) else Color(0x2E113627))
-                                .border(
-                                    width = 1.2.dp,
-                                    color = if (isOtherSelected) Color(0xFFFFE082) else Color(0x593DB88F),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable { showOtherAmountDialog = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (isOtherSelected) "₹$selectedContributionAmount" else "Other",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isOtherSelected) Color(0xFF0F1713) else primaryGold
-                            )
+                    // Average-sized QR Code Image
+                    val isGuestMasjid = uiState.selectedMasjid.id.equals("guest", ignoreCase = true) ||
+                        uiState.selectedMasjid.name.contains("guest", ignoreCase = true)
+                    val effectiveQrUrl = uiState.selectedMasjid.qrUrl
+                    val customQrFile = remember { java.io.File(context.filesDir, "custom_masjid_qr.jpg").takeIf { it.exists() } }
+                    val cardQrModel: Any? = remember(effectiveQrUrl, customQrFile, isGuestMasjid) {
+                        if (isGuestMasjid) {
+                            null
+                        } else if (effectiveQrUrl.isNotBlank()) {
+                            com.example.data.GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(effectiveQrUrl)
+                        } else if (customQrFile != null && customQrFile.exists()) {
+                            customQrFile
+                        } else {
+                            null
                         }
                     }
 
-                    // Pay UPI Button (Onyx Glass with Golden Rim)
+                    Box(
+                        modifier = Modifier
+                            .size(130.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (cardQrModel != null) Color.White else Color(0xFF0F1A15))
+                            .border(1.2.dp, primaryGold.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                            .padding(6.dp)
+                            .clickable { showQrDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (cardQrModel != null) {
+                            coil.compose.AsyncImage(
+                                model = cardQrModel,
+                                contentDescription = "Donation QR Code",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                AzanLogoCard(size = 48.dp)
+                            }
+                        }
+                    }
+
+                    // Pay UPI Button (Onyx Glass with Golden Rim) below QR code
                     Button(
                         onClick = { showUpiAppChooserDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0x66040A07)),
@@ -564,12 +476,12 @@ fun SupportScreen(
                             Image(
                                 painter = painterResource(id = R.drawable.ic_upi),
                                 contentDescription = "UPI Logo",
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Pay ₹$selectedContributionAmount via UPI (GPay, PhonePe, Paytm)",
-                                fontSize = 13.sp,
+                                text = "Pay via UPI (GPay, PhonePe, Paytm)",
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 maxLines = 1
@@ -579,150 +491,187 @@ fun SupportScreen(
                 }
             }
 
-            // 6. Combined Follow Us (Left ~40%) & Rate Us (Right ~56%) Card (Transparent Glass Effect)
+            // Slot 4: Rate Us
+            val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 0.dp),
-                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0x36081E15)),
                 border = BorderStroke(1.2.dp, Color(0x66F3DE8E))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = if (isCompact) 4.dp else 6.dp),
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Left Side: Follow Us (~40%)
-                    Column(
-                        modifier = Modifier
-                            .weight(0.40f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalAlignment = Alignment.Start
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
+                            text = String.format(Locale.US, "%.1f", appRatingDisplay),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            color = primaryGold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                            for (i in 1..5) {
+                                val fillRatio = when {
+                                    appRatingDisplay >= i -> 1f
+                                    appRatingDisplay >= i - 0.5 -> 0.5f
+                                    else -> 0f
+                                }
+                                StarIconDisplay(fillRatio = fillRatio, size = 13.dp)
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = { showRateUsDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x40143827)),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.2.dp, Color(0xB3E5B842)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
+                        modifier = Modifier.height(rateButtonHeight)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Rate Us",
+                                tint = primaryGold,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Rate Us 5★",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = primaryGold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Slot 5: Support & Feedback (WhatsApp)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { openWhatsApp() },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
+                border = BorderStroke(1.2.dp, Color(0x734ADE80))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_whatsapp),
+                        contentDescription = "WhatsApp",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
                             text = when (uiState.language) {
-                                "ur" -> "ہمیں فالو کریں :"
-                                "hi" -> "फ़ॉलो करें :"
-                                else -> "Follow us :"
+                                "ur" -> "سپورٹ اور فیڈبیک"
+                                "hi" -> "सपोर्ट और सुझाव"
+                                else -> "Support & Feedback"
                             },
-                            fontSize = 11.5.sp,
+                            fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             maxLines = 1
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            SocialCircleButton(
-                                title = "Facebook",
-                                icon = { SocialFacebookIcon() },
-                                onClick = {
-                                    Toast.makeText(context, "Facebook link coming soon!", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                            SocialCircleButton(
-                                title = "Instagram",
-                                icon = { SocialInstagramIcon() },
-                                onClick = {
-                                    Toast.makeText(context, "Instagram link coming soon!", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                            SocialCircleButton(
-                                title = "YouTube",
-                                icon = { SocialYouTubeIcon() },
-                                onClick = {
-                                    Toast.makeText(context, "YouTube link coming soon!", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                            SocialCircleButton(
-                                title = "Telegram",
-                                icon = { SocialTelegramIcon() },
-                                onClick = {
-                                    Toast.makeText(context, "Telegram link coming soon!", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        }
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "فوری واٹس ایپ"
+                                "hi" -> "इंस्टेंट व्हाट्सएप"
+                                else -> "Instant WhatsApp"
+                            },
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF4ADE80),
+                            maxLines = 1
+                        )
                     }
+                }
+            }
 
-                    // Vertical Divider (Frosted Glass Line)
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(34.dp)
-                            .background(Color(0x40F3DE8E))
+            // Slot 6: Follow Us (Single White Colour)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0x36081E15)),
+                border = BorderStroke(1.2.dp, Color(0x66F3DE8E))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = when (uiState.language) {
+                            "ur" -> "ہمیں فالو کریں :"
+                            "hi" -> "फ़ॉلو کریں :"
+                            else -> "Follow us :"
+                        },
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1
                     )
-
-                    // Right Side: Rate Us (~56%)
-                    val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
-                    Column(
-                        modifier = Modifier
-                            .weight(0.56f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = String.format(Locale.US, "%.1f", appRatingDisplay),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Black,
-                                color = primaryGold
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                                for (i in 1..5) {
-                                    val fillRatio = when {
-                                        appRatingDisplay >= i -> 1f
-                                        appRatingDisplay >= i - 0.5 -> 0.5f
-                                        else -> 0f
-                                    }
-                                    StarIconDisplay(fillRatio = fillRatio, size = 12.dp)
-                                }
+                        SocialCircleButton(
+                            title = "Facebook",
+                            icon = { WhiteSocialFacebookIcon() },
+                            onClick = {
+                                Toast.makeText(context, "Facebook link coming soon!", Toast.LENGTH_SHORT).show()
                             }
-                        }
-
-                        Button(
-                            onClick = { showRateUsDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x40143827)),
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.2.dp, Color(0xB3E5B842)),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(rateButtonHeight)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = "Rate Us",
-                                    tint = primaryGold,
-                                    modifier = Modifier.size(13.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Rate Us 5★",
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = primaryGold,
-                                    maxLines = 1
-                                )
+                        )
+                        SocialCircleButton(
+                            title = "Instagram",
+                            icon = { WhiteSocialInstagramIcon() },
+                            onClick = {
+                                Toast.makeText(context, "Instagram link coming soon!", Toast.LENGTH_SHORT).show()
                             }
-                        }
+                        )
+                        SocialCircleButton(
+                            title = "YouTube",
+                            icon = { WhiteSocialYouTubeIcon() },
+                            onClick = {
+                                Toast.makeText(context, "YouTube link coming soon!", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                        SocialCircleButton(
+                            title = "Telegram",
+                            icon = { WhiteSocialTelegramIcon() },
+                            onClick = {
+                                Toast.makeText(context, "Telegram link coming soon!", Toast.LENGTH_SHORT).show()
+                            }
+                        )
                     }
                 }
             }
 
             // 7. Footer: Version & Devotion positioned cleanly right above bottom navigation bar
             AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 1.dp, bottom = 2.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
             )
         }
     }
@@ -2471,5 +2420,105 @@ private fun SocialTelegramIcon() {
         }
     }
 }
+
+/**
+ * Single White Colour Social Media Badges
+ */
+@Composable
+private fun WhiteSocialFacebookIcon() {
+    Box(
+        modifier = Modifier
+            .size(25.dp)
+            .clip(CircleShape)
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "f",
+            color = Color(0xFF0F1E17),
+            fontSize = 14.5.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = FontFamily.SansSerif,
+            modifier = Modifier.offset(x = 0.5.dp, y = (-0.5).dp)
+        )
+    }
+}
+
+@Composable
+private fun WhiteSocialInstagramIcon() {
+    Box(
+        modifier = Modifier
+            .size(25.dp)
+            .clip(CircleShape)
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(12.5.dp)) {
+            val strokePx = 1.5.dp.toPx()
+            val darkColor = Color(0xFF0F1E17)
+            drawRoundRect(
+                color = darkColor,
+                cornerRadius = CornerRadius(3.dp.toPx()),
+                style = Stroke(width = strokePx)
+            )
+            drawCircle(
+                color = darkColor,
+                radius = size.width * 0.23f,
+                style = Stroke(width = strokePx)
+            )
+            drawCircle(
+                color = darkColor,
+                radius = 1.2.dp.toPx(),
+                center = Offset(size.width * 0.73f, size.height * 0.27f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun WhiteSocialYouTubeIcon() {
+    Box(
+        modifier = Modifier
+            .size(25.dp)
+            .clip(CircleShape)
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(11.5.dp)) {
+            val path = Path().apply {
+                moveTo(size.width * 0.32f, size.height * 0.2f)
+                lineTo(size.width * 0.82f, size.height * 0.5f)
+                lineTo(size.width * 0.32f, size.height * 0.8f)
+                close()
+            }
+            drawPath(path, Color(0xFF0F1E17))
+        }
+    }
+}
+
+@Composable
+private fun WhiteSocialTelegramIcon() {
+    Box(
+        modifier = Modifier
+            .size(25.dp)
+            .clip(CircleShape)
+            .background(Color.White),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.size(11.5.dp)) {
+            val path = Path().apply {
+                moveTo(size.width * 0.15f, size.height * 0.5f)
+                lineTo(size.width * 0.85f, size.height * 0.18f)
+                lineTo(size.width * 0.68f, size.height * 0.82f)
+                lineTo(size.width * 0.48f, size.height * 0.62f)
+                lineTo(size.width * 0.38f, size.height * 0.75f)
+                lineTo(size.width * 0.36f, size.height * 0.58f)
+                close()
+            }
+            drawPath(path, Color(0xFF0F1E17))
+        }
+    }
+}
+
 
 

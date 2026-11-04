@@ -56,7 +56,7 @@ fun AiStudioLoadingFooter(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Azan Time Solapur • v${BuildConfig.VERSION_NAME} • Powered by @tek",
+            text = "v${BuildConfig.VERSION_NAME} • Powered by @tek",
             fontSize = 11.5.sp,
             fontWeight = FontWeight.Medium,
             style = TextStyle(brush = shimmerBrush),

@@ -38,7 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Mosque
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -216,55 +217,41 @@ fun SupportScreen(
         val isCompact = screenHeight < 680.dp
         val isUltraCompact = screenHeight < 580.dp
 
-        val verticalSpacing = when {
-            screenHeight >= 720.dp -> 4.dp
-            isCompact -> 1.dp
-            else -> 2.dp
+        val itemSpacing = when {
+            screenHeight >= 720.dp -> 11.dp
+            isCompact -> 7.dp
+            else -> 9.dp
         }
-
+        val slotVerticalPadding = when {
+            screenHeight >= 720.dp -> 13.dp
+            isCompact -> 9.dp
+            else -> 11.dp
+        }
         val logoSize = when {
-            screenHeight >= 720.dp -> 76.dp
-            isUltraCompact -> 58.dp
-            isCompact -> 64.dp
-            else -> 72.dp
+            screenHeight >= 720.dp -> 96.dp
+            isUltraCompact -> 64.dp
+            isCompact -> 76.dp
+            else -> 86.dp
         }
         val wordmarkHeight = when {
-            screenHeight >= 720.dp -> 38.dp
-            isUltraCompact -> 28.dp
-            isCompact -> 32.dp
-            else -> 36.dp
-        }
-        val actionCardHeight = when {
-            screenHeight >= 720.dp -> 50.dp
-            isUltraCompact -> 38.dp
-            isCompact -> 42.dp
-            else -> 46.dp
-        }
-        val amountChipHeight = when {
-            screenHeight >= 720.dp -> 34.dp
-            isUltraCompact -> 26.dp
-            isCompact -> 28.dp
-            else -> 32.dp
+            screenHeight >= 720.dp -> 46.dp
+            isUltraCompact -> 30.dp
+            isCompact -> 36.dp
+            else -> 42.dp
         }
         val upiButtonHeight = when {
-            screenHeight >= 720.dp -> 38.dp
-            isUltraCompact -> 30.dp
-            isCompact -> 32.dp
-            else -> 36.dp
-        }
-        val rateButtonHeight = when {
-            screenHeight >= 720.dp -> 28.dp
-            isUltraCompact -> 20.dp
-            isCompact -> 22.dp
-            else -> 26.dp
+            screenHeight >= 720.dp -> 40.dp
+            isUltraCompact -> 32.dp
+            isCompact -> 36.dp
+            else -> 38.dp
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(itemSpacing),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. Top Bar: Language Buttons at top
@@ -285,18 +272,18 @@ fun SupportScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 2.dp),
+                    .padding(top = 4.dp, bottom = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 AzanLogoCard(
                     size = logoSize
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 AzanTimeWordmark(
                     height = wordmarkHeight,
-                    topPadding = 4.dp,
-                    bottomPadding = 4.dp
+                    topPadding = 5.dp,
+                    bottomPadding = 5.dp
                 )
             }
 
@@ -310,7 +297,7 @@ fun SupportScreen(
                     onLanguageSelect = onLangSelect,
                     containerColor = Color(0x380C261D),
                     borderColor = Color(0x663DB88F),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = slotVerticalPadding),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -320,321 +307,374 @@ fun SupportScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showAddMasjidDialog = true },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                border = BorderStroke(1.2.dp, Color(0x73E5B842))
+                border = BorderStroke(1.2.dp, Color(0x663DB88F))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Mosque,
-                        contentDescription = "Request Add Masjid",
-                        tint = primaryGold,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "نئی مسجد شامل کریں"
-                                "hi" -> "नई मस्जिद जोड़ें"
-                                else -> "Request Add Masjid"
-                            },
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "اوقاتِ نماز درج کریں"
-                                "hi" -> "लोکل टाइमिंग भेजें"
-                                else -> "Submit Local Timings"
-                            },
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFE5B842),
-                            maxLines = 1
-                        )
-                    }
-                }
-            }
-
-            // 5. Main Donation Card (Sadaqah Jariyah - Transparent Glass Effect)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 0.dp),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x36081E15)),
-                border = BorderStroke(1.2.dp, Color(0x66F3DE8E))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Header: SUPPORT APP (CAPS and Centered)
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "ایپ سپورٹ"
-                                "hi" -> "ऐप सपोर्ट"
-                                else -> "SUPPORT APP"
-                            },
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            letterSpacing = 0.8.sp,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "ثوابِ جاریہ"
-                                "hi" -> "सवाब-ए-जारिया"
-                                else -> "Sawab-e-Jariyah"
-                            },
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF4ADE80),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1
-                        )
-                    }
-
-                    // Average-sized QR Code Image
-                    val isGuestMasjid = uiState.selectedMasjid.id.equals("guest", ignoreCase = true) ||
-                        uiState.selectedMasjid.name.contains("guest", ignoreCase = true)
-                    val effectiveQrUrl = uiState.selectedMasjid.qrUrl
-                    val customQrFile = remember { java.io.File(context.filesDir, "custom_masjid_qr.jpg").takeIf { it.exists() } }
-                    val cardQrModel: Any? = remember(effectiveQrUrl, customQrFile, isGuestMasjid) {
-                        if (isGuestMasjid) {
-                            null
-                        } else if (effectiveQrUrl.isNotBlank()) {
-                            com.example.data.GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(effectiveQrUrl)
-                        } else if (customQrFile != null && customQrFile.exists()) {
-                            customQrFile
-                        } else {
-                            null
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .background(Color(0xFF162D22), CircleShape)
+                                .border(1.dp, Color(0xFF2E533F), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.AddLocationAlt,
+                                contentDescription = "Request Add Masjid",
+                                tint = Color(0xFFF3DE8E),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "نئی مسجد شامل کریں"
+                                    "hi" -> "नई मस्जिद जोड़ें"
+                                    else -> "Request Add Masjid"
+                                },
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF3DE8E),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "اوقاتِ نماز درج کریں"
+                                    "hi" -> "लोकल टाइमिंग भेजें"
+                                    else -> "Submit Local Timings"
+                                },
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White.copy(alpha = 0.75f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
 
                     Box(
                         modifier = Modifier
-                            .size(130.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (cardQrModel != null) Color.White else Color(0xFF0F1A15))
-                            .border(1.2.dp, primaryGold.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                            .padding(6.dp)
-                            .clickable { showQrDialog = true },
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0x40162D22))
+                            .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        if (cardQrModel != null) {
-                            coil.compose.AsyncImage(
-                                model = cardQrModel,
-                                contentDescription = "Donation QR Code",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
-                            )
-                        } else {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                AzanLogoCard(size = 48.dp)
-                            }
-                        }
-                    }
-
-                    // Pay UPI Button (Onyx Glass with Golden Rim) below QR code
-                    Button(
-                        onClick = { showUpiAppChooserDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x66040A07)),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.2.dp, Color(0xB3F3DE8E)),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(upiButtonHeight)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_upi),
-                                contentDescription = "UPI Logo",
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Pay via UPI (GPay, PhonePe, Paytm)",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                maxLines = 1
-                            )
-                        }
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "درخواست +"
+                                "hi" -> "जोड़ें +"
+                                else -> "Request +"
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF3DE8E)
+                        )
                     }
                 }
             }
 
-            // Slot 4: Rate Us
-            val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
+            // Slot 3: Support App (Sawab-e-Jariyah + QR Code Button + Pay via UPI)
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x36081E15)),
-                border = BorderStroke(1.2.dp, Color(0x66F3DE8E))
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
+                border = BorderStroke(1.2.dp, Color(0x663DB88F))
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(Color(0xFF162D22), CircleShape)
+                                    .border(1.dp, Color(0xFF2E533F), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.VolunteerActivism,
+                                contentDescription = "Support App",
+                                tint = Color(0xFFF3DE8E),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "ایپ سپورٹ"
+                                    "hi" -> "ऐप सपोर्ट"
+                                    else -> "SUPPORT APP"
+                                },
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF3DE8E),
+                                maxLines = 1
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "ثوابِ جاریہ"
+                                    "hi" -> "सवाब-ए-जारिया"
+                                    else -> "Sawab-e-Jariyah"
+                                },
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF4ADE80),
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    // QR Code Button (Tapping shows QR Code Dialog)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFF3DE8E))
+                            .border(1.dp, Color(0xFFE5B842), RoundedCornerShape(10.dp))
+                            .clickable { showQrDialog = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCode,
+                                contentDescription = "QR Code",
+                                tint = Color(0xFF071711),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "QR Code",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF071711)
+                            )
+                        }
+                    }
+                }
+
+                // Pay via UPI Button
+                Button(
+                    onClick = { showUpiAppChooserDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x66040A07)),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xB3F3DE8E)),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(upiButtonHeight)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = String.format(Locale.US, "%.1f", appRatingDisplay),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Black,
-                            color = primaryGold
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_upi),
+                            contentDescription = "UPI Logo",
+                            modifier = Modifier.size(22.dp)
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                            for (i in 1..5) {
-                                val fillRatio = when {
-                                    appRatingDisplay >= i -> 1f
-                                    appRatingDisplay >= i - 0.5 -> 0.5f
-                                    else -> 0f
-                                }
-                                StarIconDisplay(fillRatio = fillRatio, size = 13.dp)
-                            }
-                        }
-                    }
-
-                    Button(
-                        onClick = { showRateUsDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x40143827)),
-                        shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.2.dp, Color(0xB3E5B842)),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
-                        modifier = Modifier.height(rateButtonHeight)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Rate Us",
-                                tint = primaryGold,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Rate Us 5★",
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = primaryGold,
-                                maxLines = 1
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Slot 5: Support & Feedback (WhatsApp)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { openWhatsApp() },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                border = BorderStroke(1.2.dp, Color(0x734ADE80))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_whatsapp),
-                        contentDescription = "WhatsApp",
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = when (uiState.language) {
-                                "ur" -> "سپورٹ اور فیڈبیک"
-                                "hi" -> "सपोर्ट और सुझाव"
-                                else -> "Support & Feedback"
-                            },
+                            text = "Pay via UPI (GPay, PhonePe, Paytm)",
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             maxLines = 1
                         )
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "فوری واٹس ایپ"
-                                "hi" -> "इंस्टेंट व्हाट्सएप"
-                                else -> "Instant WhatsApp"
-                            },
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF4ADE80),
-                            maxLines = 1
-                        )
                     }
                 }
             }
+            }
 
-            // Slot 6: Follow Us (Single White Colour)
+            // Slot 4: Support & Feedback (Left) & Rate Us (Right)
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x36081E15)),
-                border = BorderStroke(1.2.dp, Color(0x66F3DE8E))
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
+                border = BorderStroke(1.2.dp, Color(0x663DB88F))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Left Half: Support & Feedback (WhatsApp)
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { openWhatsApp() },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_whatsapp),
+                            contentDescription = "WhatsApp",
+                            modifier = Modifier.size(30.dp)
+                        )
+                        Column {
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "سپورٹ اور فیڈبیک"
+                                    "hi" -> "सपोर्ट और सुझाव"
+                                    else -> "Support & Feedback"
+                                },
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "فوری واٹس ایپ"
+                                    "hi" -> "इंस्टेंट व्हाट्सएप"
+                                    else -> "Instant WhatsApp"
+                                },
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF4ADE80),
+                                maxLines = 1
+                            )
+                        }
+                    }
+
+                    // Vertical Divider
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(38.dp)
+                            .background(Color(0x40F3DE8E))
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Right Half: Rate Us 5★
+                    val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { showRateUsDialog = true },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = String.format(Locale.US, "%.1f", appRatingDisplay),
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = primaryGold
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                                    for (i in 1..5) {
+                                        val fillRatio = when {
+                                            appRatingDisplay >= i -> 1f
+                                            appRatingDisplay >= i - 0.5 -> 0.5f
+                                            else -> 0f
+                                        }
+                                        StarIconDisplay(fillRatio = fillRatio, size = 11.dp)
+                                    }
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0x40143827))
+                                    .border(1.dp, Color(0xB3E5B842), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 9.dp, vertical = 3.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = "Rate Us",
+                                        tint = primaryGold,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = "Rate Us 5★",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = primaryGold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Slot 5: Follow Us (Single White Colour)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
+                border = BorderStroke(1.2.dp, Color(0x663DB88F))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = when (uiState.language) {
                             "ur" -> "ہمیں فالو کریں :"
-                            "hi" -> "फ़ॉلو کریں :"
+                            "hi" -> "फ़ॉलो करें :"
                             else -> "Follow us :"
                         },
-                        fontSize = 12.5.sp,
+                        fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 1
                     )
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         SocialCircleButton(
@@ -671,7 +711,7 @@ fun SupportScreen(
 
             // 7. Footer: Version & Devotion positioned cleanly right above bottom navigation bar
             AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
             )
         }
     }

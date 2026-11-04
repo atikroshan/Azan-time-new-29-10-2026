@@ -52,12 +52,7 @@ class PreferencesRepository(private val context: Context) {
     fun isSetupCompletedSync(): Boolean {
         return try {
             val sp = context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
-            val lastVer = sp.getInt("last_setup_version", 0)
-            if (lastVer < com.example.BuildConfig.VERSION_CODE) {
-                false
-            } else {
-                sp.getBoolean("setup_completed", false)
-            }
+            sp.getBoolean("setup_completed", false)
         } catch (e: Exception) {
             false
         }
@@ -65,12 +60,9 @@ class PreferencesRepository(private val context: Context) {
 
     val isSetupCompletedFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         val sp = try { context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE) } catch (_: Exception) { null }
-        val lastVer = prefs[KEY_LAST_SETUP_VERSION] ?: (sp?.getInt("last_setup_version", 0) ?: 0)
-        if (lastVer < com.example.BuildConfig.VERSION_CODE) {
-            false
-        } else {
-            prefs[KEY_SETUP_COMPLETED] ?: isSetupCompletedSync()
-        }
+        val dsCompleted = prefs[KEY_SETUP_COMPLETED]
+        val spCompleted = sp?.getBoolean("setup_completed", false) ?: false
+        dsCompleted ?: spCompleted
     }
 
     suspend fun setSetupCompleted(completed: Boolean) {
@@ -78,14 +70,14 @@ class PreferencesRepository(private val context: Context) {
             context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .putBoolean("setup_completed", completed)
-                .putInt("last_setup_version", if (completed) com.example.BuildConfig.VERSION_CODE else 0)
+                .putInt("last_setup_version", com.example.BuildConfig.VERSION_CODE)
                 .commit()
         } catch (e: Exception) {
             e.printStackTrace()
         }
         context.dataStore.edit { prefs ->
             prefs[KEY_SETUP_COMPLETED] = completed
-            prefs[KEY_LAST_SETUP_VERSION] = if (completed) com.example.BuildConfig.VERSION_CODE else 0
+            prefs[KEY_LAST_SETUP_VERSION] = com.example.BuildConfig.VERSION_CODE
         }
     }
 

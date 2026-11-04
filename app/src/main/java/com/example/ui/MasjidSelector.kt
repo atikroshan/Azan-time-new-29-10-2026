@@ -160,7 +160,8 @@ fun MasjidSelectorDropdown(
     onChangeClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     containerColor: Color = Color(0xFF091712),
-    borderColor: Color = Color(0xFF1B3B2E)
+    borderColor: Color = Color(0xFF1B3B2E),
+    contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
 ) {
     var showDialog by remember { mutableStateOf(false) }
     val strings = remember(language) { MasjidSelectorStrings(language) }
@@ -179,7 +180,7 @@ fun MasjidSelectorDropdown(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(contentPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {

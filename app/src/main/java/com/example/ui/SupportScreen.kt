@@ -213,49 +213,58 @@ fun SupportScreen(
             )
     ) {
         val screenHeight = maxHeight
+        val isCompact = screenHeight < 680.dp
+        val isUltraCompact = screenHeight < 580.dp
+
         val verticalSpacing = when {
-            screenHeight >= 720.dp -> 3.dp
-            screenHeight >= 640.dp -> 2.dp
-            else -> 1.dp
+            screenHeight >= 720.dp -> 4.dp
+            isCompact -> 1.dp
+            else -> 2.dp
         }
 
         val logoSize = when {
-            screenHeight >= 720.dp -> 66.dp
-            screenHeight >= 640.dp -> 60.dp
-            else -> 54.dp
+            screenHeight >= 720.dp -> 58.dp
+            isUltraCompact -> 38.dp
+            isCompact -> 44.dp
+            else -> 50.dp
         }
         val wordmarkHeight = when {
-            screenHeight >= 720.dp -> 32.dp
-            screenHeight >= 640.dp -> 28.dp
+            screenHeight >= 720.dp -> 28.dp
+            isUltraCompact -> 18.dp
+            isCompact -> 20.dp
             else -> 24.dp
         }
         val actionCardHeight = when {
-            screenHeight >= 720.dp -> 50.dp
-            screenHeight >= 640.dp -> 46.dp
+            screenHeight >= 720.dp -> 46.dp
+            isUltraCompact -> 34.dp
+            isCompact -> 38.dp
             else -> 42.dp
         }
         val amountChipHeight = when {
-            screenHeight >= 720.dp -> 34.dp
-            screenHeight >= 640.dp -> 31.dp
+            screenHeight >= 720.dp -> 32.dp
+            isUltraCompact -> 22.dp
+            isCompact -> 25.dp
             else -> 28.dp
         }
         val upiButtonHeight = when {
-            screenHeight >= 720.dp -> 38.dp
-            screenHeight >= 640.dp -> 35.dp
+            screenHeight >= 720.dp -> 36.dp
+            isUltraCompact -> 26.dp
+            isCompact -> 28.dp
             else -> 32.dp
         }
         val rateButtonHeight = when {
-            screenHeight >= 720.dp -> 28.dp
-            screenHeight >= 640.dp -> 26.dp
+            screenHeight >= 720.dp -> 26.dp
+            isUltraCompact -> 18.dp
+            isCompact -> 21.dp
             else -> 24.dp
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 12.dp, end = 12.dp, top = 0.dp, bottom = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+                .then(if (screenHeight < 380.dp) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                .padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. Top Bar: Language Buttons at top
@@ -403,7 +412,7 @@ fun SupportScreen(
             }
 
             // 4. Change Slot (Selected Masjid - Transparent Glass Effect)
-            Box(modifier = Modifier.padding(vertical = 1.dp)) {
+            Box(modifier = Modifier.padding(vertical = 0.dp)) {
                 MasjidSelectorDropdown(
                     selectedMasjid = uiState.selectedMasjid,
                     allMasajid = uiState.allMasajid,
@@ -412,6 +421,7 @@ fun SupportScreen(
                     onLanguageSelect = onLangSelect,
                     containerColor = Color(0x380C261D),
                     borderColor = Color(0x663DB88F),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = if (isCompact) 4.dp else 8.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -420,7 +430,7 @@ fun SupportScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 1.dp),
+                    .padding(vertical = 0.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0x36081E15)),
                 border = BorderStroke(1.2.dp, Color(0x66F3DE8E))
@@ -428,8 +438,8 @@ fun SupportScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                        .padding(horizontal = 10.dp, vertical = if (isCompact) 4.dp else 7.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (isCompact) 3.dp else 5.dp)
                 ) {
                     // Header row: Balanced Center SADAQAH JARIYAH (in CAPS) + Larger QR Code button on Right
                     Row(
@@ -573,7 +583,7 @@ fun SupportScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 1.dp),
+                    .padding(vertical = 0.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0x36081E15)),
                 border = BorderStroke(1.2.dp, Color(0x66F3DE8E))
@@ -581,7 +591,7 @@ fun SupportScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 8.dp, vertical = if (isCompact) 4.dp else 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -712,7 +722,7 @@ fun SupportScreen(
 
             // 7. Footer: Version & Devotion positioned cleanly right above bottom navigation bar
             AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                modifier = Modifier.padding(top = 1.dp, bottom = 2.dp)
             )
         }
     }

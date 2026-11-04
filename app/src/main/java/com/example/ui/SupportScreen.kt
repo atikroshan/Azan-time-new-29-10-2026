@@ -573,15 +573,7 @@ fun SupportScreen(
                         }
                     }
 
-                    // Vertical Divider
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(38.dp)
-                            .background(Color(0x40F3DE8E))
-                    )
-
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     // Right Half: Rate Us 5★
                     val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
@@ -679,28 +671,60 @@ fun SupportScreen(
                     ) {
                         SocialCircleButton(
                             title = "Facebook",
-                            icon = { WhiteSocialFacebookIcon() },
+                            icon = {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_facebook_circle),
+                                    contentDescription = "Facebook",
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                )
+                            },
                             onClick = {
                                 Toast.makeText(context, "Facebook link coming soon!", Toast.LENGTH_SHORT).show()
                             }
                         )
                         SocialCircleButton(
                             title = "Instagram",
-                            icon = { WhiteSocialInstagramIcon() },
+                            icon = {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_instagram_circle),
+                                    contentDescription = "Instagram",
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                )
+                            },
                             onClick = {
                                 Toast.makeText(context, "Instagram link coming soon!", Toast.LENGTH_SHORT).show()
                             }
                         )
                         SocialCircleButton(
                             title = "YouTube",
-                            icon = { WhiteSocialYouTubeIcon() },
+                            icon = {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_youtube_circle),
+                                    contentDescription = "YouTube",
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                )
+                            },
                             onClick = {
                                 Toast.makeText(context, "YouTube link coming soon!", Toast.LENGTH_SHORT).show()
                             }
                         )
                         SocialCircleButton(
                             title = "Telegram",
-                            icon = { WhiteSocialTelegramIcon() },
+                            icon = {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_telegram_circle),
+                                    contentDescription = "Telegram",
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                )
+                            },
                             onClick = {
                                 Toast.makeText(context, "Telegram link coming soon!", Toast.LENGTH_SHORT).show()
                             }
@@ -2330,7 +2354,7 @@ private fun SocialCircleButton(
 ) {
     Box(
         modifier = Modifier
-            .size(25.dp)
+            .size(28.dp)
             .clip(CircleShape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },

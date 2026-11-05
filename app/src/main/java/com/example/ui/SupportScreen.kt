@@ -485,11 +485,20 @@ fun SupportScreen(
                 }
 
                 // Pay via UPI Button
+                // Pay via UPI Button (Light Gray with proper grammar)
+                val tapToPayText = when (uiState.language) {
+                    "hi" -> "UPI द्वारा भुगतान के लिए टैप करें (GPay, PhonePe, Paytm)"
+                    "ur" -> "یو پی آئی کے ذریعے ادائیگی کے لیے ٹیپ کریں"
+                    else -> "Tap to pay via UPI (GPay, PhonePe, Paytm)"
+                }
                 Button(
                     onClick = { showUpiAppChooserDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x66040A07)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE2E8F0),
+                        contentColor = Color(0xFF0F172A)
+                    ),
                     shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xB3F3DE8E)),
+                    border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -506,10 +515,10 @@ fun SupportScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Pay via UPI (GPay, PhonePe, Paytm)",
-                            fontSize = 12.5.sp,
+                            text = tapToPayText,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = Color(0xFF0F172A),
                             maxLines = 1
                         )
                     }
@@ -542,7 +551,9 @@ fun SupportScreen(
                         Image(
                             painter = painterResource(id = R.drawable.ic_whatsapp),
                             contentDescription = "WhatsApp",
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
                         )
                         Column {
                             Text(

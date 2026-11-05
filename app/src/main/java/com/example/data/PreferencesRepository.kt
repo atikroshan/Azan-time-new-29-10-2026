@@ -209,7 +209,12 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val appsScriptUrlFlow: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[KEY_APPS_SCRIPT_URL]?.ifBlank { null } ?: GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL
+        val saved = prefs[KEY_APPS_SCRIPT_URL]?.trim()
+        if (saved.isNullOrBlank() || saved.contains("AKfycbwFuuMm1an264fUDp9DvaOnjbvZR-FYUgv_uGYqDY338dACKU2Xdnyv2PHrDEr-KeqM")) {
+            GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL
+        } else {
+            saved
+        }
     }
 
     suspend fun setAppsScriptUrl(url: String) {

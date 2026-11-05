@@ -3769,14 +3769,30 @@ fun AdminPanelScreen(
         editingPrayer?.let { prayer ->
             EditPrayerTimingDialog(
                 prayer = prayer,
+                language = uiState.language,
                 onDismiss = { editingPrayer = null },
                 onSave = { newAzan, newJammat ->
-                    Toast.makeText(context, "Updating timings for all mobiles...", Toast.LENGTH_SHORT).show()
+                    val updatingMsg = when (uiState.language) {
+                        "hi" -> "सभी मोबाइल के लिए समय अपडेट हो रहा है..."
+                        "ur" -> "تمام موبائلز کے اوقات اپ ڈیٹ ہو رہے ہیں..."
+                        else -> "Updating timings for all mobiles..."
+                    }
+                    Toast.makeText(context, updatingMsg, Toast.LENGTH_SHORT).show()
                     viewModel.updatePrayerLocally(prayer.systemName, newAzan, newJammat) { success, _ ->
                         if (success) {
-                            Toast.makeText(context, "Time update ho gaya! Sabhi mobile par time badal chuka hai.", Toast.LENGTH_LONG).show()
+                            val successMsg = when (uiState.language) {
+                                "hi" -> "समय सफलतापूर्वक अपडेट हो गया! सभी मोबाइल पर नया समय बदल चुका है।"
+                                "ur" -> "اوقات کامیابی سے اپ ڈیٹ ہو گئے! تمام موبائلز پر نیا وقت تبدیل ہو گیا ہے۔"
+                                else -> "Timings updated successfully! New times are now synced on all mobiles."
+                            }
+                            Toast.makeText(context, successMsg, Toast.LENGTH_LONG).show()
                         } else {
-                            Toast.makeText(context, "Time save ho gaya.", Toast.LENGTH_SHORT).show()
+                            val savedMsg = when (uiState.language) {
+                                "hi" -> "समय सुरक्षित हो गया।"
+                                "ur" -> "وقت محفوظ ہو گیا۔"
+                                else -> "Timings saved successfully."
+                            }
+                            Toast.makeText(context, savedMsg, Toast.LENGTH_SHORT).show()
                         }
                     }
                     editingPrayer = null
@@ -4302,7 +4318,8 @@ fun MasjidInfoDialog(
 fun EditPrayerTimingDialog(
     prayer: AdminPrayerItem,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String, String) -> Unit,
+    language: String = "en"
 ) {
     val isFajr = prayer.systemName.equals("Fajr", ignoreCase = true)
     val defaultIsPm = !isFajr
@@ -4418,7 +4435,11 @@ fun EditPrayerTimingDialog(
                     letterSpacing = 1.sp
                 )
                 Text(
-                    text = "Hours & Minutes separate for Azan and Jammat",
+                    text = when (language) {
+                        "hi" -> "अज़ान और जमात के लिए घंटे व मिनट अलग-अलग"
+                        "ur" -> "اذان اور جماعت کے لیے گھنٹے اور منٹ الگ الگ"
+                        else -> "Hours & Minutes separate for Azan and Jammat"
+                    },
                     fontSize = 12.sp,
                     color = TextMuted,
                     textAlign = TextAlign.Center
@@ -4796,8 +4817,13 @@ fun EditPrayerTimingDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
+                val syncNoticeText = when (language) {
+                    "hi" -> "OK / DONE दबाते ही सभी मोबाइल में एक साथ नया समय अपडेट हो जाएगा"
+                    "ur" -> "OK / DONE دباتے ہی تمام موبائلز میں ایک ساتھ نیا وقت تبدیل ہو جائے گا"
+                    else -> "Tapping OK / DONE will immediately update timings on all mobiles"
+                }
                 Text(
-                    text = "OK / DONE dabate hi sabhi mobile mein ek sath naya time change ho jayega",
+                    text = syncNoticeText,
                     fontSize = 11.5.sp,
                     color = Color(0xFF86EFAC),
                     textAlign = TextAlign.Center,
@@ -4820,17 +4846,33 @@ fun EditPrayerTimingDialog(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f)),
                         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
                     ) {
-                        Text("Cancel", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = when (language) {
+                                "hi" -> "रद्द करें"
+                                "ur" -> "منسوخ کریں"
+                                else -> "Cancel"
+                            },
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
 
                     Button(
                         onClick = {
                             if (validAzan == null) {
-                                errorText = "Please enter valid Azan hours (01-12) and minutes (00-59)"
+                                errorText = when (language) {
+                                    "hi" -> "कृपया सही अज़ान घंटे (01-12) और मिनट (00-59) दर्ज करें"
+                                    "ur" -> "براہ کرم درست اذان کے گھنٹے (01-12) اور منٹ (00-59) درج کریں"
+                                    else -> "Please enter valid Azan hours (01-12) and minutes (00-59)"
+                                }
                                 return@Button
                             }
                             if (validJammat == null) {
-                                errorText = "Please enter valid Jammat hours (01-12) and minutes (00-59)"
+                                errorText = when (language) {
+                                    "hi" -> "कृपया सही जमात घंटे (01-12) और मिनट (00-59) दर्ज करें"
+                                    "ur" -> "براہ کرم درست جماعت کے گھنٹے (01-12) اور منٹ (00-59) درج کریں"
+                                    else -> "Please enter valid Jammat hours (01-12) and minutes (00-59)"
+                                }
                                 return@Button
                             }
                             onSave(validAzan, validJammat)

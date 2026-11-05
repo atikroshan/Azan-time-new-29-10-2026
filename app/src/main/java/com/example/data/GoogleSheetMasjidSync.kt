@@ -113,7 +113,7 @@ Password,9595996629,,,,,
         return String.format(Locale.US, "%02d:%02d", h12, m)
     }
 
-    var APPS_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwFuuMm1an264fUDp9DvaOnjbvZR-FYUgv_uGYqDY338dACKU2Xdnyv2PHrDEr-KeqM/exec"
+    var APPS_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxK5ceM3ae_WvG_ToqwWPVWmCstm46T3FYZVyaHTFo3VtXjtH_n9yr8voYf9PXeUDvs/exec"
 
     val APPS_SCRIPT_SAMPLE_CODE = """
 // ==============================================================================================
@@ -245,7 +245,7 @@ function handleRequest(e) {
             }
           }
         }
-        var nextNum = (maxId >= 100111111) ? (maxId + 1) : 100111115;
+        var nextNum = (maxId >= 1000) ? (maxId + 1) : 1001;
         finalId = nextNum.toString();
       }
 
@@ -685,7 +685,7 @@ function repairSheet1TenRows(sheet) {
     if (tag === "id") {
       var val = (data[r][1] || "").toString().trim();
       if (!val || val === "") {
-        var prevId = 100111111;
+        var prevId = 1000;
         for (var p = r - 1; p >= 0; p--) {
           if ((data[p][0] || "").toString().trim().toLowerCase() === "id") {
             var pVal = parseInt(data[p][1], 10);

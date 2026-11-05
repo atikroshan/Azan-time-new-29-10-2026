@@ -504,24 +504,13 @@ fun SupportScreen(
                         .fillMaxWidth()
                         .height(upiButtonHeight)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_upi),
-                            contentDescription = "UPI Logo",
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = tapToPayText,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A),
-                            maxLines = 1
-                        )
-                    }
+                    Text(
+                        text = tapToPayText,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF0F172A),
+                        maxLines = 1
+                    )
                 }
             }
             }
@@ -1094,9 +1083,9 @@ fun SupportScreen(
             title = {
                 Text(
                     text = when (uiState.language) {
-                        "ur" -> "درخواست موصول ہوگئی! 👍"
-                        "hi" -> "अनुरोध प्राप्त हुआ! 👍"
-                        else -> "Request Received! 👍"
+                        "ur" -> "درخواست موصول ہوگئی!"
+                        "hi" -> "अनुरोध प्राप्त हुआ!"
+                        else -> "Request Received!"
                     },
                     fontWeight = FontWeight.Bold,
                     fontSize = 19.sp,
@@ -1398,7 +1387,6 @@ fun AddMasjidAutoDialog(
     var isProcessingQr by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isSending by remember { mutableStateOf(false) }
-    var showSuccessDialog by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -1843,7 +1831,7 @@ fun AddMasjidAutoDialog(
                                 // Handled gracefully in background
                             }
                             isSending = false
-                            showSuccessDialog = true
+                            onSubmitted()
                         }
                     },
                     enabled = !isSending,
@@ -1887,91 +1875,6 @@ fun AddMasjidAutoDialog(
                     }
                 }
             }
-        }
-
-        if (showSuccessDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showSuccessDialog = false
-                    onSubmitted()
-                },
-                title = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF10B981).copy(alpha = 0.15f))
-                                .border(2.dp, Color(0xFF10B981), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ThumbUp,
-                                contentDescription = "Success",
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Text(
-                            text = "Request Received! 👍",
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF10B981),
-                            fontSize = 18.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                    }
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        val annotatedText = buildAnnotatedString {
-                            append("Please wait ")
-                            withStyle(
-                                style = SpanStyle(
-                                    color = Color(0xFFFBBF24),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
-                            ) {
-                                append("(5 Min)")
-                            }
-                            append("\nYour Masjid will be live.")
-                        }
-                        Text(
-                            text = annotatedText,
-                            fontSize = 14.5.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color.White,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-                            lineHeight = 22.sp
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showSuccessDialog = false
-                            onSubmitted()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                    ) {
-                        Text("OK", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                },
-                containerColor = Color(0xFF0F172A),
-                shape = RoundedCornerShape(20.dp)
-            )
         }
     }
 }

@@ -1375,7 +1375,7 @@ fun AddMasjidAutoDialog(
     val savedAppsScriptUrl by prefs.appsScriptUrlFlow.collectAsState(initial = com.example.data.GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL)
     var masjidName by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var adminName by remember { mutableStateOf("") }
+    var adminName by remember { mutableStateOf("admin") }
     var adminContact by remember { mutableStateOf("") }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedQrUri by remember { mutableStateOf<Uri?>(null) }
@@ -1513,20 +1513,20 @@ fun AddMasjidAutoDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Field 3: Admin Name
+                // Field 3: Admin ID (Common for all as requested)
                 OutlinedTextField(
-                    value = adminName,
-                    onValueChange = { adminName = it; errorMessage = null },
-                    label = { Text("Admin Name *") },
-                    placeholder = { Text("e.g. Haji Abdul Rahman") },
+                    value = "admin",
+                    onValueChange = { },
+                    label = { Text("Admin ID - admin") },
+                    readOnly = true,
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFFF3DE8E),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        focusedBorderColor = Color(0xFFF3DE8E).copy(alpha = 0.5f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
                         focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.6f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
+                        focusedTextColor = Color.White.copy(alpha = 0.7f),
+                        unfocusedTextColor = Color.White.copy(alpha = 0.7f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )

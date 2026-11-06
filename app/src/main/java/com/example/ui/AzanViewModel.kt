@@ -569,9 +569,19 @@ class AzanViewModel(
             val existingIdx = all.indexOfFirst { it.id == cleanId }
             if (existingIdx != -1) {
                 val cur = all[existingIdx]
+                val newPhoto = if (!photoUrl.isNullOrBlank()) {
+                    if (photoUrl.startsWith("http")) GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(photoUrl)
+                    else photoUrl
+                } else cur.photoUrl
+
+                val newQr = if (!qrUrl.isNullOrBlank()) {
+                    if (qrUrl.startsWith("http")) GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(qrUrl)
+                    else qrUrl
+                } else cur.qrUrl
+
                 val updated = cur.copy(
-                    photoUrl = photoUrl?.let { GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(it) } ?: cur.photoUrl,
-                    qrUrl = qrUrl?.let { GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(it) } ?: cur.qrUrl
+                    photoUrl = newPhoto,
+                    qrUrl = newQr
                 )
                 all[existingIdx] = updated
                 MasjidRepository.setDynamicMasajid(all)

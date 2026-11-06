@@ -275,6 +275,13 @@ function handleRequest(e) {
         try {
           var photoBytes = Utilities.base64Decode(photoData);
           var photoBlob = Utilities.newBlob(photoBytes, "image/jpeg", photoFileName);
+          
+          // Replace existing photo if found
+          var existingPhotos = masjidFolder.getFilesByName(photoFileName);
+          while (existingPhotos.hasNext()) {
+            existingPhotos.next().setTrashed(true);
+          }
+          
           var photoFile = masjidFolder.createFile(photoBlob);
           photoFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
           photoUrl = photoFile.getUrl();
@@ -288,6 +295,13 @@ function handleRequest(e) {
         try {
           var qrBytes = Utilities.base64Decode(qrData);
           var qrBlob = Utilities.newBlob(qrBytes, "image/jpeg", qrFileName);
+          
+          // Replace existing QR if found
+          var existingQrs = masjidFolder.getFilesByName(qrFileName);
+          while (existingQrs.hasNext()) {
+            existingQrs.next().setTrashed(true);
+          }
+          
           var qrFile = masjidFolder.createFile(qrBlob);
           qrFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
           qrUrl = qrFile.getUrl();
@@ -321,8 +335,8 @@ function handleRequest(e) {
         ["", "Fajr", "Zohar", "Asr", "Maghrib", "Isha", "Jummah"],
         ["Azan", "05:50", "01:15", "05:35", "06:10", "07:50", "12:48"],
         ["Jammat", "06:20", "01:30", "05:45", "06:12", "07:59", "01:30"],
-        ["Admin ID", admin || "admin", "", "", "", "", ""],
-        ["Password", contact, "", "", "", "", ""]
+        ["Admin ID", "admin", "", "", "", "", ""],
+        ["Password", contact || "", "", "", "", "", ""]
       ];
       
       // 3. Write all 10 rows to the sheet
@@ -404,8 +418,16 @@ function handleRequest(e) {
       
       if (photoData) {
         try {
+          var photoFileName = slug + "_photo.jpg";
           var photoBytes = Utilities.base64Decode(photoData);
-          var photoBlob = Utilities.newBlob(photoBytes, "image/jpeg", slug + "_photo.jpg");
+          var photoBlob = Utilities.newBlob(photoBytes, "image/jpeg", photoFileName);
+          
+          // Replace existing photo if found
+          var existingPhotos = masjidFolder.getFilesByName(photoFileName);
+          while (existingPhotos.hasNext()) {
+            existingPhotos.next().setTrashed(true);
+          }
+          
           var photoFile = masjidFolder.createFile(photoBlob);
           photoFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
           photoUrl = photoFile.getUrl();
@@ -419,8 +441,16 @@ function handleRequest(e) {
       
       if (qrData) {
         try {
+          var qrFileName = slug + "_qr.jpg";
           var qrBytes = Utilities.base64Decode(qrData);
-          var qrBlob = Utilities.newBlob(qrBytes, "image/jpeg", slug + "_qr.jpg");
+          var qrBlob = Utilities.newBlob(qrBytes, "image/jpeg", qrFileName);
+          
+          // Replace existing QR if found
+          var existingQrs = masjidFolder.getFilesByName(qrFileName);
+          while (existingQrs.hasNext()) {
+            existingQrs.next().setTrashed(true);
+          }
+          
           var qrFile = masjidFolder.createFile(qrBlob);
           qrFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
           qrUrl = qrFile.getUrl();

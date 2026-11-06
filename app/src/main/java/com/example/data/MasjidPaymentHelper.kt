@@ -58,12 +58,15 @@ object MasjidPaymentHelper {
     /**
      * Checks if a masjid has a valid, active QR code.
      */
-    fun hasValidQr(masjid: MasjidItem?): Boolean {
+    fun hasValidQr(masjid: MasjidItem?, context: Context? = null): Boolean {
         if (masjid == null) return false
         val mId = masjid.id.trim()
         val mName = masjid.name.trim()
         if (mId.equals("guest", ignoreCase = true) || mName.contains("guest", ignoreCase = true)) {
             return false
+        }
+        if (context != null && MasjidLocalCacheManager.hasLocalQr(context, mId)) {
+            return true
         }
         if (mId == MOHAMMADIYA_ID ||
             mName.contains("Mohammadiya", ignoreCase = true) ||
@@ -76,7 +79,7 @@ object MasjidPaymentHelper {
         val qr = masjid.qrUrl.trim()
         if (qr.isBlank()) return false
         // Exclude generic placeholders or dummy entries
-        return qr.startsWith("http://") || qr.startsWith("https://") || qr.startsWith("upi://") || qr.contains("pa=")
+        return qr.startsWith("http://") || qr.startsWith("https://") || qr.startsWith("upi://") || qr.contains("pa=") || qr.startsWith("content://") || qr.startsWith("file://")
     }
 
     /**

@@ -797,7 +797,7 @@ fun AzanHomeContent(
 ) {
     val context = LocalContext.current
     val photoUrl = uiState.selectedMasjid.photoUrl
-    val hasQrCode = com.example.data.MasjidPaymentHelper.hasValidQr(uiState.selectedMasjid)
+    val hasQrCode = com.example.data.MasjidPaymentHelper.hasValidQr(uiState.selectedMasjid, context)
     var showSupportPopup by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
@@ -973,7 +973,14 @@ fun AzanHomeContent(
                     uiState.selectedMasjid.name.contains("guest", ignoreCase = true) ||
                     uiState.selectedMasjid.name.contains("गेस्ट", ignoreCase = true) ||
                     uiState.selectedMasjid.name.contains("گیسٹ", ignoreCase = true)
-            val hasMasjidPhoto = photoUrl.isNotBlank() && !isGuestMasjid
+
+            val localPhotoFile = remember(uiState.selectedMasjid.id) {
+                com.example.data.MasjidLocalCacheManager.getLocalPhotoFile(context, uiState.selectedMasjid.id)
+            }
+            val localPhotoTimestamp = if (localPhotoFile.exists()) localPhotoFile.lastModified() else 0L
+            val hasLocalPhoto = com.example.data.MasjidLocalCacheManager.hasLocalPhoto(context, uiState.selectedMasjid.id)
+            val hasMasjidPhoto = (photoUrl.isNotBlank() || hasLocalPhoto) && !isGuestMasjid
+
             var langRowHeightPx by remember { mutableIntStateOf(0) }
             val langRowHeightDp = with(density) { langRowHeightPx.toDp() }
             val photoTopPadding = if (langRowHeightDp > 0.dp) langRowHeightDp + 16.dp else 60.dp
@@ -988,9 +995,9 @@ fun AzanHomeContent(
                     .height(availablePhotoHeight),
                 contentAlignment = Alignment.Center
             ) {
-                var imageLoadError by remember(photoUrl, uiState.selectedMasjid.id) { mutableStateOf(false) }
+                var imageLoadError by remember(photoUrl, uiState.selectedMasjid.id, localPhotoTimestamp) { mutableStateOf(false) }
 
-                val localOrRemoteModel = remember(photoUrl, uiState.selectedMasjid.id) {
+                val localOrRemoteModel = remember(photoUrl, uiState.selectedMasjid.id, localPhotoTimestamp) {
                     com.example.data.MasjidLocalCacheManager.getPhotoModel(context, uiState.selectedMasjid.id, photoUrl)
                 }
                 val hasValidPhoto = hasMasjidPhoto && localOrRemoteModel != null && !imageLoadError
@@ -998,8 +1005,8 @@ fun AzanHomeContent(
                 if (hasValidPhoto) {
                     val finalPhotoModel = ImageRequest.Builder(context)
                         .data(localOrRemoteModel)
-                        .diskCachePolicy(coil.request.CachePolicy.ENABLED)
-                        .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                        .memoryCacheKey("${uiState.selectedMasjid.id}_$localPhotoTimestamp")
+                        .diskCacheKey("${uiState.selectedMasjid.id}_$localPhotoTimestamp")
                         .crossfade(true)
                         .listener(onError = { _, _ -> imageLoadError = true })
                         .build()
@@ -3298,7 +3305,7 @@ fun AdminLoginDialog(
     val defaultAdminId = curMasjid?.adminId?.trim().takeUnless { it.isNullOrBlank() } ?: "admin"
     val defaultPassword = curMasjid?.adminPassword?.trim().takeUnless { it.isNullOrBlank() } ?: "admin"
 
-    var adminId by remember { mutableStateOf("") }
+    var adminId by remember { mutableStateOf("admin") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var isError by remember { mutableStateOf(false) }
@@ -3472,6 +3479,7 @@ fun AdminPanelScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val strings = LocalAppStrings.current
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -3508,6 +3516,9 @@ fun AdminPanelScreen(
     var showAddMasjidDialog by remember { mutableStateOf(false) }
     var showAppsScriptSettingsDialog by remember { mutableStateOf(false) }
     var showScriptCodeDialog by remember { mutableStateOf(false) }
+    var showScriptUpdateNoticeDialog by remember { mutableStateOf(false) }
+    var showAssetSuccessDialog by remember { mutableStateOf(false) }
+    var isCloudSuccess by remember { mutableStateOf(false) }
     var isSyncingNow by remember { mutableStateOf(false) }
     var syncStatusErrorDialog by remember { mutableStateOf<String?>(null) }
 
@@ -3919,7 +3930,7 @@ fun AdminPanelScreen(
                                             color = Color(0xFF38BDF8)
                                         )
                                         Text(
-                                            text = "Ready to upload to Google Drive & Sheet",
+                                            text = "Ready to save & upload",
                                             fontSize = 10.sp,
                                             color = Color.White.copy(alpha = 0.65f)
                                         )
@@ -3936,40 +3947,46 @@ fun AdminPanelScreen(
                                         )
                                     }
                                 }
-                            } else if (curMasjid.photoUrl.isNotBlank()) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color(0xFF141E2E), RoundedCornerShape(8.dp))
-                                        .padding(8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(46.dp)
-                                            .background(Color(0xFF0B132B), RoundedCornerShape(6.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        AsyncImage(
-                                            model = curMasjid.photoUrl,
-                                            contentDescription = "Current Masjid Photo",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Fit
-                                        )
+                            } else {
+                                val hasActivePhoto = curMasjid.photoUrl.isNotBlank() || com.example.data.MasjidLocalCacheManager.hasLocalPhoto(context, curMasjid.id)
+                                if (hasActivePhoto) {
+                                    val activePhotoModel = remember(curMasjid.id, curMasjid.photoUrl, selectedPhotoUri) {
+                                        com.example.data.MasjidLocalCacheManager.getPhotoModel(context, curMasjid.id, curMasjid.photoUrl)
                                     }
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Current Active Photo",
-                                            fontSize = 11.5.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(0xFF86EFAC)
-                                        )
-                                        Text(
-                                            text = "Tap above button to replace",
-                                            fontSize = 10.sp,
-                                            color = Color.White.copy(alpha = 0.5f)
-                                        )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color(0xFF141E2E), RoundedCornerShape(8.dp))
+                                            .padding(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(46.dp)
+                                                .background(Color(0xFF0B132B), RoundedCornerShape(6.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AsyncImage(
+                                                model = activePhotoModel,
+                                                contentDescription = "Current Masjid Photo",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Current Active Photo",
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF86EFAC)
+                                            )
+                                            Text(
+                                                text = "Tap above button to replace",
+                                                fontSize = 10.sp,
+                                                color = Color.White.copy(alpha = 0.5f)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -4065,7 +4082,7 @@ fun AdminPanelScreen(
                                             text = if (standardizedQr!!.decodedPayload != null)
                                                 "Payload: ${standardizedQr!!.decodedPayload!!.take(26)}..."
                                             else
-                                                "Ready to upload to Google Drive & Sheet",
+                                                "Ready to save & upload",
                                             fontSize = 10.sp,
                                             color = Color.White.copy(alpha = 0.65f),
                                             maxLines = 1
@@ -4086,41 +4103,47 @@ fun AdminPanelScreen(
                                         )
                                     }
                                 }
-                            } else if (curMasjid.qrUrl.isNotBlank()) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color(0xFF141E2E), RoundedCornerShape(8.dp))
-                                        .padding(8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(46.dp)
-                                            .background(Color.White, RoundedCornerShape(6.dp))
-                                            .padding(2.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        AsyncImage(
-                                            model = curMasjid.qrUrl,
-                                            contentDescription = "Current Masjid QR",
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Fit
-                                        )
+                            } else {
+                                val hasActiveQr = com.example.data.MasjidPaymentHelper.hasValidQr(curMasjid, context)
+                                if (hasActiveQr) {
+                                    val activeQrModel = remember(curMasjid.id, curMasjid.qrUrl, selectedQrUri, standardizedQr) {
+                                        com.example.data.MasjidLocalCacheManager.getQrModel(context, curMasjid.id, curMasjid.qrUrl)
                                     }
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Current Active QR",
-                                            fontSize = 11.5.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(0xFF86EFAC)
-                                        )
-                                        Text(
-                                            text = "Tap above button to replace",
-                                            fontSize = 10.sp,
-                                            color = Color.White.copy(alpha = 0.5f)
-                                        )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color(0xFF141E2E), RoundedCornerShape(8.dp))
+                                            .padding(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(46.dp)
+                                                .background(Color.White, RoundedCornerShape(6.dp))
+                                                .padding(2.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AsyncImage(
+                                                model = activeQrModel,
+                                                contentDescription = "Current Masjid QR",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Current Active QR",
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color(0xFF86EFAC)
+                                            )
+                                            Text(
+                                                text = "Tap above button to replace",
+                                                fontSize = 10.sp,
+                                                color = Color.White.copy(alpha = 0.5f)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -4153,14 +4176,28 @@ fun AdminPanelScreen(
                                     val configuredUrl = uiState.appsScriptUrl.trim()
                                     val targetUrl = configuredUrl.ifBlank { com.example.data.GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL }
 
-                                    // Immediately update in app
+                                    // 1. Immediately replace and save in local files & evict Coil cache
+                                    val localPhotoSaved = if (pUri != null) {
+                                        com.example.data.MasjidLocalCacheManager.replaceMasjidPhotoLocally(context, curMasjid.id, pUri)
+                                    } else false
+
+                                    val localQrSaved = if (standardizedQr != null) {
+                                        com.example.data.MasjidLocalCacheManager.replaceMasjidQrLocally(context, curMasjid.id, standardizedQr!!.bitmap)
+                                    } else if (qUri != null) {
+                                        com.example.data.MasjidLocalCacheManager.replaceMasjidQrLocally(context, curMasjid.id, qUri)
+                                    } else false
+
+                                    // 2. Immediately update in ViewModel state
+                                    val localPhotoPath = if (localPhotoSaved) com.example.data.MasjidLocalCacheManager.getLocalPhotoFile(context, curMasjid.id).absolutePath else pUri?.toString()
+                                    val localQrPath = if (localQrSaved) com.example.data.MasjidLocalCacheManager.getLocalQrFile(context, curMasjid.id).absolutePath else (standardizedQr?.localFilePath ?: qUri?.toString())
+
                                     viewModel.updateMasjidPhotoAndQr(
                                         id = curMasjid.id,
-                                        photoUrl = pUri?.toString(),
-                                        qrUrl = standardizedQr?.localFilePath ?: qUri?.toString()
+                                        photoUrl = localPhotoPath,
+                                        qrUrl = localQrPath
                                     )
 
-                                    // Upload to Google Drive and update Sheet
+                                    // 3. Upload to Google Drive and update Sheet
                                     val (success, msg) = com.example.data.GoogleSheetMasjidSync.uploadMasjidAssets(
                                         masjidId = curMasjid.id,
                                         masjidName = curMasjid.name,
@@ -4171,14 +4208,12 @@ fun AdminPanelScreen(
 
                                     isUploadingAssets = false
                                     android.os.Handler(android.os.Looper.getMainLooper()).post {
-                                        if (success) {
-                                            Toast.makeText(context, "✅ $msg", Toast.LENGTH_LONG).show()
-                                            selectedPhotoUri = null
-                                            selectedQrUri = null
-                                            standardizedQr = null
-                                        } else {
-                                            Toast.makeText(context, "Saved locally. Cloud notice: $msg", Toast.LENGTH_LONG).show()
-                                        }
+                                        selectedPhotoUri = null
+                                        selectedQrUri = null
+                                        standardizedQr = null
+                                        
+                                        isCloudSuccess = success
+                                        showAssetSuccessDialog = true
                                     }
                                 }
                             },
@@ -4200,7 +4235,7 @@ fun AdminPanelScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Uploading to Google Drive & Sheet...",
+                                    text = "Saving & Uploading Media...",
                                     color = Color.White,
                                     fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold
@@ -4214,7 +4249,7 @@ fun AdminPanelScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Save & Upload Media to Google Drive",
+                                    text = "Save & Upload Media",
                                     color = if (canUpload) Color.White else Color.White.copy(alpha = 0.4f),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
@@ -4287,6 +4322,90 @@ fun AdminPanelScreen(
                     viewModel.saveOrUpdateMasjid(id, name, address, photoUrl)
                     android.widget.Toast.makeText(context, "$name added successfully!", android.widget.Toast.LENGTH_SHORT).show()
                     showAddMasjidDialog = false
+                }
+            )
+        }
+
+        // Asset Success Dialog (Matches "Request Received!" style)
+        if (showAssetSuccessDialog) {
+            AlertDialog(
+                onDismissRequest = { showAssetSuccessDialog = false },
+                containerColor = Color(0xFF0F241A),
+                shape = RoundedCornerShape(22.dp),
+                icon = {
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .background(Color(0xFF10B981).copy(alpha = 0.2f), CircleShape)
+                            .border(2.dp, Color(0xFF10B981), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = "Success",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(34.dp)
+                        )
+                    }
+                },
+                title = {
+                    Text(
+                        text = if (isCloudSuccess) "Updated Successfully!" else "Saved Locally!",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        color = Color(0xFF34D399),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Aapki photo/QR mobile me update ho chuki hai aur Home Page par ab nayi image dikhegi.",
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.9f),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 20.sp
+                        )
+                        
+                        if (!isCloudSuccess) {
+                            Text(
+                                text = "Google Drive cloud-sync ke liye purana Apps Script update karna hoga.",
+                                fontSize = 11.5.sp,
+                                color = Color(0xFFFBBF24),
+                                textAlign = TextAlign.Center
+                            )
+                            
+                            Button(
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(com.example.data.GoogleSheetMasjidSync.APPS_SCRIPT_SAMPLE_CODE))
+                                    Toast.makeText(context, "✅ Latest Apps Script Code Copied!", Toast.LENGTH_SHORT).show()
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Copy Script Code", fontSize = 11.sp, color = Color.White)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showAssetSuccessDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Theek Hai", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             )
         }

@@ -112,14 +112,14 @@ object MasjidLocalCacheManager {
                 val photoFile = File(masjidDir, PHOTO_FILE_NAME)
                 val photoUrlTracker = File(masjidDir, "photo_url.txt")
 
+                val lastPhotoUrl = if (photoUrlTracker.exists()) photoUrlTracker.readText().trim() else ""
                 if (directPhotoUrl.isNotBlank() && directPhotoUrl.startsWith("http")) {
-                    val lastPhotoUrl = if (photoUrlTracker.exists()) photoUrlTracker.readText().trim() else ""
                     if (lastPhotoUrl != directPhotoUrl || !photoFile.exists() || photoFile.length() == 0L) {
                         downloadAndSaveAsWebP(directPhotoUrl, photoFile)
                         try { photoUrlTracker.writeText(directPhotoUrl) } catch (_: Exception) {}
                     }
-                } else {
-                    // Photo was removed from sheet - clean up stale local file
+                } else if (lastPhotoUrl.isNotBlank() && lastPhotoUrl.startsWith("http")) {
+                    // Only remove if it was previously an HTTP image from the sheet
                     if (photoFile.exists()) photoFile.delete()
                     if (photoUrlTracker.exists()) photoUrlTracker.delete()
                 }
@@ -128,20 +128,84 @@ object MasjidLocalCacheManager {
                 val directQrUrl = GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(masjid.qrUrl)
                 val qrFile = File(masjidDir, QR_FILE_NAME)
                 val qrUrlTracker = File(masjidDir, "qr_url.txt")
+                val lastQrUrl = if (qrUrlTracker.exists()) qrUrlTracker.readText().trim() else ""
 
                 if (directQrUrl.isNotBlank() && directQrUrl.startsWith("http")) {
-                    val lastQrUrl = if (qrUrlTracker.exists()) qrUrlTracker.readText().trim() else ""
                     if (lastQrUrl != directQrUrl || !qrFile.exists() || qrFile.length() == 0L) {
                         downloadAndSaveAsWebP(directQrUrl, qrFile)
                         try { qrUrlTracker.writeText(directQrUrl) } catch (_: Exception) {}
                     }
-                } else {
-                    // QR was removed from sheet - clean up stale local file
+                } else if (lastQrUrl.isNotBlank() && lastQrUrl.startsWith("http")) {
+                    // Only remove if it was previously an HTTP image from the sheet
                     if (qrFile.exists()) qrFile.delete()
                     if (qrUrlTracker.exists()) qrUrlTracker.delete()
                 }
             }
         }
+    }
+
+    fun hasLocalPhoto(context: Context, masjidId: String): Boolean {
+        val file = getLocalPhotoFile(context, masjidId)
+        return file.exists() && file.length() > 0
+    }
+
+    fun hasLocalQr(context: Context, masjidId: String): Boolean {
+        val file = getLocalQrFile(context, masjidId)
+        return file.exists() && file.length() > 0
+    }
+
+    /**
+     * Replaces previous masjid photo with new photo immediately and evicts Coil image cache.
+     */
+    fun replaceMasjidPhotoLocally(context: Context, masjidId: String, sourceUri: android.net.Uri): Boolean {
+        val success = saveCustomImageAsWebP(context, sourceUri, masjidId, isQr = false)
+        if (success) {
+            val photoUrlTracker = File(getMasjidDir(context, masjidId), "photo_url.txt")
+            try { photoUrlTracker.writeText(sourceUri.toString()) } catch (_: Exception) {}
+            try {
+                coil.Coil.imageLoader(context).memoryCache?.clear()
+                coil.Coil.imageLoader(context).diskCache?.clear()
+            } catch (_: Exception) {}
+        }
+        return success
+    }
+
+    /**
+     * Replaces previous masjid QR with new QR immediately and evicts Coil image cache.
+     */
+    fun replaceMasjidQrLocally(context: Context, masjidId: String, qrBitmapOrUri: Any): Boolean {
+        val qrFile = getLocalQrFile(context, masjidId)
+        val success = try {
+            if (qrBitmapOrUri is Bitmap) {
+                val tempFile = File(qrFile.parentFile, "${qrFile.name}.tmp")
+                FileOutputStream(tempFile).use { out ->
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        qrBitmapOrUri.compress(Bitmap.CompressFormat.WEBP_LOSSY, 90, out)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        qrBitmapOrUri.compress(Bitmap.CompressFormat.WEBP, 90, out)
+                    }
+                }
+                if (tempFile.exists() && tempFile.length() > 0) {
+                    if (qrFile.exists()) qrFile.delete()
+                    tempFile.renameTo(qrFile)
+                    true
+                } else false
+            } else if (qrBitmapOrUri is android.net.Uri) {
+                saveCustomImageAsWebP(context, qrBitmapOrUri, masjidId, isQr = true)
+            } else false
+        } catch (_: Exception) {
+            false
+        }
+        if (success) {
+            val qrUrlTracker = File(getMasjidDir(context, masjidId), "qr_url.txt")
+            try { qrUrlTracker.writeText("custom_local_qr") } catch (_: Exception) {}
+            try {
+                coil.Coil.imageLoader(context).memoryCache?.clear()
+                coil.Coil.imageLoader(context).diskCache?.clear()
+            } catch (_: Exception) {}
+        }
+        return success
     }
 
     /**
@@ -153,6 +217,7 @@ object MasjidLocalCacheManager {
             context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
                 val bitmap = BitmapFactory.decodeStream(inputStream)
                 if (bitmap != null) {
+                    targetFile.parentFile?.mkdirs()
                     val tempFile = File(targetFile.parentFile, "${targetFile.name}.tmp")
                     FileOutputStream(tempFile).use { out ->
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -163,6 +228,7 @@ object MasjidLocalCacheManager {
                         }
                     }
                     if (tempFile.exists() && tempFile.length() > 0) {
+                        if (targetFile.exists()) targetFile.delete()
                         tempFile.renameTo(targetFile)
                         return true
                     }

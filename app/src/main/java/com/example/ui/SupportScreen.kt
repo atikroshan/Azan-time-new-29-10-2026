@@ -14,6 +14,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,8 +34,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -282,18 +289,18 @@ fun SupportScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 4.dp),
+                    .padding(top = 6.dp, bottom = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 AzanLogoCard(
                     size = logoSize
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 AzanTimeWordmark(
                     height = wordmarkHeight,
-                    topPadding = 5.dp,
-                    bottomPadding = 5.dp
+                    topPadding = 6.dp,
+                    bottomPadding = 6.dp
                 )
             }
 
@@ -497,17 +504,29 @@ fun SupportScreen(
                     }
                 }
 
-                // Slide to Pay via UPI Button (Dribbble 2352079 animation)
-                val slideToPayText = when (uiState.language) {
-                    "hi" -> "UPI भुगतान के लिए स्लाइड करें"
-                    "ur" -> "یو پی آئی ادائیگی کے لیے سلائیڈ کریں"
-                    else -> "SLIDE TO PAY VIA UPI"
+                // Regular Tap to Pay Button (Dark gray background, white bold text, no arrows)
+                Button(
+                    onClick = { showUpiAppChooserDialog = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF262C36),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(upiButtonHeight.coerceAtLeast(42.dp))
+                ) {
+                    Text(
+                        text = "TAP TO PAY VIA UPI",
+                        color = Color.White,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.8.sp,
+                        textAlign = TextAlign.Center
+                    )
                 }
-                SlideToPayButton(
-                    text = slideToPayText,
-                    onSlideComplete = { showUpiAppChooserDialog = true },
-                    height = upiButtonHeight
-                )
             }
             }
 
@@ -534,11 +553,9 @@ fun SupportScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.ic_whatsapp),
+                            painter = painterResource(id = R.drawable.ic_whatsapp_outlined),
                             contentDescription = "WhatsApp",
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
+                            modifier = Modifier.size(31.dp)
                         )
                         Column {
                             Text(
@@ -1054,83 +1071,114 @@ fun SupportScreen(
         )
     }
 
-    // Thanks Popup in Green with Thumb 👍 Icon
+    // Thanks Popup in Green with Thumb 👍 Icon + Colourful Confetti
     if (showThanksDialog) {
-        AlertDialog(
-            onDismissRequest = { showThanksDialog = false },
-            containerColor = Color(0xFF0F241A),
-            shape = RoundedCornerShape(22.dp),
-            icon = {
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .background(Color(0xFF10B981).copy(alpha = 0.2f), CircleShape)
-                        .border(2.dp, Color(0xFF10B981), CircleShape),
-                    contentAlignment = Alignment.Center
+        Dialog(
+            onDismissRequest = {
+                showThanksDialog = false
+                onMasjidSubmitted()
+            },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(0.90f),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A)),
+                    border = BorderStroke(1.5.dp, Color(0xFF10B981).copy(alpha = 0.7f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ThumbUp,
-                        contentDescription = "Thanks",
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(34.dp)
-                    )
-                }
-            },
-            title = {
-                Text(
-                    text = when (uiState.language) {
-                        "ur" -> "درخواست موصول ہوگئی!"
-                        "hi" -> "अनुरोध प्राप्त हुआ!"
-                        else -> "Request Received!"
-                    },
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp,
-                    color = Color(0xFF34D399),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            text = {
-                val annotatedText = buildAnnotatedString {
-                    append("Please wait ")
-                    withStyle(
-                        style = SpanStyle(
-                            color = Color(0xFFFBBF24),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        append("(5 Min)")
+                        Box(
+                            modifier = Modifier
+                                .size(68.dp)
+                                .background(Color(0xFF10B981).copy(alpha = 0.2f), CircleShape)
+                                .border(2.dp, Color(0xFF10B981), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ThumbUp,
+                                contentDescription = "Thanks",
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(34.dp)
+                            )
+                        }
+
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "درخواست موصول ہوگئی!"
+                                "hi" -> "अनुरोध प्राप्त हुआ!"
+                                else -> "Request Received!"
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 19.sp,
+                            color = Color(0xFF34D399),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        val annotatedText = buildAnnotatedString {
+                            append("Please wait ")
+                            withStyle(
+                                style = SpanStyle(
+                                    color = Color(0xFFFBBF24),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                            ) {
+                                append("(5 Min)")
+                            }
+                            append("\nYour Masjid will be live.")
+                        }
+                        Text(
+                            text = annotatedText,
+                            fontSize = 14.5.sp,
+                            color = Color.White.copy(alpha = 0.95f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            lineHeight = 22.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Button(
+                            onClick = {
+                                showThanksDialog = false
+                                onMasjidSubmitted()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                        ) {
+                            Text(
+                                text = "OK",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
                     }
-                    append("\nYour Masjid will be live.")
                 }
-                Text(
-                    text = annotatedText,
-                    fontSize = 14.5.sp,
-                    color = Color.White.copy(alpha = 0.95f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                    lineHeight = 22.sp
+
+                // Colourful Confetti bursting and falling over the card and screen
+                ColorfulConfettiOverlay(
+                    modifier = Modifier.fillMaxSize()
                 )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showThanksDialog = false
-                        onMasjidSubmitted()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "OK",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
             }
-        )
+        }
     }
 }
 
@@ -1361,6 +1409,22 @@ private suspend fun saveCustomQrToInternalStorage(context: Context, qrUri: Uri):
     }
 }
 
+private fun toTitleCaseWords(input: String): String {
+    if (input.isEmpty()) return input
+    val chars = input.toCharArray()
+    var capitalizeNext = true
+    for (i in chars.indices) {
+        val c = chars[i]
+        if (c.isWhitespace() || c == ',' || c == '-' || c == '/' || c == '(' || c == '.') {
+            capitalizeNext = true
+        } else if (capitalizeNext && c.isLetter()) {
+            chars[i] = c.uppercaseChar()
+            capitalizeNext = false
+        }
+    }
+    return String(chars)
+}
+
 @Composable
 fun AddMasjidAutoDialog(
     language: String,
@@ -1377,6 +1441,9 @@ fun AddMasjidAutoDialog(
     var location by remember { mutableStateOf("") }
     var adminName by remember { mutableStateOf("admin") }
     var adminContact by remember { mutableStateOf("") }
+    val masjidNameFocusRequester = remember { FocusRequester() }
+    val locationFocusRequester = remember { FocusRequester() }
+    val contactFocusRequester = remember { FocusRequester() }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedQrUri by remember { mutableStateOf<Uri?>(null) }
     var standardizedQr by remember { mutableStateOf<StandardizedQrResult?>(null) }
@@ -1418,12 +1485,12 @@ fun AddMasjidAutoDialog(
             keyboardController?.hide()
             onDismiss()
         },
-        properties = androidx.compose.ui.window.DialogProperties(decorFitsSystemWindows = false)
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .padding(horizontal = 16.dp, vertical = 20.dp)
                 .imePadding(),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
@@ -1480,37 +1547,77 @@ fun AddMasjidAutoDialog(
                 // Field 1: Name of Masjid
                 OutlinedTextField(
                     value = masjidName,
-                    onValueChange = { masjidName = it; errorMessage = null },
+                    onValueChange = { 
+                        masjidName = toTitleCaseWords(it)
+                        errorMessage = null 
+                    },
+                    enabled = true,
+                    readOnly = false,
                     label = { Text("Name of Masjid *") },
-                    placeholder = { Text("e.g. Markaz Masjid, Jama Masjid") },
+                    placeholder = { 
+                        Text("e.g. Markaz Masjid, Jama Masjid", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
+                    },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { locationFocusRequester.requestFocus() }
+                    ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFFF3DE8E),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
                         focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.6f),
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
                         focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color(0xFFF3DE8E),
+                        focusedContainerColor = Color(0xFF1E293B),
+                        unfocusedContainerColor = Color(0xFF131D2A)
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(masjidNameFocusRequester)
                 )
 
                 // Field 2: Location
                 OutlinedTextField(
                     value = location,
-                    onValueChange = { location = it; errorMessage = null },
+                    onValueChange = { 
+                        location = toTitleCaseWords(it)
+                        errorMessage = null 
+                    },
+                    enabled = true,
+                    readOnly = false,
                     label = { Text("Location / City / Area *") },
-                    placeholder = { Text("e.g. Solapur, Muslim Peth") },
+                    placeholder = { 
+                        Text("e.g. Solapur, Muslim Peth", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
+                    },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { contactFocusRequester.requestFocus() }
+                    ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFFF3DE8E),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
                         focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.6f),
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
                         focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color(0xFFF3DE8E),
+                        focusedContainerColor = Color(0xFF1E293B),
+                        unfocusedContainerColor = Color(0xFF131D2A)
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(locationFocusRequester)
                 )
 
                 // Field 3: Admin ID (Common for all as requested)
@@ -1526,7 +1633,9 @@ fun AddMasjidAutoDialog(
                         focusedLabelColor = Color(0xFFF3DE8E),
                         unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
                         focusedTextColor = Color.White.copy(alpha = 0.7f),
-                        unfocusedTextColor = Color.White.copy(alpha = 0.7f)
+                        unfocusedTextColor = Color.White.copy(alpha = 0.7f),
+                        focusedContainerColor = Color(0xFF141E2E),
+                        unfocusedContainerColor = Color(0xFF141E2E)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1535,19 +1644,45 @@ fun AddMasjidAutoDialog(
                 OutlinedTextField(
                     value = adminContact,
                     onValueChange = { adminContact = it; errorMessage = null },
+                    enabled = true,
+                    readOnly = false,
                     label = { Text("Admin Contact Number *") },
-                    placeholder = { Text("e.g. 9876543210") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    placeholder = { 
+                        Text("e.g. 9876543210", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { 
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        },
+                        onSearch = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        },
+                        onGo = {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
+                    ),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFFF3DE8E),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
                         focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.6f),
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
                         focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color(0xFFF3DE8E),
+                        focusedContainerColor = Color(0xFF1E293B),
+                        unfocusedContainerColor = Color(0xFF131D2A)
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(contactFocusRequester)
                 )
 
                 // Field 5: Photo Browser Button
@@ -2457,181 +2592,113 @@ private fun WhiteSocialTelegramIcon() {
     }
 }
 
-/**
- * Modern Slide to Action Button (Dribbble 2352079 style)
- * Features smooth drag physics with spring snap-back, progress track fill, and shimmering text.
- */
+private data class ConfettiParticle(
+    val initialXRatio: Float,
+    val initialYRatio: Float,
+    val vx: Float,
+    val vy: Float,
+    val gravity: Float,
+    val color: Color,
+    val width: Float,
+    val height: Float,
+    val rotationSpeed: Float,
+    val isCircle: Boolean,
+    val swayFrequency: Float,
+    val swayPhase: Float
+)
+
 @Composable
-fun SlideToPayButton(
-    text: String,
-    onSlideComplete: () -> Unit,
+fun ColorfulConfettiOverlay(
     modifier: Modifier = Modifier,
-    height: Dp = 44.dp
+    particleCount: Int = 90
 ) {
-    val density = LocalDensity.current
-    val coroutineScope = rememberCoroutineScope()
-    var containerWidthPx by remember { mutableFloatStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
-    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
-    var isCompleted by remember { mutableStateOf(false) }
-
-    val thumbPadding = 4.dp
-    val thumbSizeDp = height - (thumbPadding * 2)
-    val thumbSizePx = with(density) { thumbSizeDp.toPx() }
-    val thumbPaddingPx = with(density) { thumbPadding.toPx() }
-    val maxDragPx = (containerWidthPx - thumbSizePx - (thumbPaddingPx * 2)).coerceAtLeast(0f)
-
-    val animatedThumbOffset by animateFloatAsState(
-        targetValue = if (isDragging) dragOffsetPx else if (isCompleted) maxDragPx else 0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "thumbOffset"
-    )
-
-    // Shimmer animation for track text
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
-    val shimmerAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.45f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "shimmerAlpha"
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(height)
-            .clip(RoundedCornerShape(height / 2))
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color(0xFF0A1C14),
-                        Color(0xFF143023),
-                        Color(0xFF0A1C14)
-                    )
-                )
-            )
-            .border(
-                width = 1.2.dp,
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color(0xFF3DB88F).copy(alpha = 0.6f),
-                        Color(0xFFF3DE8E).copy(alpha = 0.85f),
-                        Color(0xFF3DB88F).copy(alpha = 0.6f)
-                    )
-                ),
-                shape = RoundedCornerShape(height / 2)
-            )
-            .onGloballyPositioned { coordinates ->
-                containerWidthPx = coordinates.size.width.toFloat()
-            }
-            .clickable {
-                onSlideComplete()
-            },
-        contentAlignment = Alignment.CenterStart
-    ) {
-        // Dynamic Progress Track Fill behind the thumb knob
-        val progressWidth = with(density) { (animatedThumbOffset + thumbSizePx + (thumbPaddingPx * 2)).toDp() }
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(progressWidth)
-                .clip(RoundedCornerShape(height / 2))
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0x99225841),
-                            Color(0xCC3DB88F)
-                        )
-                    )
-                )
+    val confettiColors = remember {
+        listOf(
+            Color(0xFFFFD700), // Bright Gold
+            Color(0xFFFF3366), // Festive Pink
+            Color(0xFF10B981), // Emerald Green
+            Color(0xFF00B0FF), // Sky Blue
+            Color(0xFFAA00FF), // Vivid Purple
+            Color(0xFFFF9100), // Vibrant Orange
+            Color(0xFF00E5FF), // Cyan
+            Color(0xFFFF5252), // Coral Red
+            Color(0xFF76FF03), // Lime Green
+            Color(0xFFFFEB3B)  // Lemon Yellow
         )
+    }
 
-        // Shimmering Track Text & Arrows
-        val progressFraction = if (maxDragPx > 0f) (animatedThumbOffset / maxDragPx).coerceIn(0f, 1f) else 0f
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 48.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = text,
-                fontSize = 12.5.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White.copy(alpha = if (progressFraction > 0.5f) 0.35f else shimmerAlpha),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Color(0xFFF3DE8E).copy(alpha = if (progressFraction > 0.5f) 0.35f else shimmerAlpha),
-                modifier = Modifier.size(18.dp)
+    val particles = remember {
+        val random = java.util.Random(1337)
+        List(particleCount) {
+            val angle = random.nextFloat() * 2f * Math.PI.toFloat()
+            val speed = 160f + random.nextFloat() * 420f
+            ConfettiParticle(
+                initialXRatio = 0.5f + (random.nextFloat() - 0.5f) * 0.35f,
+                initialYRatio = 0.30f + (random.nextFloat() - 0.5f) * 0.2f,
+                vx = kotlin.math.cos(angle) * speed,
+                vy = (kotlin.math.sin(angle) * speed * 0.7f) - (180f + random.nextFloat() * 220f),
+                gravity = 420f + random.nextFloat() * 300f,
+                color = confettiColors[random.nextInt(confettiColors.size)],
+                width = 12f + random.nextFloat() * 16f,
+                height = 6f + random.nextFloat() * 10f,
+                rotationSpeed = (random.nextFloat() - 0.5f) * 720f,
+                isCircle = random.nextFloat() < 0.25f,
+                swayFrequency = 2f + random.nextFloat() * 3f,
+                swayPhase = random.nextFloat() * 2f * Math.PI.toFloat()
             )
         }
+    }
 
-        // Draggable Thumb Knob (Gold Circle with Arrow Icon)
-        Box(
-            modifier = Modifier
-                .padding(start = thumbPadding)
-                .offset { IntOffset(animatedThumbOffset.toInt(), 0) }
-                .size(thumbSizeDp)
-                .clip(CircleShape)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFFFFF1A6),
-                            Color(0xFFE5B842)
-                        )
+    var elapsedTime by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val startTime = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { frameTime ->
+                elapsedTime = (frameTime - startTime) / 1_000_000_000f
+            }
+        }
+    }
+
+    Canvas(
+        modifier = modifier.fillMaxSize()
+    ) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+
+        val loopDuration = 4.0f
+        val t = elapsedTime % loopDuration
+        val alpha = if (t < 2.8f) 1f else (1f - (t - 2.8f) / 1.2f).coerceIn(0f, 1f)
+
+        for (p in particles) {
+            val startX = p.initialXRatio * canvasWidth
+            val startY = p.initialYRatio * canvasHeight
+
+            val sway = kotlin.math.sin(t * p.swayFrequency + p.swayPhase) * 24f
+            val currentX = startX + p.vx * t * 0.65f + sway
+            val currentY = startY + p.vy * t + 0.5f * p.gravity * t * t
+
+            if (currentY > canvasHeight + 50f || currentY < -50f) continue
+
+            val currentRotation = p.rotationSpeed * t
+            val flutterScale = kotlin.math.cos(t * 5f + p.swayPhase)
+            val particleColor = p.color.copy(alpha = alpha)
+
+            rotate(degrees = currentRotation, pivot = androidx.compose.ui.geometry.Offset(currentX, currentY)) {
+                if (p.isCircle) {
+                    drawCircle(
+                        color = particleColor,
+                        radius = (p.width / 2.5f) * kotlin.math.abs(flutterScale).coerceAtLeast(0.3f),
+                        center = androidx.compose.ui.geometry.Offset(currentX, currentY)
                     )
-                )
-                .border(1.2.dp, Color.White.copy(alpha = 0.95f), CircleShape)
-                .pointerInput(maxDragPx) {
-                    detectHorizontalDragGestures(
-                        onDragStart = {
-                            isDragging = true
-                        },
-                        onDragEnd = {
-                            isDragging = false
-                            if (dragOffsetPx >= maxDragPx * 0.65f) {
-                                isCompleted = true
-                                dragOffsetPx = maxDragPx
-                                onSlideComplete()
-                                coroutineScope.launch {
-                                    delay(400)
-                                    isCompleted = false
-                                    dragOffsetPx = 0f
-                                }
-                            } else {
-                                dragOffsetPx = 0f
-                            }
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                            dragOffsetPx = 0f
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            dragOffsetPx = (dragOffsetPx + dragAmount).coerceIn(0f, maxDragPx)
-                        }
+                } else {
+                    val effectiveHeight = (p.height * flutterScale).coerceIn(-p.height, p.height)
+                    drawRect(
+                        color = particleColor,
+                        topLeft = androidx.compose.ui.geometry.Offset(currentX - p.width / 2f, currentY - effectiveHeight / 2f),
+                        size = androidx.compose.ui.geometry.Size(p.width, kotlin.math.abs(effectiveHeight).coerceAtLeast(2.5f))
                     )
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Slide to Pay",
-                tint = Color(0xFF091712),
-                modifier = Modifier.size(18.dp)
-            )
+                }
+            }
         }
     }
 }

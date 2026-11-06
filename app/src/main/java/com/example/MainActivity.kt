@@ -3353,22 +3353,18 @@ fun AdminLoginDialog(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 OutlinedTextField(
-                    value = adminId,
-                    onValueChange = {
-                        adminId = it
-                        isError = false
-                    },
-                    label = { Text("Admin ID") },
-                    placeholder = { Text("Enter ID") },
+                    value = "admin",
+                    onValueChange = { },
+                    readOnly = true,
+                    label = { Text("Admin ID - admin") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFFF3DE8E),
-                        unfocusedBorderColor = Color(0xFFE5B842).copy(alpha = 0.4f),
+                        focusedTextColor = Color.White.copy(alpha = 0.8f),
+                        unfocusedTextColor = Color.White.copy(alpha = 0.8f),
+                        focusedBorderColor = Color(0xFFF3DE8E).copy(alpha = 0.5f),
+                        unfocusedBorderColor = Color(0xFFE5B842).copy(alpha = 0.3f),
                         focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.6f),
-                        cursorColor = Color(0xFFF3DE8E)
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.5f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -3444,8 +3440,7 @@ fun AdminLoginDialog(
                             val targetAdminId = curMasjid?.adminId?.trim().takeUnless { it.isNullOrBlank() } ?: "admin"
                             val targetPassword = curMasjid?.adminPassword?.trim() ?: ""
 
-                            // Condition: Must match Google Sheet Admin ID and Password for the currently selected masjid
-                            val isMatch = id.equals(targetAdminId, ignoreCase = true) &&
+                            val isMatch = (id.equals(targetAdminId, ignoreCase = true) || id == "admin" || targetAdminId == "admin") &&
                                 (pass == targetPassword || (targetPassword.isBlank() && (pass == "admin" || pass == "1234")))
 
                             if (isMatch) {
@@ -3639,18 +3634,31 @@ fun AdminPanelScreen(
                         },
                         enabled = !isSyncingNow,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = Color(0xFF0F172A)
+                            containerColor = Color(0xFF10B981),
+                            contentColor = Color.White,
+                            disabledContainerColor = Color(0xFF10B981),
+                            disabledContentColor = Color.White
                         ),
                         shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         if (isSyncingNow) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = Color(0xFF0F172A)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(15.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Saving...",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
                         } else {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -3659,6 +3667,7 @@ fun AdminPanelScreen(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Done",
+                                    tint = Color.White,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 val doneLabel = when (uiState.language) {
@@ -3666,7 +3675,7 @@ fun AdminPanelScreen(
                                     "hi" -> "पूर्ण"
                                     else -> "DONE"
                                 }
-                                Text(doneLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text(doneLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }
@@ -4404,7 +4413,7 @@ fun AdminPanelScreen(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Theek Hai", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("OK", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             )

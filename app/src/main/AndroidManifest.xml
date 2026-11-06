@@ -39,6 +39,7 @@
             android:launchMode="singleTop"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.OfflineAzan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

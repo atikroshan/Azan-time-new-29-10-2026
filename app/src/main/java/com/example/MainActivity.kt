@@ -58,6 +58,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.ui.graphics.asImageBitmap
+import com.example.ui.prepareStandardizedMasjidQr
+import com.example.ui.prepareStraightMasjidPhotoBase64
+import com.example.ui.StandardizedQrResult
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.foundation.BorderStroke
@@ -791,7 +797,7 @@ fun AzanHomeContent(
 ) {
     val context = LocalContext.current
     val photoUrl = uiState.selectedMasjid.photoUrl
-    val hasQrCode = uiState.selectedMasjid.qrUrl.isNotBlank()
+    val hasQrCode = com.example.data.MasjidPaymentHelper.hasValidQr(uiState.selectedMasjid)
     var showSupportPopup by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
@@ -1102,9 +1108,16 @@ fun AzanHomeContent(
                     }
 
                     if (!isPlayingAzan || !isPulledDown) {
-                        // Support Masjid QR Button (Animated spin loop matching Support page QR button)
+                        // Support Masjid QR Button (Animated spin loop when QR present, static 🚫 icon when missing)
                         com.example.ui.AnimatedTopQrIconButton(
-                            onClick = { showSupportPopup = true }
+                            hasQr = hasQrCode,
+                            onClick = {
+                                if (hasQrCode) {
+                                    showSupportPopup = true
+                                } else {
+                                    android.widget.Toast.makeText(context, "QR code not available for this masjid", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         )
 
                         // Admin icon button (Profile/Avatar)
@@ -3498,6 +3511,34 @@ fun AdminPanelScreen(
     var isSyncingNow by remember { mutableStateOf(false) }
     var syncStatusErrorDialog by remember { mutableStateOf<String?>(null) }
 
+    var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedQrUri by remember { mutableStateOf<Uri?>(null) }
+    var standardizedQr by remember { mutableStateOf<StandardizedQrResult?>(null) }
+    var isProcessingQr by remember { mutableStateOf(false) }
+    var isUploadingAssets by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        selectedPhotoUri = uri
+    }
+
+    val qrPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        selectedQrUri = uri
+        if (uri != null) {
+            isProcessingQr = true
+            scope.launch {
+                val res = prepareStandardizedMasjidQr(context, uri)
+                standardizedQr = res
+                isProcessingQr = false
+            }
+        } else {
+            standardizedQr = null
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -3756,6 +3797,428 @@ fun AdminPanelScreen(
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // ==================== MASJID PHOTO & QR SECTION ====================
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1522).copy(alpha = 0.95f)),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.2.dp, Color(0xFFF3DE8E).copy(alpha = 0.45f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Color(0xFF1E293B), CircleShape)
+                                    .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.6f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudUpload,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF3DE8E),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "MASJID MEDIA & QR UPLOAD",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFF3DE8E),
+                                    letterSpacing = 0.5.sp
+                                )
+                                Text(
+                                    text = "Upload or replace Photo & Donation QR for ${curMasjid.name}",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+
+                        // --- 1. UPLOAD MASJID PHOTO ---
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Masjid Photo:",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+
+                            Button(
+                                onClick = {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.6f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AddPhotoAlternate,
+                                    contentDescription = "Upload Photo",
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (selectedPhotoUri != null) "New Photo Selected ✓ Change" else "Browse / Upload Masjid Photo",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF38BDF8)
+                                )
+                            }
+
+                            if (selectedPhotoUri != null) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF0F1A15), RoundedCornerShape(8.dp))
+                                        .border(1.dp, Color(0xFF2E533F), RoundedCornerShape(8.dp))
+                                        .padding(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .background(Color(0xFF1E293B), RoundedCornerShape(6.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AsyncImage(
+                                            model = selectedPhotoUri,
+                                            contentDescription = "New Masjid Photo Preview",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "New Photo Selected",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF38BDF8)
+                                        )
+                                        Text(
+                                            text = "Ready to upload to Google Drive & Sheet",
+                                            fontSize = 10.sp,
+                                            color = Color.White.copy(alpha = 0.65f)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { selectedPhotoUri = null },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Remove Photo",
+                                            tint = Color(0xFFEF4444),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            } else if (curMasjid.photoUrl.isNotBlank()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF141E2E), RoundedCornerShape(8.dp))
+                                        .padding(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .background(Color(0xFF0B132B), RoundedCornerShape(6.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AsyncImage(
+                                            model = curMasjid.photoUrl,
+                                            contentDescription = "Current Masjid Photo",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Current Active Photo",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF86EFAC)
+                                        )
+                                        Text(
+                                            text = "Tap above button to replace",
+                                            fontSize = 10.sp,
+                                            color = Color.White.copy(alpha = 0.5f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // --- 2. UPLOAD MASJID QR ---
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Masjid QR Code:",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White.copy(alpha = 0.9f)
+                            )
+
+                            Button(
+                                onClick = {
+                                    qrPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.6f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QrCode,
+                                    contentDescription = "Upload QR",
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (selectedQrUri != null) "New QR Selected ✓ Change" else "Browse / Upload Masjid QR",
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF38BDF8)
+                                )
+                            }
+
+                            if (isProcessingQr) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
+                                        .padding(10.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Color(0xFF38BDF8)
+                                    )
+                                    Text(
+                                        text = "Standardizing & Straightening QR...",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF38BDF8)
+                                    )
+                                }
+                            } else if (standardizedQr != null) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF0F1A15), RoundedCornerShape(8.dp))
+                                        .border(1.dp, Color(0xFF2E533F), RoundedCornerShape(8.dp))
+                                        .padding(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .background(Color.White, RoundedCornerShape(6.dp))
+                                            .padding(3.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Image(
+                                            bitmap = standardizedQr!!.bitmap.asImageBitmap(),
+                                            contentDescription = "Standard QR Preview",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (standardizedQr!!.isCleanRegenerated) "✓ Standard Clean QR Generated" else "✓ Straight Square QR Cropped",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF10B981)
+                                        )
+                                        Text(
+                                            text = if (standardizedQr!!.decodedPayload != null)
+                                                "Payload: ${standardizedQr!!.decodedPayload!!.take(26)}..."
+                                            else
+                                                "Ready to upload to Google Drive & Sheet",
+                                            fontSize = 10.sp,
+                                            color = Color.White.copy(alpha = 0.65f),
+                                            maxLines = 1
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            selectedQrUri = null
+                                            standardizedQr = null
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Remove QR",
+                                            tint = Color(0xFFEF4444),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            } else if (curMasjid.qrUrl.isNotBlank()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF141E2E), RoundedCornerShape(8.dp))
+                                        .padding(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .background(Color.White, RoundedCornerShape(6.dp))
+                                            .padding(2.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AsyncImage(
+                                            model = curMasjid.qrUrl,
+                                            contentDescription = "Current Masjid QR",
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Current Active QR",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF86EFAC)
+                                        )
+                                        Text(
+                                            text = "Tap above button to replace",
+                                            fontSize = 10.sp,
+                                            color = Color.White.copy(alpha = 0.5f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // --- 3. SAVE & UPLOAD BUTTON ---
+                        val canUpload = selectedPhotoUri != null || standardizedQr != null || selectedQrUri != null
+                        Button(
+                            onClick = {
+                                if (!canUpload) return@Button
+                                isUploadingAssets = true
+                                scope.launch {
+                                    var photoBase64: String? = null
+                                    val pUri = selectedPhotoUri
+                                    if (pUri != null) {
+                                        try {
+                                            photoBase64 = prepareStraightMasjidPhotoBase64(context, pUri)
+                                        } catch (_: Throwable) {}
+                                    }
+
+                                    var qrBase64: String? = standardizedQr?.base64
+                                    val qUri = selectedQrUri
+                                    if (qrBase64 == null && qUri != null) {
+                                        try {
+                                            val res = prepareStandardizedMasjidQr(context, qUri)
+                                            qrBase64 = res?.base64 ?: prepareStraightMasjidPhotoBase64(context, qUri)
+                                        } catch (_: Throwable) {}
+                                    }
+
+                                    val configuredUrl = uiState.appsScriptUrl.trim()
+                                    val targetUrl = configuredUrl.ifBlank { com.example.data.GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL }
+
+                                    // Immediately update in app
+                                    viewModel.updateMasjidPhotoAndQr(
+                                        id = curMasjid.id,
+                                        photoUrl = pUri?.toString(),
+                                        qrUrl = standardizedQr?.localFilePath ?: qUri?.toString()
+                                    )
+
+                                    // Upload to Google Drive and update Sheet
+                                    val (success, msg) = com.example.data.GoogleSheetMasjidSync.uploadMasjidAssets(
+                                        masjidId = curMasjid.id,
+                                        masjidName = curMasjid.name,
+                                        photoBase64 = photoBase64,
+                                        qrBase64 = qrBase64,
+                                        webAppUrl = targetUrl
+                                    )
+
+                                    isUploadingAssets = false
+                                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                        if (success) {
+                                            Toast.makeText(context, "✅ $msg", Toast.LENGTH_LONG).show()
+                                            selectedPhotoUri = null
+                                            selectedQrUri = null
+                                            standardizedQr = null
+                                        } else {
+                                            Toast.makeText(context, "Saved locally. Cloud notice: $msg", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = canUpload && !isUploadingAssets,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF10B981),
+                                disabledContainerColor = Color(0xFF1E293B)
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                        ) {
+                            if (isUploadingAssets) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Uploading to Google Drive & Sheet...",
+                                    color = Color.White,
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.CloudUpload,
+                                    contentDescription = null,
+                                    tint = if (canUpload) Color.White else Color.White.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Save & Upload Media to Google Drive",
+                                    color = if (canUpload) Color.White else Color.White.copy(alpha = 0.4f),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }

@@ -21,7 +21,9 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import android.graphics.Bitmap
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,6 +37,7 @@ import coil.compose.AsyncImage
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.QrCode
@@ -713,11 +716,105 @@ fun SupportMasjidPopup(
  * 2. White background + Black text & icon
  * Uses 4.5s delay and 850ms smooth spin transition matching Support page QR button.
  */
+private var cachedDemoQrBitmap: Bitmap? = null
+
+private fun getOrCreateDemoQrBitmap(): Bitmap? {
+    if (cachedDemoQrBitmap != null) return cachedDemoQrBitmap
+    return try {
+        val hints = mapOf(
+            com.google.zxing.EncodeHintType.MARGIN to 0,
+            com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
+        )
+        val bitMatrix = com.google.zxing.qrcode.QRCodeWriter().encode(
+            "upi://pay?pa=demo@upi&pn=Demo%20Masjid",
+            com.google.zxing.BarcodeFormat.QR_CODE,
+            120,
+            120,
+            hints
+        )
+        val bmp = Bitmap.createBitmap(120, 120, Bitmap.Config.ARGB_8888)
+        for (x in 0 until 120) {
+            for (y in 0 until 120) {
+                bmp.setPixel(x, y, if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+            }
+        }
+        cachedDemoQrBitmap = bmp
+        bmp
+    } catch (_: Throwable) {
+        null
+    }
+}
+
 @Composable
 fun AnimatedTopQrIconButton(
+    hasQr: Boolean = true,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (!hasQr) {
+        // When QR is not available: NO animation, crisp Demo QR clearly visible underneath with 🚫 sign on top
+        Box(
+            modifier = modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White)
+                .border(1.2.dp, Color(0xFFCBD5E1), RoundedCornerShape(8.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple(bounded = true),
+                    onClick = onClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val demoQr = remember { getOrCreateDemoQrBitmap() }
+
+            // 1. Crisp Demo QR code underneath (enlarged to 26.dp so finder squares visibly extend past circle)
+            if (demoQr != null) {
+                Image(
+                    bitmap = demoQr.asImageBitmap(),
+                    contentDescription = "Demo QR Code",
+                    modifier = Modifier.size(26.dp),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.QrCode,
+                    contentDescription = "Demo QR Code",
+                    tint = Color.Black,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+
+            // 2. Clear Red 🚫 Prohibition Sign drawn on top (diameter 22.dp)
+            // Center is transparent so the QR pattern is clearly visible through the sign
+            Canvas(modifier = Modifier.size(22.dp)) {
+                val strokeWidth = 2.4.dp.toPx()
+                val radius = size.minDimension / 2f - strokeWidth / 2f
+                val center = Offset(size.width / 2f, size.height / 2f)
+
+                // Red outer circle
+                drawCircle(
+                    color = Color(0xFFDC2626),
+                    radius = radius,
+                    center = center,
+                    style = Stroke(width = strokeWidth)
+                )
+
+                // Diagonal slash from top-left to bottom-right (45 deg)
+                val cos45 = 0.7071f
+                val offset = radius * cos45
+                drawLine(
+                    color = Color(0xFFDC2626),
+                    start = Offset(center.x - offset, center.y - offset),
+                    end = Offset(center.x + offset, center.y + offset),
+                    strokeWidth = strokeWidth,
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+        return
+    }
+
     val themes = remember {
         listOf(
             // 1. Golden background + black icon

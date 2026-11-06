@@ -350,6 +350,96 @@ function handleRequest(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
+    // 3.5. Upload / Update Masjid Photo and/or QR Code for Existing Masjid
+    if (action === "uploadMasjidAssets" || action === "updateAssets" || action === "updatePhotoQr") {
+      var id = (p.id || "").toString().trim();
+      var name = (p.name || "").toString().trim();
+      var photoData = p.photoData || "";
+      var qrData = p.qrData || "";
+      
+      if (!id) return ContentService.createTextOutput(JSON.stringify({status: "error", message: "Missing id"})).setMimeType(ContentService.MimeType.JSON);
+      
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName("Sheet1") || ss.getActiveSheet();
+      var data = sheet.getDataRange().getValues();
+      
+      var foundRow = -1;
+      var masjidNameFromSheet = name;
+      for (var r = 0; r < data.length; r++) {
+        if ((data[r][0] || "").toString().trim().toLowerCase() === "id" && (data[r][1] || "").toString().trim() === id) {
+          foundRow = r;
+          if (r >= 2 && (data[r - 2][0] || "").toString().trim().toLowerCase() === "masjid name") {
+            masjidNameFromSheet = (data[r - 2][1] || "").toString().trim();
+          }
+          break;
+        }
+      }
+      
+      if (foundRow === -1) {
+        return ContentService.createTextOutput(JSON.stringify({status: "error", message: "Masjid ID #" + id + " not found in sheet"})).setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      var photoRow = -1;
+      var qrRow = -1;
+      for (var r = Math.max(0, foundRow - 4); r < Math.min(data.length, foundRow + 6); r++) {
+        var tag = (data[r][0] || "").toString().trim().toLowerCase();
+        if (tag === "masjid photo") photoRow = r;
+        if (tag === "masjid qr") qrRow = r;
+      }
+      
+      var parentFolder = getMasjidDetailsFolder();
+      var slug = sanitizeSlug(masjidNameFromSheet);
+      var subfolderName = slug + "_" + id;
+      var masjidFolder;
+      var existingFolders = parentFolder.getFoldersByName(subfolderName);
+      if (existingFolders.hasNext()) {
+        masjidFolder = existingFolders.next();
+      } else {
+        masjidFolder = parentFolder.createFolder(subfolderName);
+      }
+      masjidFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      
+      var photoUrl = "";
+      var qrUrl = "";
+      
+      if (photoData) {
+        try {
+          var photoBytes = Utilities.base64Decode(photoData);
+          var photoBlob = Utilities.newBlob(photoBytes, "image/jpeg", slug + "_photo.jpg");
+          var photoFile = masjidFolder.createFile(photoBlob);
+          photoFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          photoUrl = photoFile.getUrl();
+          if (photoRow !== -1) {
+            sheet.getRange(photoRow + 1, 2).setValue(photoUrl);
+          }
+        } catch (pe) {
+          photoUrl = "Error: " + pe.toString();
+        }
+      }
+      
+      if (qrData) {
+        try {
+          var qrBytes = Utilities.base64Decode(qrData);
+          var qrBlob = Utilities.newBlob(qrBytes, "image/jpeg", slug + "_qr.jpg");
+          var qrFile = masjidFolder.createFile(qrBlob);
+          qrFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          qrUrl = qrFile.getUrl();
+          if (qrRow !== -1) {
+            sheet.getRange(qrRow + 1, 2).setValue(qrUrl);
+          }
+        } catch (qe) {
+          qrUrl = "Error: " + qe.toString();
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Photo & QR updated successfully in Google Drive & Sheet for #" + id,
+        photoUrl: photoUrl,
+        qrUrl: qrUrl
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // 4. Update All Timings for a Masjid via Admin Panel
     if (action === "updateAll") {
       var id = (p.id || "").toString().trim();
@@ -1214,6 +1304,83 @@ function repairSheet1TenRows(sheet) {
             } catch (e: Exception) {
                 if (responseCode in 200..399) {
                     Pair(true, "Submitted successfully!")
+                } else {
+                    Pair(false, "Server responded with HTTP $responseCode: $responseText")
+                }
+            }
+        } catch (e: Exception) {
+            Pair(false, e.message ?: "Connection failed. Please check internet connection.")
+        }
+    }
+
+    suspend fun uploadMasjidAssets(
+        masjidId: String,
+        masjidName: String,
+        photoBase64: String? = null,
+        qrBase64: String? = null,
+        webAppUrl: String? = null
+    ): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        try {
+            val targetUrl = webAppUrl?.trim()?.ifBlank { null } ?: APPS_SCRIPT_WEBAPP_URL.trim()
+            val postData = StringBuilder()
+            postData.append("action=").append(java.net.URLEncoder.encode("uploadMasjidAssets", "UTF-8"))
+            postData.append("&id=").append(java.net.URLEncoder.encode(masjidId.trim(), "UTF-8"))
+            postData.append("&name=").append(java.net.URLEncoder.encode(masjidName.trim(), "UTF-8"))
+            if (!photoBase64.isNullOrBlank()) {
+                postData.append("&photoData=").append(java.net.URLEncoder.encode(photoBase64, "UTF-8"))
+                postData.append("&photoName=").append(java.net.URLEncoder.encode("${masjidName.trim()}_photo.jpg", "UTF-8"))
+            }
+            if (!qrBase64.isNullOrBlank()) {
+                postData.append("&qrData=").append(java.net.URLEncoder.encode(qrBase64, "UTF-8"))
+                postData.append("&qrName=").append(java.net.URLEncoder.encode("${masjidName.trim()}_qr.jpg", "UTF-8"))
+            }
+            val postBytes = postData.toString().toByteArray(Charsets.UTF_8)
+
+            var conn = (URL(targetUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                instanceFollowRedirects = false
+                setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                connectTimeout = 25000
+                readTimeout = 25000
+            }
+            conn.outputStream.use { os ->
+                os.write(postBytes)
+            }
+
+            var responseCode = conn.responseCode
+            // Follow 302 redirect from Google Apps Script
+            if (responseCode in listOf(301, 302, 303, 307, 308)) {
+                val redirectUrl = conn.getHeaderField("Location")
+                if (!redirectUrl.isNullOrBlank()) {
+                    conn.disconnect()
+                    conn = (URL(redirectUrl).openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        connectTimeout = 25000
+                        readTimeout = 25000
+                    }
+                    responseCode = conn.responseCode
+                }
+            }
+
+            val responseText = if (responseCode in 200..399) {
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } else {
+                conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "HTTP $responseCode"
+            }
+            conn.disconnect()
+
+            try {
+                val json = org.json.JSONObject(responseText)
+                if (json.optString("status") == "success") {
+                    Pair(true, json.optString("message", "Assets uploaded successfully to Google Drive & Sheet!"))
+                } else {
+                    val err = json.optString("message", "Upload error")
+                    Pair(false, err)
+                }
+            } catch (e: Exception) {
+                if (responseCode in 200..399) {
+                    Pair(true, "Uploaded successfully to Google Drive & Sheet!")
                 } else {
                     Pair(false, "Server responded with HTTP $responseCode: $responseText")
                 }

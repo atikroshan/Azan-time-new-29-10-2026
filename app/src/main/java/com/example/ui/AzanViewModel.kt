@@ -562,6 +562,27 @@ class AzanViewModel(
         }
     }
 
+    fun updateMasjidPhotoAndQr(id: String, photoUrl: String?, qrUrl: String?) {
+        viewModelScope.launch {
+            val all = MasjidRepository.getAllMasajid().toMutableList()
+            val cleanId = id.trim()
+            val existingIdx = all.indexOfFirst { it.id == cleanId }
+            if (existingIdx != -1) {
+                val cur = all[existingIdx]
+                val updated = cur.copy(
+                    photoUrl = photoUrl?.let { GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(it) } ?: cur.photoUrl,
+                    qrUrl = qrUrl?.let { GoogleSheetMasjidSync.extractGoogleDriveDirectUrl(it) } ?: cur.qrUrl
+                )
+                all[existingIdx] = updated
+                MasjidRepository.setDynamicMasajid(all)
+                _masajidList.value = all
+                val newCsv = GoogleSheetMasjidSync.buildCsv(all)
+                prefs.setCachedGoogleSheetCsv(newCsv)
+                prefs.addLocalAdminEditedMasjid(cleanId)
+            }
+        }
+    }
+
     fun getGoogleSheetCsv(): String {
         return GoogleSheetMasjidSync.buildCsv(MasjidRepository.getAllMasajid())
     }

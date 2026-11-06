@@ -34,6 +34,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -484,34 +497,17 @@ fun SupportScreen(
                     }
                 }
 
-                // Pay via UPI Button
-                // Pay via UPI Button (Light Gray with proper grammar)
-                val tapToPayText = when (uiState.language) {
-                    "hi" -> "UPI द्वारा भुगतान के लिए टैप करें (GPay, PhonePe, Paytm)"
-                    "ur" -> "یو پی آئی کے ذریعے ادائیگی کے لیے ٹیپ کریں"
-                    else -> "Tap to pay via UPI (GPay, PhonePe, Paytm)"
+                // Slide to Pay via UPI Button (Dribbble 2352079 animation)
+                val slideToPayText = when (uiState.language) {
+                    "hi" -> "UPI भुगतान के लिए स्लाइड करें"
+                    "ur" -> "یو پی آئی ادائیگی کے لیے سلائیڈ کریں"
+                    else -> "SLIDE TO PAY VIA UPI"
                 }
-                Button(
-                    onClick = { showUpiAppChooserDialog = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE2E8F0),
-                        contentColor = Color(0xFF0F172A)
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(upiButtonHeight)
-                ) {
-                    Text(
-                        text = tapToPayText,
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF0F172A),
-                        maxLines = 1
-                    )
-                }
+                SlideToPayButton(
+                    text = slideToPayText,
+                    onSlideComplete = { showUpiAppChooserDialog = true },
+                    height = upiButtonHeight
+                )
             }
             }
 
@@ -2457,6 +2453,185 @@ private fun WhiteSocialTelegramIcon() {
                 close()
             }
             drawPath(path, Color(0xFF0F1E17))
+        }
+    }
+}
+
+/**
+ * Modern Slide to Action Button (Dribbble 2352079 style)
+ * Features smooth drag physics with spring snap-back, progress track fill, and shimmering text.
+ */
+@Composable
+fun SlideToPayButton(
+    text: String,
+    onSlideComplete: () -> Unit,
+    modifier: Modifier = Modifier,
+    height: Dp = 44.dp
+) {
+    val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
+    var containerWidthPx by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
+    var isCompleted by remember { mutableStateOf(false) }
+
+    val thumbPadding = 4.dp
+    val thumbSizeDp = height - (thumbPadding * 2)
+    val thumbSizePx = with(density) { thumbSizeDp.toPx() }
+    val thumbPaddingPx = with(density) { thumbPadding.toPx() }
+    val maxDragPx = (containerWidthPx - thumbSizePx - (thumbPaddingPx * 2)).coerceAtLeast(0f)
+
+    val animatedThumbOffset by animateFloatAsState(
+        targetValue = if (isDragging) dragOffsetPx else if (isCompleted) maxDragPx else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "thumbOffset"
+    )
+
+    // Shimmer animation for track text
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val shimmerAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shimmerAlpha"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(RoundedCornerShape(height / 2))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF0A1C14),
+                        Color(0xFF143023),
+                        Color(0xFF0A1C14)
+                    )
+                )
+            )
+            .border(
+                width = 1.2.dp,
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF3DB88F).copy(alpha = 0.6f),
+                        Color(0xFFF3DE8E).copy(alpha = 0.85f),
+                        Color(0xFF3DB88F).copy(alpha = 0.6f)
+                    )
+                ),
+                shape = RoundedCornerShape(height / 2)
+            )
+            .onGloballyPositioned { coordinates ->
+                containerWidthPx = coordinates.size.width.toFloat()
+            }
+            .clickable {
+                onSlideComplete()
+            },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        // Dynamic Progress Track Fill behind the thumb knob
+        val progressWidth = with(density) { (animatedThumbOffset + thumbSizePx + (thumbPaddingPx * 2)).toDp() }
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(progressWidth)
+                .clip(RoundedCornerShape(height / 2))
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0x99225841),
+                            Color(0xCC3DB88F)
+                        )
+                    )
+                )
+        )
+
+        // Shimmering Track Text & Arrows
+        val progressFraction = if (maxDragPx > 0f) (animatedThumbOffset / maxDragPx).coerceIn(0f, 1f) else 0f
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 48.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = text,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White.copy(alpha = if (progressFraction > 0.5f) 0.35f else shimmerAlpha),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color(0xFFF3DE8E).copy(alpha = if (progressFraction > 0.5f) 0.35f else shimmerAlpha),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        // Draggable Thumb Knob (Gold Circle with Arrow Icon)
+        Box(
+            modifier = Modifier
+                .padding(start = thumbPadding)
+                .offset { IntOffset(animatedThumbOffset.toInt(), 0) }
+                .size(thumbSizeDp)
+                .clip(CircleShape)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFFFFF1A6),
+                            Color(0xFFE5B842)
+                        )
+                    )
+                )
+                .border(1.2.dp, Color.White.copy(alpha = 0.95f), CircleShape)
+                .pointerInput(maxDragPx) {
+                    detectHorizontalDragGestures(
+                        onDragStart = {
+                            isDragging = true
+                        },
+                        onDragEnd = {
+                            isDragging = false
+                            if (dragOffsetPx >= maxDragPx * 0.65f) {
+                                isCompleted = true
+                                dragOffsetPx = maxDragPx
+                                onSlideComplete()
+                                coroutineScope.launch {
+                                    delay(400)
+                                    isCompleted = false
+                                    dragOffsetPx = 0f
+                                }
+                            } else {
+                                dragOffsetPx = 0f
+                            }
+                        },
+                        onDragCancel = {
+                            isDragging = false
+                            dragOffsetPx = 0f
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            dragOffsetPx = (dragOffsetPx + dragAmount).coerceIn(0f, maxDragPx)
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Slide to Pay",
+                tint = Color(0xFF091712),
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

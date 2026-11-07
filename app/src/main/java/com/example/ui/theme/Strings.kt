@@ -195,7 +195,7 @@ data class AppStrings(
     val changeMasjid: String = "Change Masjid",
     val feedback: String = "Feedback",
     val rateUs: String = "Rate Us",
-    val support: String = "Support"
+    val setting: String = "Setting"
 ) {
     fun getMonthFullName(month: Int): String = when (month) {
         1 -> jan
@@ -453,7 +453,7 @@ val HindiStrings = AppStrings(
     changeMasjid = "मस्जिद बदलें",
     feedback = "सुझाव (फीडबैक)",
     rateUs = "हमें रेटिंग दें",
-    support = "सहायता (सपोर्ट)"
+    setting = "सेटिंग"
 )
 
 val UrduStrings = AppStrings(
@@ -649,7 +649,7 @@ val UrduStrings = AppStrings(
     changeMasjid = "مسجد تبدیل کریں",
     feedback = "فیڈ بیک",
     rateUs = "ہمیں ریٹ کریں",
-    support = "سپورٹ"
+    setting = "سیٹنگ"
 )
 
 val LocalAppStrings = staticCompositionLocalOf { EnglishStrings }

@@ -416,16 +416,13 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
         }
     }
 
+    val strings = getAppStrings(uiState.language)
     val homeLabel = when (uiState.language) {
         "ur" -> "ہوم"
         "hi" -> "होम"
         else -> "Home"
     }
-    val supportLabel = when (uiState.language) {
-        "ur" -> "سپورٹ"
-        "hi" -> "सपोर्ट"
-        else -> "Support"
-    }
+    val supportLabel = strings.setting
     val ramazanLabel = when (uiState.language) {
         "ur" -> "رمضان"
         "hi" -> "रमज़ान"

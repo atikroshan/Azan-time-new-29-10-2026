@@ -155,19 +155,14 @@ fun FirstTimeSetupScreen(
         }
     }
 
-    // Matching masajid list (returns non-guest masajid list when search query is empty, or filtered list when searching)
+    // Matching masajid list (returns all masajid including Guest Masjid when search query is empty, or filtered list when searching)
     val matchedList = remember(searchQuery, uiState.allMasajid, uiState.language, hasQuery) {
-        val nonGuestList = uiState.allMasajid.filterNot { m ->
-            m.id.equals("guest", ignoreCase = true) ||
-            m.name.contains("guest", ignoreCase = true) ||
-            m.name.contains("गेस्ट", ignoreCase = true) ||
-            m.name.contains("گیسٹ", ignoreCase = true)
-        }
+        val allList = uiState.allMasajid
         if (!hasQuery) {
-            nonGuestList
+            allList
         } else {
             val q = searchQuery.trim().lowercase()
-            nonGuestList.filter { m ->
+            allList.filter { m ->
                 val nameEn = m.name.lowercase().trim()
                 val nameUr = m.getLocalizedName("ur").lowercase().trim()
                 val nameHi = m.getLocalizedName("hi").lowercase().trim()

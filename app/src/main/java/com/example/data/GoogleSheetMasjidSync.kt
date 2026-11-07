@@ -9,54 +9,32 @@ import java.net.URL
 import java.util.Locale
 
 object GoogleSheetMasjidSync {
-    const val DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/13l1dJh64fyOnpHFlw81iWKHZlA5ko0JVWJ_qoF43k0g/export?format=csv"
-    const val SHEET_EDIT_URL = "https://docs.google.com/spreadsheets/d/13l1dJh64fyOnpHFlw81iWKHZlA5ko0JVWJ_qoF43k0g/edit?usp=sharing"
-    const val DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1zEbq9A1LvGk-etUfVcMHUhKd6bqVH01n?usp=sharing"
+    const val DEFAULT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1RtV0pCOltpQT9W_HQB88ZS47saeUN6ugzsfxV_mgK_A/export?format=csv"
+    const val SHEET_EDIT_URL = "https://docs.google.com/spreadsheets/d/1RtV0pCOltpQT9W_HQB88ZS47saeUN6ugzsfxV_mgK_A/edit?usp=sharing"
+    const val DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/17OSMKbkrjfT-F5e16GT8ByLlCBojV2PT?usp=sharing"
 
     val DEFAULT_CSV_CONTENT = """
-Masjid Name,Mohammadiya Masjid,,,,,
-Address,Swagat Nagar,,,,,
-ID,100111111,,,,,
-Masjid Photo,https://drive.google.com/file/d/1QP6elu7nlZwmrxjG4p-eyZWOrEaEdiwo/view?usp=drive_link,,,,,
-Masjid QR,https://drive.google.com/file/d/1V3IA8iNF5FJ-tT2zGMLYre5cebqbffpi/view?usp=drivesdk,,,,,
+Masjid Name,Guest Masjid,,,,,
+Address,Solapur City,,,,,
+ID,Guest,,,,,
+Masjid Photo,,,,,,
+Masjid QR,,,,,,
 ,Fajr,Zohar,Asr,Maghrib,Isha,Jummah
-Azan,05:10,01:15,04:30,06:06,07:30,12:30
-Jammat,05:40,01:30,04:45,06:09,07:45,01:30
+Azan,05:15,01:15,04:30,05:56,07:30,12:30
+Jammat,05:45,01:30,04:45,05:59,07:45,01:30
+Admin ID,admin,,,,,
+Password,guest9960171516,,,,,
+,,,,,,
+Masjid Name,Mohammadiya Masjid,,,,,
+Address,"Swagat Nagar, Kumtha Naka, Solapur",,,,,
+ID,1001,,,,,
+Masjid Photo,https://drive.google.com/file/d/10Th3Ydfam4HmB7W7QN856LvKN38XtIEO/view?usp=drivesdk,,,,,
+Masjid QR,https://drive.google.com/file/d/1EFXU2-a0NlSzYMGSzdHKpF4jTjIXvvQl/view?usp=drivesdk,,,,,
+,Fajr,Zohar,Asr,Maghrib,Isha,Jummah
+Azan,05:15,01:15,04:30,05:56,07:30,12:30
+Jammat,05:45,01:30,04:45,05:59,07:45,01:30
 Admin ID,admin,,,,,
 Password,9960171516,,,,,
-,,,,,,
-Masjid Name,Hazrat Imam Hussain Masjid,,,,,
-Address,Tai Chowk,,,,,
-ID,100111112,,,,,
-Masjid Photo,https://drive.google.com/file/d/1Wtt9FYQSWz2o0PpxuCtGJZjSKBOLNhjH/view?usp=drive_link,,,,,
-Masjid QR,,,,,,
-,Fajr,Zohar,Asr,Maghrib,Isha,Jummah
-Azan,05:10,01:15,04:30,06:07,07:30,12:30
-Jammat,05:40,01:30,05:45,06:10,07:45,01:30
-Admin ID,admin,,,,,
-Password,9970595659,,,,,
-,,,,,,
-Masjid Name,Abu Bakar Siddique Masjid,,,,,
-Address,Mumtaz Nagar,,,,,
-ID,100111113,,,,,
-Masjid Photo,https://drive.google.com/file/d/1wtzGogJQgbTLR1rHlTAocBeMdwMESBtD/view?usp=drive_link,,,,,
-Masjid QR,,,,,,
-,Fajr,Zohar,Asr,Maghrib,Isha,Jummah
-Azan,06:00,01:15,05:18,06:11,07:55,12:30
-Jammat,06:22,01:30,05:32,06:13,08:05,01:30
-Admin ID,admin,,,,,
-Password,9371883412,,,,,
-,,,,,,
-Masjid Name,Hazrat Jang Bahadur Salabat Kha,,,,,
-Address,"Bhayya Chowk, Railway Station Ground",,,,,
-ID,100111114,,,,,
-Masjid Photo,https://drive.google.com/file/d/1Ju4p3KkS6sc3vzSvf68Bm1panplC_g8r/view?usp=drive_link,,,,,
-Masjid QR,,,,,,
-,Fajr,Zohar,Asr,Maghrib,Isha,Jummah
-Azan,05:42,01:15,05:18,06:11,07:55,12:30
-Jammat,06:17,01:30,05:32,06:13,08:05,01:30
-Admin ID,admin,,,,,
-Password,9595996629,,,,,
 """.trimIndent()
 
     fun extractGoogleDriveDirectUrl(rawUrl: String): String {
@@ -113,12 +91,12 @@ Password,9595996629,,,,,
         return String.format(Locale.US, "%02d:%02d", h12, m)
     }
 
-    var APPS_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxK5ceM3ae_WvG_ToqwWPVWmCstm46T3FYZVyaHTFo3VtXjtH_n9yr8voYf9PXeUDvs/exec"
+    var APPS_SCRIPT_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyCAO5Dzatziw_xxXOFOhOoyYpNxfR0-k-F1ZICB03I_x1ct6Xa3k91u4YzHC0M_DUe/exec"
 
     val APPS_SCRIPT_SAMPLE_CODE = """
 // ==============================================================================================
 // AZAN TIME SOLAPUR - GOOGLE APPS SCRIPT (FULL BACKEND SCRIPT)
-// Root Folder Name: "Masjid Details" (ID: 1zEbq9A1LvGk-etUfVcMHUhKd6bqVH01n)
+// Root Folder Name: "Masjid Details" (ID: 17OSMKbkrjfT-F5e16GT8ByLlCBojV2PT)
 //
 // Features & Fixes:
 // 1. Root folder is "Masjid Details"
@@ -155,7 +133,7 @@ function getMasjidDetailsFolder() {
   }
   // 2. Try by previously configured Drive folder ID
   try {
-    var f = DriveApp.getFolderById("1zEbq9A1LvGk-etUfVcMHUhKd6bqVH01n");
+    var f = DriveApp.getFolderById("17OSMKbkrjfT-F5e16GT8ByLlCBojV2PT");
     if (f) return f;
   } catch (e) {}
   // 3. Fallback: create "Masjid Details" folder in root

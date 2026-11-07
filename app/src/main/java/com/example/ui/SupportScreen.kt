@@ -107,114 +107,48 @@ fun SupportScreen(
     onMasjidSubmitted: () -> Unit = {},
     onChangeMasjid: () -> Unit = {},
     onSelectMasjid: (MasjidItem) -> Unit = {},
+    onOpenSupportFrontScreen: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val primaryGold = Color(0xFFF3DE8E)
-    val whatsappTarget = "919960171516"
+    var showFrontScreen by remember { mutableStateOf(false) }
 
+    if (showFrontScreen) {
+        SupportFrontScreen(
+            uiState = uiState,
+            onClose = { showFrontScreen = false },
+            onLangSelect = onLangSelect,
+            onMasjidSubmitted = onMasjidSubmitted,
+            onChangeMasjid = onChangeMasjid,
+            onSelectMasjid = onSelectMasjid,
+            modifier = modifier
+        )
+    } else {
+        SupportBackScreen(
+            uiState = uiState,
+            onBack = onBack,
+            onLangSelect = onLangSelect,
+            onMasjidSubmitted = onMasjidSubmitted,
+            onChangeMasjid = onChangeMasjid,
+            onSelectMasjid = onSelectMasjid,
+            onOpenFrontScreen = { showFrontScreen = true },
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+fun SupportBackScreen(
+    uiState: UIState,
+    onBack: () -> Unit,
+    onLangSelect: (String) -> Unit = {},
+    onMasjidSubmitted: () -> Unit = {},
+    onChangeMasjid: () -> Unit = {},
+    onSelectMasjid: (MasjidItem) -> Unit = {},
+    onOpenFrontScreen: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     var showAddMasjidDialog by remember { mutableStateOf(false) }
     var showThanksDialog by remember { mutableStateOf(false) }
-    var showRateUsDialog by remember { mutableStateOf(false) }
-    var showOtherAmountDialog by remember { mutableStateOf(false) }
-    var showUpiAppChooserDialog by remember { mutableStateOf(false) }
-    var showQrDialog by remember { mutableStateOf(false) }
-    var selectedContributionAmount by remember { mutableIntStateOf(250) }
-
-    // Rating system: safely read saved stars with fallback across all types (float, int, string), default 0.0
-    val prefs = remember { context.getSharedPreferences("azan_user_rating", Context.MODE_PRIVATE) }
-    val initialRating = remember(prefs) {
-        try {
-            prefs.getFloat("saved_stars", 0f).toDouble()
-        } catch (e1: Throwable) {
-            try {
-                prefs.getInt("saved_stars", 0).toDouble()
-            } catch (e2: Throwable) {
-                try {
-                    prefs.getString("saved_stars", "0")?.toDoubleOrNull() ?: 0.0
-                } catch (e3: Throwable) {
-                    0.0
-                }
-            }
-        }
-    }
-    var userRating by remember { mutableDoubleStateOf(initialRating) }
-    var averageRating by remember { mutableDoubleStateOf(0.0) }
-    var totalReviews by remember { mutableIntStateOf(0) }
-
-    // Fetch live ratings from Google Sheet tab "rating" on load
-    LaunchedEffect(Unit) {
-        try {
-            val (avg, count) = GoogleSheetMasjidSync.fetchRatingStats()
-            if (count > 0 && avg > 0.0) {
-                averageRating = avg
-                totalReviews = count
-            }
-        } catch (t: Throwable) {
-            // Never crash if network or sheet fails
-        }
-    }
-
-    fun openWhatsApp() {
-        try {
-            val message = when (uiState.language) {
-                "ur" -> "السلام علیکم! اذان ایپ کے بارے میں فیڈ بیک / مدد درکار ہے۔"
-                "hi" -> "अस्सलाम-ओ-अलैकुम! अज़ान ऐप के बारे में सहायता / सुझाव।"
-                else -> "Assalam-o-Alaikum! I need support / have feedback regarding Azan App."
-            }
-            val uri = Uri.parse("https://wa.me/$whatsappTarget?text=${Uri.encode(message)}")
-            val intent = Intent(Intent.ACTION_VIEW, uri)
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            try {
-                val dial = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+$whatsappTarget"))
-                context.startActivity(dial)
-            } catch (e2: Exception) {
-                Toast.makeText(context, "Could not open WhatsApp", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    fun launchUpiForApp(packageName: String?, amount: Int) {
-        val amStr = if (amount > 0) "&am=$amount" else ""
-        val targetVpa = "9960171516@ybl"
-        val targetName = Uri.encode("Azan Time App Support")
-        val uri: Uri = Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
-
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        if (!packageName.isNullOrBlank()) {
-            intent.setPackage(packageName)
-        }
-        try {
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            try {
-                val fallbackIntent = Intent(Intent.ACTION_VIEW, uri)
-                context.startActivity(Intent.createChooser(fallbackIntent, "Pay with UPI"))
-            } catch (e2: Exception) {
-                Toast.makeText(context, "No UPI app found. Please scan the QR code.", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    fun shareApp() {
-        try {
-            val shareText = when (uiState.language) {
-                "ur" -> "🕌 اذان ٹائم ایپ - سولاپور شہر کی مساجد کے اوقاتِ نماز و اذان!\nثوابِ جاریہ کی نیت سے اپنے اہل و عیال اور احباب کو شیئر کریں:\nhttps://drive.google.com/drive/folders/1zEbq9A1LvGk-etUfVcMHUhKd6bqVH01n?usp=sharing"
-                "hi" -> "🕌 अज़ान टाइम ऐप - सोलापुर शहर की मस्जिदों के सही अज़ान और नमाज़ के औक़ात!\nसवाब-ए-जारिया के लिए अपने दोस्तों और परिवार के साथ शेयर करें:\nhttps://drive.google.com/drive/folders/1zEbq9A1LvGk-etUfVcMHUhKd6bqVH01n?usp=sharing"
-                else -> "🕌 Azan Time App - Accurate prayer & Azan timings for Solapur City Masajid!\nShare with your family & friends to earn Sawab-e-Jariyah:\nhttps://drive.google.com/drive/folders/1zEbq9A1LvGk-etUfVcMHUhKd6bqVH01n?usp=sharing"
-            }
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, "Azan Time Solapur")
-                putExtra(Intent.EXTRA_TEXT, shareText)
-            }
-            context.startActivity(Intent.createChooser(intent, "Share Azan Time App"))
-        } catch (e: Exception) {
-            Toast.makeText(context, "Could not open share menu", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     BoxWithConstraints(
         modifier = modifier
@@ -256,12 +190,6 @@ fun SupportScreen(
             isCompact -> 36.dp
             else -> 42.dp
         }
-        val upiButtonHeight = when {
-            screenHeight >= 720.dp -> 40.dp
-            isUltraCompact -> 32.dp
-            isCompact -> 36.dp
-            else -> 38.dp
-        }
 
         Column(
             modifier = Modifier
@@ -271,7 +199,7 @@ fun SupportScreen(
             verticalArrangement = Arrangement.spacedBy(itemSpacing),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Top Bar: Language Buttons at top
+            // 1. Top Bar: Language Buttons at top left
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -285,7 +213,7 @@ fun SupportScreen(
                 )
             }
 
-            // 2. Center: Prominent, Spacious Logo & AZAN TIME Wordmark with Punchline
+            // 2. Center: Logo & AZAN TIME Wordmark with Punchline
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -293,9 +221,7 @@ fun SupportScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                AzanLogoCard(
-                    size = logoSize
-                )
+                AzanLogoCard(size = logoSize)
                 Spacer(modifier = Modifier.height(14.dp))
                 AzanTimeWordmark(
                     height = wordmarkHeight,
@@ -319,7 +245,7 @@ fun SupportScreen(
                 )
             }
 
-            // Slot 2: Request Add Masjid
+            // Slot 2: Request Add Masjid Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -407,39 +333,37 @@ fun SupportScreen(
                 }
             }
 
-            // Slot 3: Support App (Sawab-e-Jariyah + QR Code Button + Pay via UPI)
+            // Slot 3: Support & Feedback Button Card (Opens Front Screen)
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenFrontScreen() },
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
                 border = BorderStroke(1.2.dp, Color(0x663DB88F))
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .background(Color(0xFF162D22), CircleShape)
-                                    .border(1.dp, Color(0xFF2E533F), CircleShape),
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .background(Color(0xFF162D22), CircleShape)
+                                .border(1.dp, Color(0xFF2E533F), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.VolunteerActivism,
-                                contentDescription = "Support App",
+                                imageVector = Icons.Outlined.HeadsetMic,
+                                contentDescription = "Support",
                                 tint = Color(0xFFF3DE8E),
                                 modifier = Modifier.size(22.dp)
                             )
@@ -450,87 +374,497 @@ fun SupportScreen(
                         ) {
                             Text(
                                 text = when (uiState.language) {
-                                    "ur" -> "ایپ سپورٹ"
-                                    "hi" -> "ऐप सपोर्ट"
-                                    else -> "SUPPORT APP"
+                                    "ur" -> "سپورٹ اور فیڈبیک"
+                                    "hi" -> "सपोर्ट और सुझाव"
+                                    else -> "Support & Feedback"
                                 },
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFF3DE8E),
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = when (uiState.language) {
-                                    "ur" -> "ثوابِ جاریہ"
-                                    "hi" -> "सवाब-ए-जारिया"
-                                    else -> "Sawab-e-Jariyah"
+                                    "ur" -> "سپورٹ، ریٹنگ اور فالو کریں"
+                                    "hi" -> "सपोर्ट, रेटिंग और फॉलो"
+                                    else -> "Support, Rate Us & Follow Us"
                                 },
                                 fontSize = 11.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF4ADE80),
-                                maxLines = 1
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White.copy(alpha = 0.75f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    // QR Code Button (Tapping shows QR Code Dialog)
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFF3DE8E))
-                            .border(1.dp, Color(0xFFE5B842), RoundedCornerShape(10.dp))
-                            .clickable { showQrDialog = true }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
+                            .background(Color(0x40162D22))
+                            .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "کھولیں >"
+                                "hi" -> "खोलें >"
+                                else -> "Open >"
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF3DE8E)
+                        )
+                    }
+                }
+            }
+
+            // Footer
+            AiStudioLoadingFooter(
+                modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
+            )
+        }
+    }
+
+    // Add Masjid Form Dialog
+    if (showAddMasjidDialog) {
+        AddMasjidAutoDialog(
+            language = uiState.language,
+            onDismiss = { showAddMasjidDialog = false },
+            onSubmitted = {
+                showAddMasjidDialog = false
+                showThanksDialog = true
+            }
+        )
+    }
+
+    // Thanks Popup
+    if (showThanksDialog) {
+        Dialog(
+            onDismissRequest = {
+                showThanksDialog = false
+                onMasjidSubmitted()
+            },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(0.90f),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A)),
+                    border = BorderStroke(1.5.dp, Color(0xFF10B981).copy(alpha = 0.7f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(68.dp)
+                                .background(Color(0xFF10B981).copy(alpha = 0.2f), CircleShape)
+                                .border(2.dp, Color(0xFF10B981), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.QrCode,
-                                contentDescription = "QR Code",
-                                tint = Color(0xFF071711),
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.ThumbUp,
+                                contentDescription = "Thanks",
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(34.dp)
                             )
+                        }
+
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "درخواست موصول ہوگئی!"
+                                "hi" -> "अनुरोध प्राप्त हुआ!"
+                                else -> "Request Received!"
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 19.sp,
+                            color = Color(0xFF34D399),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        val annotatedText = buildAnnotatedString {
+                            append("Please wait ")
+                            withStyle(
+                                style = SpanStyle(
+                                    color = Color(0xFFFBBF24),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                            ) {
+                                append("(5 Min)")
+                            }
+                            append("\nYour Masjid will be live.")
+                        }
+                        Text(
+                            text = annotatedText,
+                            fontSize = 14.5.sp,
+                            color = Color.White.copy(alpha = 0.95f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            lineHeight = 22.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Button(
+                            onClick = {
+                                showThanksDialog = false
+                                onMasjidSubmitted()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                        ) {
                             Text(
-                                text = "QR Code",
-                                fontSize = 12.sp,
+                                text = "OK",
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF071711)
+                                fontSize = 15.sp,
+                                color = Color.White
                             )
                         }
                     }
                 }
 
-                // Regular Tap to Pay Button (Dark gray background, white bold text, no arrows)
-                Button(
-                    onClick = { showUpiAppChooserDialog = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF262C36),
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                ColorfulConfettiOverlay(
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SupportFrontScreen(
+    uiState: UIState,
+    onClose: () -> Unit,
+    onLangSelect: (String) -> Unit = {},
+    onMasjidSubmitted: () -> Unit = {},
+    onChangeMasjid: () -> Unit = {},
+    onSelectMasjid: (MasjidItem) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val primaryGold = Color(0xFFF3DE8E)
+    val whatsappTarget = "919960171516"
+
+    var showRateUsDialog by remember { mutableStateOf(false) }
+    var showOtherAmountDialog by remember { mutableStateOf(false) }
+    var showUpiAppChooserDialog by remember { mutableStateOf(false) }
+    var showQrDialog by remember { mutableStateOf(false) }
+    var selectedContributionAmount by remember { mutableIntStateOf(250) }
+
+    val prefs = remember { context.getSharedPreferences("azan_user_rating", Context.MODE_PRIVATE) }
+    val initialRating = remember(prefs) {
+        try {
+            prefs.getFloat("saved_stars", 0f).toDouble()
+        } catch (e1: Throwable) {
+            try {
+                prefs.getInt("saved_stars", 0).toDouble()
+            } catch (e2: Throwable) {
+                try {
+                    prefs.getString("saved_stars", "0")?.toDoubleOrNull() ?: 0.0
+                } catch (e3: Throwable) {
+                    0.0
+                }
+            }
+        }
+    }
+    var userRating by remember { mutableDoubleStateOf(initialRating) }
+    var averageRating by remember { mutableDoubleStateOf(0.0) }
+    var totalReviews by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val (avg, count) = GoogleSheetMasjidSync.fetchRatingStats()
+            if (count > 0 && avg > 0.0) {
+                averageRating = avg
+                totalReviews = count
+            }
+        } catch (t: Throwable) {
+            // Never crash
+        }
+    }
+
+    fun openWhatsApp() {
+        try {
+            val message = when (uiState.language) {
+                "ur" -> "السلام علیکم! اذان ایپ کے بارے میں فیڈ بیک / مدد درکار ہے۔"
+                "hi" -> "अस्सلام-ओ-अलैकुम! अज़ान ऐप के बारे में सहायता / सुझाव।"
+                else -> "Assalam-o-Alaikum! I need support / have feedback regarding Azan App."
+            }
+            val uri = Uri.parse("https://wa.me/$whatsappTarget?text=${Uri.encode(message)}")
+            val intent = Intent(Intent.ACTION_VIEW, uri)
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val dial = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+$whatsappTarget"))
+                context.startActivity(dial)
+            } catch (e2: Exception) {
+                Toast.makeText(context, "Could not open WhatsApp", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun launchUpiForApp(packageName: String?, amount: Int) {
+        val amStr = if (amount > 0) "&am=$amount" else ""
+        val targetVpa = "9960171516@ybl"
+        val targetName = Uri.encode("Azan Time App Support")
+        val uri: Uri = Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
+
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        if (!packageName.isNullOrBlank()) {
+            intent.setPackage(packageName)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val fallbackIntent = Intent(Intent.ACTION_VIEW, uri)
+                context.startActivity(Intent.createChooser(fallbackIntent, "Pay with UPI"))
+            } catch (e2: Exception) {
+                Toast.makeText(context, "No UPI app found. Please scan the QR code.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF040E0A),
+                        Color(0xFF06140D),
+                        Color(0xFF040C08),
+                        Color(0xFF020704)
+                    )
+                )
+            )
+    ) {
+        val screenHeight = maxHeight
+        val isCompact = screenHeight < 680.dp
+        val isUltraCompact = screenHeight < 580.dp
+
+        val itemSpacing = when {
+            screenHeight >= 720.dp -> 11.dp
+            isCompact -> 7.dp
+            else -> 9.dp
+        }
+        val slotVerticalPadding = when {
+            screenHeight >= 720.dp -> 13.dp
+            isCompact -> 9.dp
+            else -> 11.dp
+        }
+        val logoSize = when {
+            screenHeight >= 720.dp -> 96.dp
+            isUltraCompact -> 64.dp
+            isCompact -> 76.dp
+            else -> 86.dp
+        }
+        val wordmarkHeight = when {
+            screenHeight >= 720.dp -> 46.dp
+            isUltraCompact -> 30.dp
+            isCompact -> 36.dp
+            else -> 42.dp
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(itemSpacing),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // 1. Top Bar: Language Circles on Left + Close Button (X) on Right
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                LanguageCirclesRow(
+                    currentLang = uiState.language,
+                    onLangSelect = onLangSelect
+                )
+
+                IconButton(
+                    onClick = onClose,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(upiButtonHeight.coerceAtLeast(42.dp))
+                        .size(36.dp)
+                        .background(Color(0x40162D22), CircleShape)
+                        .border(1.dp, Color(0x803DB88F), CircleShape)
                 ) {
-                    Text(
-                        text = "TAP TO PAY VIA UPI",
-                        color = Color.White,
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.8.sp,
-                        textAlign = TextAlign.Center
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = primaryGold
                     )
                 }
             }
+
+            // 2. Center: Logo & AZAN TIME Wordmark
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp, bottom = 14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                AzanLogoCard(size = logoSize)
+                Spacer(modifier = Modifier.height(14.dp))
+                AzanTimeWordmark(
+                    height = wordmarkHeight,
+                    topPadding = 6.dp,
+                    bottomPadding = 6.dp
+                )
             }
 
-            // Slot 4: Support & Feedback (Left) & Rate Us (Right)
+            // Slot 1: App Support UPI Card (₹100, ₹250, ₹500, Other, Scan QR)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
+                border = BorderStroke(1.2.dp, Color(0x663DB88F))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Favorite,
+                                contentDescription = "Support App",
+                                tint = Color(0xFFF3DE8E),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "ایپ میں تعاون کریں"
+                                    "hi" -> "ऐप को सपोर्ट करें"
+                                    else -> "Support the App"
+                                },
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF3DE8E)
+                            )
+                        }
+                        Text(
+                            text = "UPI Pay / QR",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF34D399)
+                        )
+                    }
+
+                    // Preset Amount Buttons (₹100, ₹250, ₹500, Other)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val amounts = listOf(100, 250, 500)
+                        amounts.forEach { amt ->
+                            Button(
+                                onClick = {
+                                    selectedContributionAmount = amt
+                                    showUpiAppChooserDialog = true
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF143827)),
+                                border = BorderStroke(1.dp, Color(0xFF3DB88F)),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(36.dp)
+                            ) {
+                                Text(
+                                    text = "₹$amt",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { showOtherAmountDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF143827)),
+                            border = BorderStroke(1.dp, Color(0xFFE5B842)),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp)
+                        ) {
+                            Text(
+                                text = "Other",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = primaryGold
+                            )
+                        }
+                    }
+
+                    // Scan QR Button
+                    OutlinedButton(
+                        onClick = { showQrDialog = true },
+                        border = BorderStroke(1.dp, Color(0xFF3DB88F)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = "Scan QR",
+                                tint = primaryGold,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Scan QR Code",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = primaryGold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Slot 2: Support & Feedback (Left) & Rate Us (Right)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
@@ -650,7 +984,7 @@ fun SupportScreen(
                 }
             }
 
-            // Slot 5: Follow Us (Single White Colour)
+            // Slot 3: Follow Us
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
@@ -667,7 +1001,7 @@ fun SupportScreen(
                     Text(
                         text = when (uiState.language) {
                             "ur" -> "ہمیں فالو کریں :"
-                            "hi" -> "फ़ॉलो करें :"
+                            "hi" -> "फ़ॉلو کریں :"
                             else -> "Follow us :"
                         },
                         fontSize = 13.5.sp,
@@ -743,14 +1077,14 @@ fun SupportScreen(
                 }
             }
 
-            // 7. Footer: Version & Devotion positioned cleanly right above bottom navigation bar
+            // Footer
             AiStudioLoadingFooter(
                 modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
             )
         }
     }
 
-    // Custom Amount Dialog (when "Other" contribution is clicked)
+    // Custom Amount Dialog
     if (showOtherAmountDialog) {
         val amountFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
         val amountKeyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
@@ -896,7 +1230,7 @@ fun SupportScreen(
         }
     }
 
-    // Rate Us Interactive Dialog (Supports Half-Stars e.g. 2.5 and Saves to Google Sheet)
+    // Rate Us Dialog
     if (showRateUsDialog) {
         var tempRating by remember { mutableDoubleStateOf(if (userRating > 0.0) userRating else 5.0) }
         var isSubmitting by remember { mutableStateOf(false) }
@@ -942,7 +1276,6 @@ fun SupportScreen(
                         textAlign = TextAlign.Center
                     )
 
-                    // Large Interactive Half-Star Rating Bar
                     InteractiveHalfStarRatingBar(
                         rating = tempRating,
                         onRatingSelected = { selected ->
@@ -977,7 +1310,6 @@ fun SupportScreen(
                                 isSubmitting = false
                                 showRateUsDialog = false
 
-                                // Launch Google Play Store directly to app's listing page for rating & review
                                 try {
                                     val pkgName = context.packageName
                                     val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkgName")).apply {
@@ -1047,7 +1379,6 @@ fun SupportScreen(
         }
     }
 
-    // UPI App Chooser Dialog (Google Pay, PhonePe, Paytm, Other)
     if (showUpiAppChooserDialog) {
         UpiAppChooserDialog(
             amount = selectedContributionAmount,
@@ -1057,128 +1388,6 @@ fun SupportScreen(
                 launchUpiForApp(pkg, selectedContributionAmount)
             }
         )
-    }
-
-    // Add Masjid Form Dialog (Auto sends directly to email without redirecting)
-    if (showAddMasjidDialog) {
-        AddMasjidAutoDialog(
-            language = uiState.language,
-            onDismiss = { showAddMasjidDialog = false },
-            onSubmitted = {
-                showAddMasjidDialog = false
-                showThanksDialog = true
-            }
-        )
-    }
-
-    // Thanks Popup in Green with Thumb 👍 Icon + Colourful Confetti
-    if (showThanksDialog) {
-        Dialog(
-            onDismissRequest = {
-                showThanksDialog = false
-                onMasjidSubmitted()
-            },
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(0.90f),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A)),
-                    border = BorderStroke(1.5.dp, Color(0xFF10B981).copy(alpha = 0.7f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(68.dp)
-                                .background(Color(0xFF10B981).copy(alpha = 0.2f), CircleShape)
-                                .border(2.dp, Color(0xFF10B981), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ThumbUp,
-                                contentDescription = "Thanks",
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(34.dp)
-                            )
-                        }
-
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "درخواست موصول ہوگئی!"
-                                "hi" -> "अनुरोध प्राप्त हुआ!"
-                                else -> "Request Received!"
-                            },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 19.sp,
-                            color = Color(0xFF34D399),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        val annotatedText = buildAnnotatedString {
-                            append("Please wait ")
-                            withStyle(
-                                style = SpanStyle(
-                                    color = Color(0xFFFBBF24),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
-                            ) {
-                                append("(5 Min)")
-                            }
-                            append("\nYour Masjid will be live.")
-                        }
-                        Text(
-                            text = annotatedText,
-                            fontSize = 14.5.sp,
-                            color = Color.White.copy(alpha = 0.95f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                            lineHeight = 22.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Button(
-                            onClick = {
-                                showThanksDialog = false
-                                onMasjidSubmitted()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(46.dp)
-                        ) {
-                            Text(
-                                text = "OK",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = Color.White
-                            )
-                        }
-                    }
-                }
-
-                // Colourful Confetti bursting and falling over the card and screen
-                ColorfulConfettiOverlay(
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
     }
 }
 

@@ -371,8 +371,7 @@ fun SupportBackScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0x40162D22))
-                            .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
+                            .background(Color(0xFFF3DE8E))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -381,9 +380,9 @@ fun SupportBackScreen(
                                 "hi" -> "जोड़ें +"
                                 else -> "Request +"
                             },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF3DE8E)
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF040E0A)
                         )
                     }
                 }
@@ -459,8 +458,7 @@ fun SupportBackScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0x40162D22))
-                            .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
+                            .background(Color(0xFFF3DE8E))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -469,9 +467,9 @@ fun SupportBackScreen(
                                 "hi" -> "खोलें >"
                                 else -> "Open >"
                             },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF3DE8E)
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF040E0A)
                         )
                     }
                 }
@@ -1716,6 +1714,68 @@ fun AddMasjidAutoDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isSending by remember { mutableStateOf(false) }
 
+    val performFormSubmit: () -> Unit = {
+        if (masjidName.isBlank()) {
+            errorMessage = "Please enter Masjid Name"
+        } else if (location.isBlank()) {
+            errorMessage = "Please enter Location"
+        } else if (adminName.isBlank()) {
+            errorMessage = "Please enter Admin Name"
+        } else if (adminContact.isBlank()) {
+            errorMessage = "Please enter Admin Contact Number"
+        } else if (!isSending) {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+            isSending = true
+            val cleanMasjidName = masjidName.trim()
+            val targetUrl = savedAppsScriptUrl.trim()
+            val photoUri = selectedPhotoUri
+            val qrUri = selectedQrUri
+
+            coroutineScope.launch {
+                var photoBase64: String? = null
+                if (photoUri != null) {
+                    try {
+                        photoBase64 = prepareStraightMasjidPhotoBase64(context, photoUri)
+                    } catch (e: Throwable) {
+                        // Proceed without photo if encoding fails
+                    }
+                }
+
+                var qrBase64: String? = standardizedQr?.base64
+                if (qrBase64 == null && qrUri != null) {
+                    try {
+                        val res = prepareStandardizedMasjidQr(context, qrUri)
+                        qrBase64 = res?.base64 ?: prepareStraightMasjidPhotoBase64(context, qrUri)
+                        if (res != null) {
+                            prefs.setCustomMasjidQrPath(res.localFilePath)
+                        }
+                    } catch (e: Throwable) {
+                        // Proceed without QR if encoding fails
+                    }
+                }
+
+                try {
+                    com.example.data.GoogleSheetMasjidSync.submitMasjidRequestAuto(
+                        name = cleanMasjidName,
+                        location = location.trim(),
+                        adminName = adminName.trim(),
+                        contact = adminContact.trim(),
+                        photoBase64 = photoBase64,
+                        photoName = "$cleanMasjidName.jpg",
+                        qrBase64 = qrBase64,
+                        qrName = "${cleanMasjidName}_QR.jpg",
+                        webAppUrl = targetUrl
+                    )
+                } catch (e: Exception) {
+                    // Handled gracefully in background
+                }
+                isSending = false
+                onSubmitted()
+            }
+        }
+    }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -1920,18 +1980,12 @@ fun AddMasjidAutoDialog(
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
-                        onDone = { 
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                        },
-                        onSearch = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                        },
-                        onGo = {
-                            focusManager.clearFocus()
-                            keyboardController?.hide()
-                        }
+                        onDone = { performFormSubmit() },
+                        onSend = { performFormSubmit() },
+                        onSearch = { performFormSubmit() },
+                        onGo = { performFormSubmit() },
+                        onNext = { performFormSubmit() },
+                        onPrevious = { performFormSubmit() }
                     ),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -2162,74 +2216,7 @@ fun AddMasjidAutoDialog(
 
                 // Submit Request Button (Uploads photo & QR to Google Drive, sets QR in Support Masjid holder, & inserts into Sheet1)
                 Button(
-                    onClick = {
-                        if (masjidName.isBlank()) {
-                            errorMessage = "Please enter Masjid Name"
-                            return@Button
-                        }
-                        if (location.isBlank()) {
-                            errorMessage = "Please enter Location"
-                            return@Button
-                        }
-                        if (adminName.isBlank()) {
-                            errorMessage = "Please enter Admin Name"
-                            return@Button
-                        }
-                        if (adminContact.isBlank()) {
-                            errorMessage = "Please enter Admin Contact Number"
-                            return@Button
-                        }
-
-                        focusManager.clearFocus()
-                        keyboardController?.hide()
-                        isSending = true
-                        val cleanMasjidName = masjidName.trim()
-                        val targetUrl = savedAppsScriptUrl.trim()
-                        val photoUri = selectedPhotoUri
-                        val qrUri = selectedQrUri
-
-                        coroutineScope.launch {
-                            var photoBase64: String? = null
-                            if (photoUri != null) {
-                                try {
-                                    photoBase64 = prepareStraightMasjidPhotoBase64(context, photoUri)
-                                } catch (e: Throwable) {
-                                    // Proceed without photo if encoding fails
-                                }
-                            }
-
-                            var qrBase64: String? = standardizedQr?.base64
-                            if (qrBase64 == null && qrUri != null) {
-                                try {
-                                    val res = prepareStandardizedMasjidQr(context, qrUri)
-                                    qrBase64 = res?.base64 ?: prepareStraightMasjidPhotoBase64(context, qrUri)
-                                    if (res != null) {
-                                        prefs.setCustomMasjidQrPath(res.localFilePath)
-                                    }
-                                } catch (e: Throwable) {
-                                    // Proceed without QR if encoding fails
-                                }
-                            }
-
-                            try {
-                                com.example.data.GoogleSheetMasjidSync.submitMasjidRequestAuto(
-                                    name = cleanMasjidName,
-                                    location = location.trim(),
-                                    adminName = adminName.trim(),
-                                    contact = adminContact.trim(),
-                                    photoBase64 = photoBase64,
-                                    photoName = "$cleanMasjidName.jpg",
-                                    qrBase64 = qrBase64,
-                                    qrName = "${cleanMasjidName}_QR.jpg",
-                                    webAppUrl = targetUrl
-                                )
-                            } catch (e: Exception) {
-                                // Handled gracefully in background
-                            }
-                            isSending = false
-                            onSubmitted()
-                        }
-                    },
+                    onClick = { performFormSubmit() },
                     enabled = !isSending,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                     shape = RoundedCornerShape(10.dp),

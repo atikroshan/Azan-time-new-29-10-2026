@@ -226,13 +226,13 @@ fun FirstTimeSetupScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(horizontal = 20.dp, vertical = 2.dp)
         ) {
-            // 1. TOP BAR: Language Selection Buttons (Exact same Home Page buttons: E, ह, ر)
+            // 1. TOP BAR: Language Selection Buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp),
+                    .padding(top = 0.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -242,33 +242,27 @@ fun FirstTimeSetupScreen(
                 )
             }
 
-            // 2. 30% OF SCREEN HEIGHT: AZAN TIME Logo & Punchline
+            // 2. Logo & Punchline (Scaled up slightly)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(logoSectionHeight),
+                    .height((logoSectionHeight * 0.9f).coerceIn(150.dp, 200.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Squircle Logo Card with 45-degree Shimmer (matching Support Screen / image_0af060ef.png)
-                    AzanLogoCard(
-                        size = 64.dp
-                    )
-
+                    AzanLogoCard(size = 80.dp)
                     AzanTimeWordmark(
-                        height = 28.dp,
-                        topPadding = 8.dp,
+                        height = 36.dp,
+                        topPadding = 10.dp,
                         bottomPadding = 4.dp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // 3. SEARCH BAR
+            // 3. SEARCH BAR (Pulled up)
             SearchBarContent(
                 searchQuery = searchQuery,
                 placeholder = strings.searchPlaceholder,

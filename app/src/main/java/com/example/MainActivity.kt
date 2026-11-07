@@ -19,7 +19,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.ui.FirstTimeSetupScreen
 import com.example.ui.AiStudioLoadingFooter
-import com.example.ui.HtmlSplashScreen
+import com.example.ui.SplashScreen
 import com.example.data.GoogleSheetMasjidSync
 import com.example.util.AppUpdateManager
 import com.example.util.UpdateInfo
@@ -324,7 +324,7 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
     var showAdminLoginDialog by remember { mutableStateOf(false) }
     var showAdminPanel by remember { mutableStateOf(false) }
     var showMasjidSelectorScreen by remember { mutableStateOf(false) }
-    var showSplash by remember { mutableStateOf(false) }
+    var showSplash by rememberSaveable { mutableStateOf(true) }
     var ramazanTapCount by remember { mutableIntStateOf(0) }
     var forcedRamazanActive by remember { mutableStateOf(false) }
     val effectiveRamazanActive = isRamazanActive || forcedRamazanActive
@@ -429,34 +429,35 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
         else -> "Ramazan"
     }
 
-    if (!uiState.isSetupCompleted) {
-        FirstTimeSetupScreen(
-            uiState = uiState,
-            onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
-            onFinishSetup = { masjidId ->
-                viewModel.completeSetup(masjidId)
-            },
-            onRefresh = { viewModel.syncGoogleSheet() },
-            onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
-        )
-    } else if (showAdminPanel) {
-        BackHandler { showAdminPanel = false }
-        AdminPanelScreen(
-            viewModel = viewModel,
-            uiState = uiState,
-            onBack = { showAdminPanel = false }
-        )
-    } else {
-        if (showUpdateDialog && availableUpdateInfo != null) {
-            UpdateDialog(
-                updateInfo = availableUpdateInfo!!,
-                language = uiState.language,
-                onDismiss = { showUpdateDialog = false }
+    Box(modifier = modifier.fillMaxSize()) {
+        if (!uiState.isSetupCompleted) {
+            FirstTimeSetupScreen(
+                uiState = uiState,
+                onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
+                onFinishSetup = { masjidId ->
+                    viewModel.completeSetup(masjidId)
+                },
+                onRefresh = { viewModel.syncGoogleSheet() },
+                onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
             )
-        }
-        Scaffold(
-            modifier = modifier.fillMaxSize(),
-            containerColor = Color.Black,
+        } else if (showAdminPanel) {
+            BackHandler { showAdminPanel = false }
+            AdminPanelScreen(
+                viewModel = viewModel,
+                uiState = uiState,
+                onBack = { showAdminPanel = false }
+            )
+        } else {
+            if (showUpdateDialog && availableUpdateInfo != null) {
+                UpdateDialog(
+                    updateInfo = availableUpdateInfo!!,
+                    language = uiState.language,
+                    onDismiss = { showUpdateDialog = false }
+                )
+            }
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = Color.Black,
             bottomBar = {
                 com.example.ui.AnimatedCurvedNavBar(
                     selectedTab = selectedTab,
@@ -649,6 +650,13 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
             onLanguageSelect = { viewModel.setLanguage(it) },
             onDismiss = { showMasjidSelectorScreen = false }
         )
+    }
+
+        if (showSplash) {
+            SplashScreen(
+                onFinished = { showSplash = false }
+            )
+        }
     }
 }
 

@@ -1890,7 +1890,7 @@ fun AddMasjidAutoDialog(
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .background(Color(0xFF1E293B), CircleShape)
                             .border(1.2.dp, Color(0xFFF3DE8E), CircleShape)
                     ) {
@@ -1898,7 +1898,7 @@ fun AddMasjidAutoDialog(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
                             tint = Color(0xFFF3DE8E),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

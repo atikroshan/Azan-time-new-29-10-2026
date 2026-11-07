@@ -798,11 +798,11 @@ fun MasjidSelectionDialog(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    AzanLogoCard(size = 68.dp)
+                                    AzanLogoCard(size = 102.dp)
                                     AzanTimeWordmark(
-                                        height = 30.dp,
-                                        topPadding = 4.dp,
-                                        bottomPadding = 4.dp
+                                        height = 45.dp,
+                                        topPadding = 10.dp,
+                                        bottomPadding = 10.dp
                                     )
                                     Text(
                                         text = targetMasjid.getLocalizedName(language),

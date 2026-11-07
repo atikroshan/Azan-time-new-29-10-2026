@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -236,16 +237,16 @@ fun SupportBackScreen(
             else -> 11.dp
         }
         val logoSize = when {
-            screenHeight >= 720.dp -> 96.dp
-            isUltraCompact -> 64.dp
-            isCompact -> 76.dp
-            else -> 86.dp
+            screenHeight >= 720.dp -> 72.dp
+            isUltraCompact -> 48.dp
+            isCompact -> 56.dp
+            else -> 64.dp
         }
         val wordmarkHeight = when {
-            screenHeight >= 720.dp -> 46.dp
-            isUltraCompact -> 30.dp
-            isCompact -> 36.dp
-            else -> 42.dp
+            screenHeight >= 720.dp -> 30.dp
+            isUltraCompact -> 20.dp
+            isCompact -> 24.dp
+            else -> 26.dp
         }
 
         Column(
@@ -1255,11 +1256,18 @@ fun SupportFrontScreen(
                             fontWeight = FontWeight.Bold,
                             color = primaryGold
                         )
-                        IconButton(onClick = { showQrDialog = false }, modifier = Modifier.size(28.dp)) {
+                        IconButton(
+                            onClick = { showQrDialog = false },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color(0xFF1E293B), CircleShape)
+                                .border(1.2.dp, primaryGold, CircleShape)
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close",
-                                tint = Color.White.copy(alpha = 0.7f)
+                                tint = primaryGold,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -1320,12 +1328,17 @@ fun SupportFrontScreen(
                         )
                         IconButton(
                             onClick = { showRateUsDialog = false },
-                            modifier = Modifier.size(28.dp).align(Alignment.CenterEnd)
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color(0xFF1E293B), CircleShape)
+                                .border(1.2.dp, primaryGold, CircleShape)
+                                .align(Alignment.CenterEnd)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close",
-                                tint = Color.White.copy(alpha = 0.7f)
+                                tint = primaryGold,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -1703,8 +1716,6 @@ fun AddMasjidAutoDialog(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val prefs = remember { com.example.data.PreferencesRepository(context) }
     val savedAppsScriptUrl by prefs.appsScriptUrlFlow.collectAsState(initial = com.example.data.GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL)
     var masjidName by remember { mutableStateOf("") }
@@ -1721,7 +1732,10 @@ fun AddMasjidAutoDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isSending by remember { mutableStateOf(false) }
 
+    var dismissKeyboard by remember { mutableStateOf<() -> Unit>({}) }
+
     val performFormSubmit: () -> Unit = {
+        dismissKeyboard()
         if (masjidName.isBlank()) {
             errorMessage = "Please enter Masjid Name"
         } else if (location.isBlank()) {
@@ -1731,8 +1745,6 @@ fun AddMasjidAutoDialog(
         } else if (adminContact.isBlank()) {
             errorMessage = "Please enter Admin Contact Number"
         } else if (!isSending) {
-            focusManager.clearFocus()
-            keyboardController?.hide()
             isSending = true
             val cleanMasjidName = masjidName.trim()
             val targetUrl = savedAppsScriptUrl.trim()
@@ -1813,17 +1825,41 @@ fun AddMasjidAutoDialog(
 
     Dialog(
         onDismissRequest = {
-            focusManager.clearFocus()
-            keyboardController?.hide()
+            dismissKeyboard()
             onDismiss()
         },
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        val dialogView = androidx.compose.ui.platform.LocalView.current
+        val dialogFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
+        val dialogKeyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+
+        LaunchedEffect(dialogView, dialogFocusManager, dialogKeyboardController) {
+            dismissKeyboard = {
+                dialogFocusManager.clearFocus(force = true)
+                dialogKeyboardController?.hide()
+                try {
+                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                    imm?.hideSoftInputFromWindow(dialogView.windowToken, 0)
+                    imm?.hideSoftInputFromWindow(dialogView.applicationWindowToken, 0)
+                    (context as? Activity)?.currentFocus?.let { focused ->
+                        imm?.hideSoftInputFromWindow(focused.windowToken, 0)
+                    }
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
+        }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 20.dp)
-                .imePadding(),
+                .imePadding()
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) { dismissKeyboard() },
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
             border = BorderStroke(1.5.dp, Color(0xFFF3DE8E).copy(alpha = 0.5f))
@@ -1832,7 +1868,11 @@ fun AddMasjidAutoDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(18.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { dismissKeyboard() },
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Header
@@ -1842,17 +1882,24 @@ fun AddMasjidAutoDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = when (language) {
-                            "ur" -> "نئی مسجد شامل کریں"
-                            "hi" -> "नई मस्जिद जोड़ें"
-                            else -> "Add New Masjid"
-                        },
+                        text = "Add New Masjid",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF3DE8E)
                     )
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White.copy(alpha = 0.7f))
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(Color(0xFF1E293B), CircleShape)
+                            .border(1.2.dp, Color(0xFFF3DE8E), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color(0xFFF3DE8E),
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
 
@@ -1860,11 +1907,7 @@ fun AddMasjidAutoDialog(
 
                 // Responsible person notice in bold white text
                 Text(
-                    text = when (language) {
-                        "ur" -> "ذمہ دار شخص (مولانا / متولی / بندے صاحب / ٹرسٹ ممبر) کو یہ فارم جمع کرنا چاہیے۔"
-                        "hi" -> "जिम्मेदार व्यक्ति (मौलाना / मुतवल्ली / बंदेसाहब / ट्रस्ट मेंबर) को ही यह फॉर्म भरना चाहिए।"
-                        else -> "The responsible person (Moulana / Mutawalli / Bangi sahab / Trust Member) should submit the form."
-                    },
+                    text = "The responsible person (Moulana / Mutawalli / Bangi sahab / Trust Member) should submit the form.",
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -1960,7 +2003,7 @@ fun AddMasjidAutoDialog(
                         adminContact = clean
                         errorMessage = null
                         if (input.contains("\n") || input.contains("\r")) {
-                            performFormSubmit()
+                            dismissKeyboard()
                         }
                     },
                     enabled = true,
@@ -1970,17 +2013,29 @@ fun AddMasjidAutoDialog(
                         Text("e.g. 9876543210", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
                     },
                     keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
+                        keyboardType = KeyboardType.Phone,
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
-                        onDone = { performFormSubmit() },
-                        onSend = { performFormSubmit() },
-                        onSearch = { performFormSubmit() },
-                        onGo = { performFormSubmit() },
-                        onNext = { performFormSubmit() },
-                        onPrevious = { performFormSubmit() }
+                        onDone = { dismissKeyboard() },
+                        onSend = { dismissKeyboard() },
+                        onSearch = { dismissKeyboard() },
+                        onGo = { dismissKeyboard() },
+                        onNext = { dismissKeyboard() }
                     ),
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { dismissKeyboard() },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Done / Hide Keyboard",
+                                tint = Color(0xFFF3DE8E),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFFF3DE8E),
@@ -1997,8 +2052,8 @@ fun AddMasjidAutoDialog(
                         .fillMaxWidth()
                         .focusRequester(contactFocusRequester)
                         .onKeyEvent { keyEvent ->
-                            if (keyEvent.type == KeyEventType.KeyUp && (keyEvent.key == Key.Enter || keyEvent.key == Key.NumPadEnter)) {
-                                performFormSubmit()
+                            if (keyEvent.key == Key.Enter || keyEvent.key == Key.NumPadEnter) {
+                                dismissKeyboard()
                                 true
                             } else {
                                 false
@@ -2268,11 +2323,7 @@ fun AddMasjidAutoDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = when (language) {
-                                "ur" -> "درخواست ارسال کریں"
-                                "hi" -> "अनुरोध भेजें"
-                                else -> "Send Request"
-                            },
+                            text = "Send Request",
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White

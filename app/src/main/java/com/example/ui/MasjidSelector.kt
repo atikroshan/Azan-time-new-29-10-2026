@@ -479,13 +479,14 @@ fun MasjidSelectionDialog(
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(36.dp)
                             .background(Color(0xFF1E293B), CircleShape)
+                            .border(1.2.dp, Color(0xFFF3DE8E), CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.8f),
+                            tint = Color(0xFFF3DE8E),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -588,7 +589,11 @@ fun MasjidSelectionDialog(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { pendingSelectedMasjid = masjid },
+                                .clickable(enabled = !isCurrent) {
+                                    if (!isCurrent) {
+                                        pendingSelectedMasjid = masjid
+                                    }
+                                },
                             shape = RoundedCornerShape(14.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = if (isCurrent) Color(0xFF1E2B45) else Color(0xFF141C2E)
@@ -688,18 +693,40 @@ fun MasjidSelectionDialog(
                                 }
 
                                 if (isCurrent) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .background(Color(0xFFE5A93C), CircleShape),
-                                        contentAlignment = Alignment.Center
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = "Selected",
-                                            tint = Color(0xFF0F172A),
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .background(Color(0xFFF3DE8E).copy(alpha = 0.2f), RoundedCornerShape(6.dp))
+                                                .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = when (language) {
+                                                    "ur" -> "منتخب شدہ"
+                                                    "hi" -> "चुनी गई"
+                                                    else -> "Selected"
+                                                },
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFF3DE8E)
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .background(Color(0xFFE5A93C), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = Color(0xFF0F172A),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -771,11 +798,11 @@ fun MasjidSelectionDialog(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    AzanLogoCard(size = 140.dp)
+                                    AzanLogoCard(size = 68.dp)
                                     AzanTimeWordmark(
-                                        height = 68.dp,
-                                        topPadding = 8.dp,
-                                        bottomPadding = 8.dp
+                                        height = 30.dp,
+                                        topPadding = 4.dp,
+                                        bottomPadding = 4.dp
                                     )
                                     Text(
                                         text = targetMasjid.getLocalizedName(language),

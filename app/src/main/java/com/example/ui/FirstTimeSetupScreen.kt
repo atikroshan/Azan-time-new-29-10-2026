@@ -255,13 +255,13 @@ fun FirstTimeSetupScreen(
                 ) {
                     // Squircle Logo Card with 45-degree Shimmer (matching Support Screen / image_0af060ef.png)
                     AzanLogoCard(
-                        size = 90.dp
+                        size = 64.dp
                     )
 
                     AzanTimeWordmark(
-                        height = 40.dp,
-                        topPadding = 12.dp,
-                        bottomPadding = 6.dp
+                        height = 28.dp,
+                        topPadding = 8.dp,
+                        bottomPadding = 4.dp
                     )
                 }
             }
@@ -400,11 +400,11 @@ fun FirstTimeSetupScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        AzanLogoCard(size = 140.dp)
+                                        AzanLogoCard(size = 68.dp)
                                         AzanTimeWordmark(
-                                            height = 68.dp,
-                                            topPadding = 8.dp,
-                                            bottomPadding = 8.dp
+                                            height = 30.dp,
+                                            topPadding = 4.dp,
+                                            bottomPadding = 4.dp
                                         )
                                         Text(
                                             text = masjidToConfirm.getLocalizedName(uiState.language),
@@ -945,15 +945,18 @@ private fun SearchResultsList(
         }
 
         matchedList.forEach { item ->
+            val isCurrent = selectedMasjidId != null && item.id == selectedMasjidId
             Card(
-                onClick = { onSelect(item) },
+                onClick = { if (!isCurrent) onSelect(item) },
+                enabled = !isCurrent,
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF0F151C).copy(alpha = 0.85f)
+                    containerColor = if (isCurrent) Color(0xFF1E2B45) else Color(0xFF0F151C).copy(alpha = 0.85f),
+                    disabledContainerColor = Color(0xFF1E2B45)
                 ),
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(
                     1.dp,
-                    Color(0xFFF2CA50).copy(alpha = 0.25f)
+                    if (isCurrent) Color(0xFFF2CA50) else Color(0xFFF2CA50).copy(alpha = 0.25f)
                 ),
                 modifier = Modifier
                     .fillMaxWidth()

@@ -39,6 +39,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.animation.core.animateFloatAsState
@@ -370,9 +371,12 @@ fun SupportBackScreen(
 
                     Box(
                         modifier = Modifier
+                            .width(90.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFF3DE8E))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .background(Color(0x40162D22))
+                            .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = when (uiState.language) {
@@ -380,9 +384,10 @@ fun SupportBackScreen(
                                 "hi" -> "जोड़ें +"
                                 else -> "Request +"
                             },
-                            fontSize = 12.5.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF040E0A)
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF3DE8E),
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -457,9 +462,11 @@ fun SupportBackScreen(
 
                     Box(
                         modifier = Modifier
+                            .width(90.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xFFF3DE8E))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = when (uiState.language) {
@@ -1945,30 +1952,17 @@ fun AddMasjidAutoDialog(
                         .focusRequester(locationFocusRequester)
                 )
 
-                // Field 3: Admin ID (Common for all as requested)
-                OutlinedTextField(
-                    value = "admin",
-                    onValueChange = { },
-                    label = { Text("Admin ID - admin") },
-                    readOnly = true,
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFFF3DE8E).copy(alpha = 0.5f),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                        focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
-                        focusedTextColor = Color.White.copy(alpha = 0.7f),
-                        unfocusedTextColor = Color.White.copy(alpha = 0.7f),
-                        focusedContainerColor = Color(0xFF141E2E),
-                        unfocusedContainerColor = Color(0xFF141E2E)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Field 4: Admin Contact Number
+                // Field 3: Admin Contact Number
                 OutlinedTextField(
                     value = adminContact,
-                    onValueChange = { adminContact = it; errorMessage = null },
+                    onValueChange = { input ->
+                        val clean = input.replace("\n", "").replace("\r", "")
+                        adminContact = clean
+                        errorMessage = null
+                        if (input.contains("\n") || input.contains("\r")) {
+                            performFormSubmit()
+                        }
+                    },
                     enabled = true,
                     readOnly = false,
                     label = { Text("Admin Contact Number *") },
@@ -1976,7 +1970,7 @@ fun AddMasjidAutoDialog(
                         Text("e.g. 9876543210", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
                     },
                     keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
+                        keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
@@ -2002,6 +1996,34 @@ fun AddMasjidAutoDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(contactFocusRequester)
+                        .onKeyEvent { keyEvent ->
+                            if (keyEvent.type == KeyEventType.KeyUp && (keyEvent.key == Key.Enter || keyEvent.key == Key.NumPadEnter)) {
+                                performFormSubmit()
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                )
+
+                // Field 4: Admin ID (Common for all as requested)
+                OutlinedTextField(
+                    value = "admin",
+                    onValueChange = { },
+                    label = { Text("Admin ID - admin") },
+                    readOnly = true,
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFF3DE8E).copy(alpha = 0.5f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        focusedLabelColor = Color(0xFFF3DE8E),
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
+                        focusedTextColor = Color.White.copy(alpha = 0.7f),
+                        unfocusedTextColor = Color.White.copy(alpha = 0.7f),
+                        focusedContainerColor = Color(0xFF141E2E),
+                        unfocusedContainerColor = Color(0xFF141E2E)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 // Field 5: Photo Browser Button

@@ -258,14 +258,18 @@ fun MasjidSelectorDropdown(
                 color = Color(0xFF162D22),
                 shape = RoundedCornerShape(10.dp),
                 border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.5f)),
-                modifier = Modifier.clickable {
-                    if (onChangeClick != null) onChangeClick() else showDialog = true
-                }
+                modifier = Modifier
+                    .width(90.dp)
+                    .clickable {
+                        if (onChangeClick != null) onChangeClick() else showDialog = true
+                    }
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
                         text = strings.changeBtn,
@@ -273,6 +277,7 @@ fun MasjidSelectorDropdown(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF3DE8E)
                     )
+                    Spacer(modifier = Modifier.width(3.dp))
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = "Select",
@@ -764,18 +769,19 @@ fun MasjidSelectionDialog(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Mosque,
-                                        contentDescription = null,
-                                        tint = Color(0xFFF2CA50).copy(alpha = 0.50f),
-                                        modifier = Modifier.size(80.dp)
+                                    AzanLogoCard(size = 140.dp)
+                                    AzanTimeWordmark(
+                                        height = 68.dp,
+                                        topPadding = 8.dp,
+                                        bottomPadding = 8.dp
                                     )
                                     Text(
                                         text = targetMasjid.getLocalizedName(language),
-                                        fontSize = 15.sp,
-                                        color = Color(0xFFD0C5AF).copy(alpha = 0.70f),
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFD0C5AF),
                                         textAlign = TextAlign.Center,
                                         modifier = Modifier.padding(horizontal = 20.dp)
                                     )

@@ -398,13 +398,13 @@ fun FirstTimeSetupScreen(
                                 ) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Mosque,
-                                            contentDescription = null,
-                                            tint = Color(0xFFF2CA50).copy(alpha = 0.50f),
-                                            modifier = Modifier.size(80.dp)
+                                        AzanLogoCard(size = 140.dp)
+                                        AzanTimeWordmark(
+                                            height = 68.dp,
+                                            topPadding = 8.dp,
+                                            bottomPadding = 8.dp
                                         )
                                         Text(
                                             text = masjidToConfirm.getLocalizedName(uiState.language),

@@ -156,11 +156,7 @@ fun SupportScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(0.92f)
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .border(
-                        BorderStroke(1.5.dp, Color(0xFF3DB88F).copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                    ),
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                 color = Color(0xFF040E0A),
                 tonalElevation = 8.dp,
                 shadowElevation = 16.dp
@@ -177,7 +173,7 @@ fun SupportScreen(
                             modifier = Modifier
                                 .width(42.dp)
                                 .height(5.dp)
-                                .background(Color(0xFF3DB88F).copy(alpha = 0.6f), CircleShape)
+                                .background(Color.White.copy(alpha = 0.35f), CircleShape)
                         )
                     }
 

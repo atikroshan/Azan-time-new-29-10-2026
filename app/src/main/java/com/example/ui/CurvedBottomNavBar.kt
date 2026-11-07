@@ -12,12 +12,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.HeadsetMic
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.outlined.HeadsetMic
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -180,7 +180,7 @@ fun AnimatedCurvedNavBar(
             ) {
                 // Active Icon inside the floating bubble
                 val activeIcon = when (selectedIndex) {
-                    0 -> Icons.Filled.HeadsetMic
+                    0 -> Icons.Filled.Settings
                     1 -> Icons.Filled.Home
                     else -> Icons.Filled.NightsStay
                 }
@@ -201,10 +201,10 @@ fun AnimatedCurvedNavBar(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Tab 0: Support
+                // Tab 0: Setting
                 NavBarItem(
                     selected = selectedIndex == 0,
-                    icon = Icons.Outlined.HeadsetMic,
+                    icon = Icons.Outlined.Settings,
                     label = supportLabel,
                     onClick = { if (!isBusy) onSelectTab("support") },
                     testTag = "nav_support_button",

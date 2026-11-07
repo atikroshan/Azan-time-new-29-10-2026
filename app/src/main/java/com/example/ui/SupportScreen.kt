@@ -112,17 +112,8 @@ fun SupportScreen(
 ) {
     var showFrontScreen by remember { mutableStateOf(false) }
 
-    if (showFrontScreen) {
-        SupportFrontScreen(
-            uiState = uiState,
-            onClose = { showFrontScreen = false },
-            onLangSelect = onLangSelect,
-            onMasjidSubmitted = onMasjidSubmitted,
-            onChangeMasjid = onChangeMasjid,
-            onSelectMasjid = onSelectMasjid,
-            modifier = modifier
-        )
-    } else {
+    Box(modifier = modifier.fillMaxSize()) {
+        // SupportBackScreen rendered in background
         SupportBackScreen(
             uiState = uiState,
             onBack = onBack,
@@ -131,8 +122,77 @@ fun SupportScreen(
             onChangeMasjid = onChangeMasjid,
             onSelectMasjid = onSelectMasjid,
             onOpenFrontScreen = { showFrontScreen = true },
-            modifier = modifier
+            modifier = Modifier.fillMaxSize()
         )
+
+        // Dimmed backdrop overlay when front screen is open
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showFrontScreen,
+            enter = fadeIn(animationSpec = tween(300)),
+            exit = fadeOut(animationSpec = tween(300))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.65f))
+                    .clickable { showFrontScreen = false }
+            )
+        }
+
+        // SupportFrontScreen sliding up as dual overlay sheet
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showFrontScreen,
+            enter = slideInVertically(
+                initialOffsetY = { fullHeight -> fullHeight },
+                animationSpec = spring(stiffness = Spring.StiffnessLow)
+            ) + fadeIn(),
+            exit = slideOutVertically(
+                targetOffsetY = { fullHeight -> fullHeight },
+                animationSpec = spring(stiffness = Spring.StiffnessMedium)
+            ) + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.92f)
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .border(
+                        BorderStroke(1.5.dp, Color(0xFF3DB88F).copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                    ),
+                color = Color(0xFF040E0A),
+                tonalElevation = 8.dp,
+                shadowElevation = 16.dp
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Top Drag Indicator Bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(42.dp)
+                                .height(5.dp)
+                                .background(Color(0xFF3DB88F).copy(alpha = 0.6f), CircleShape)
+                        )
+                    }
+
+                    SupportFrontScreen(
+                        uiState = uiState,
+                        onClose = { showFrontScreen = false },
+                        onLangSelect = onLangSelect,
+                        onMasjidSubmitted = onMasjidSubmitted,
+                        onChangeMasjid = onChangeMasjid,
+                        onSelectMasjid = onSelectMasjid,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
     }
 }
 

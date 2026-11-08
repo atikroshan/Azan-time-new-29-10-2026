@@ -139,7 +139,7 @@ fun SplashScreen(onFinished: () -> Unit) {
     )
 
     LaunchedEffect(Unit) {
-        delay(10000) // Total 10s duration
+        delay(6000) // Total 6s duration
         isDismissing = true
     }
 

@@ -51,6 +51,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -159,28 +160,57 @@ fun SupportScreen(
             ) + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
+            val sheetOffsetY = remember { androidx.compose.animation.core.Animatable(0f) }
+            val coroutineScope = rememberCoroutineScope()
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.75f)
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+                    .fillMaxHeight(0.77f)
+                    .offset(y = (-6).dp)
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .offset { IntOffset(0, sheetOffsetY.value.toInt()) }
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                if (sheetOffsetY.value > 120f) {
+                                    showFrontScreen = false
+                                } else {
+                                    coroutineScope.launch {
+                                        sheetOffsetY.animateTo(0f, animationSpec = tween(200))
+                                    }
+                                }
+                            },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                coroutineScope.launch {
+                                    val newOffset = (sheetOffsetY.value + dragAmount).coerceAtLeast(0f)
+                                    sheetOffsetY.snapTo(newOffset)
+                                }
+                            }
+                        )
+                    },
                 color = Color(0xFF040E0A),
                 tonalElevation = 8.dp,
                 shadowElevation = 16.dp
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Top Drag Indicator Bar
+                    // Top Drag Indicator Bar (Fully working: tap or drag to close)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp, bottom = 4.dp),
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { showFrontScreen = false }
+                            )
+                            .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(42.dp)
+                                .width(48.dp)
                                 .height(5.dp)
-                                .background(Color.White.copy(alpha = 0.35f), CircleShape)
+                                .background(Color.White.copy(alpha = 0.5f), CircleShape)
                         )
                     }
 
@@ -956,7 +986,7 @@ fun SupportFrontScreen(
                 }
             }
 
-            // Slot 4: Follow Us
+            // App Version Line Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
@@ -965,86 +995,26 @@ fun SupportFrontScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
+                        .padding(horizontal = 16.dp, vertical = slotVerticalPadding),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = when (uiState.language) {
-                            "ur" -> "ہمیں فالو کریں :"
-                            "hi" -> "फ़ॉلو کریں :"
-                            else -> "Follow us :"
+                            "ur" -> "ایپ ورژن"
+                            "hi" -> "ऐप वर्ज़न"
+                            else -> "App Version"
                         },
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1
+                        color = Color.White
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SocialCircleButton(
-                            title = "Facebook",
-                            icon = {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_facebook_circle),
-                                    contentDescription = "Facebook",
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                )
-                            },
-                            onClick = {
-                                Toast.makeText(context, "Facebook link coming soon!", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        SocialCircleButton(
-                            title = "Instagram",
-                            icon = {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_instagram_circle),
-                                    contentDescription = "Instagram",
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                )
-                            },
-                            onClick = {
-                                Toast.makeText(context, "Instagram link coming soon!", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        SocialCircleButton(
-                            title = "YouTube",
-                            icon = {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_youtube_circle),
-                                    contentDescription = "YouTube",
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                )
-                            },
-                            onClick = {
-                                Toast.makeText(context, "YouTube link coming soon!", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        SocialCircleButton(
-                            title = "Telegram",
-                            icon = {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_telegram_circle),
-                                    contentDescription = "Telegram",
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                )
-                            },
-                            onClick = {
-                                Toast.makeText(context, "Telegram link coming soon!", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }
+                    Text(
+                        text = "v3.1.66",
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = primaryGold
+                    )
                 }
             }
 

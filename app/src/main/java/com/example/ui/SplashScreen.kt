@@ -27,7 +27,7 @@ import kotlinx.coroutines.delay
  * - Signature Google AI Studio / Gemini glowing shimmer beam progress track
  * - AI Studio minimal shimmering footer ("Powered by @tek")
  * - Butter-smooth entrance easing and 450ms seamless dissolve exit transition
- * - Auto-finishes in 6.0s or instantly on user tap
+ * - Auto-finishes in 10.0s or instantly on user tap
  */
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
@@ -107,9 +107,8 @@ fun SplashScreen(onFinished: () -> Unit) {
     )
 
     LaunchedEffect(Unit) {
-        delay(2500) // Wait 2.5s before starting entrance animation
-        hasEntered = true
-        delay(3500) // Hold for another 3.5s (Total 6s duration)
+        hasEntered = true // Start entrance animation immediately
+        delay(10000) // Total 10s duration
         isDismissing = true
     }
 

@@ -476,18 +476,20 @@ fun MasjidSelectionDialog(
                         }
                     }
 
-                    IconButton(
-                        onClick = onDismiss,
+                    Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
                             .background(Color(0xFF1E293B), CircleShape)
-                            .border(1.2.dp, Color(0xFFF3DE8E), CircleShape)
+                            .border(1.dp, Color(0xFFF3DE8E), CircleShape)
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
                             tint = Color(0xFFF3DE8E),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

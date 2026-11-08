@@ -207,6 +207,7 @@ fun SupportBackScreen(
 ) {
     var showAddMasjidDialog by remember { mutableStateOf(false) }
     var showThanksDialog by remember { mutableStateOf(false) }
+    var showMasjidSelectorDialog by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
         modifier = modifier
@@ -288,20 +289,8 @@ fun SupportBackScreen(
                 )
             }
 
-            // Slot 1: Masjid Change (Selected Masjid Dropdown)
-            Box(modifier = Modifier.padding(vertical = 0.dp)) {
-                MasjidSelectorDropdown(
-                    selectedMasjid = uiState.selectedMasjid,
-                    allMasajid = uiState.allMasajid,
-                    language = uiState.language,
-                    onSelectMasjid = onSelectMasjid,
-                    onLanguageSelect = onLangSelect,
-                    containerColor = Color(0x380C261D),
-                    borderColor = Color(0x663DB88F),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = slotVerticalPadding),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            // Cards Container Placeholder (will be filled in next step)
+            Box(modifier = Modifier.height(1.dp))
 
             // Slot 2: Request Add Masjid Card
             Card(
@@ -1887,18 +1876,20 @@ fun AddMasjidAutoDialog(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF3DE8E)
                     )
-                    IconButton(
-                        onClick = onDismiss,
+                    Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
                             .background(Color(0xFF1E293B), CircleShape)
-                            .border(1.2.dp, Color(0xFFF3DE8E), CircleShape)
+                            .border(1.dp, Color(0xFFF3DE8E), CircleShape)
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
                             tint = Color(0xFFF3DE8E),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

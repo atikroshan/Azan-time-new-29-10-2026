@@ -115,7 +115,7 @@ fun SupportScreen(
     var showFrontScreen by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // SupportBackScreen rendered in background
+        // SupportBackScreen rendered in background with conditional blur
         SupportBackScreen(
             uiState = uiState,
             onBack = onBack,
@@ -124,7 +124,9 @@ fun SupportScreen(
             onChangeMasjid = onChangeMasjid,
             onSelectMasjid = onSelectMasjid,
             onOpenFrontScreen = { showFrontScreen = true },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(if (showFrontScreen) 8.dp else 0.dp)
         )
 
         // Dimmed backdrop overlay when front screen is open
@@ -136,12 +138,12 @@ fun SupportScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.65f))
+                    .background(Color.Black.copy(alpha = 0.45f))
                     .clickable { showFrontScreen = false }
             )
         }
 
-        // SupportFrontScreen sliding up as dual overlay sheet
+        // SupportFrontScreen sliding up as dual overlay sheet (Half Height)
         androidx.compose.animation.AnimatedVisibility(
             visible = showFrontScreen,
             enter = slideInVertically(
@@ -157,7 +159,7 @@ fun SupportScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.92f)
+                    .fillMaxHeight(0.75f)
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                 color = Color(0xFF040E0A),
                 tonalElevation = 8.dp,
@@ -228,33 +230,33 @@ fun SupportBackScreen(
         val isUltraCompact = screenHeight < 580.dp
 
         val itemSpacing = when {
-            screenHeight >= 720.dp -> 11.dp
-            isCompact -> 7.dp
-            else -> 9.dp
+            screenHeight >= 720.dp -> 8.dp
+            isCompact -> 5.dp
+            else -> 6.dp
         }
         val slotVerticalPadding = when {
-            screenHeight >= 720.dp -> 13.dp
-            isCompact -> 9.dp
-            else -> 11.dp
+            screenHeight >= 720.dp -> 10.dp
+            isCompact -> 6.dp
+            else -> 8.dp
         }
         val logoSize = when {
-            screenHeight >= 720.dp -> 72.dp
-            isUltraCompact -> 48.dp
-            isCompact -> 56.dp
-            else -> 64.dp
+            screenHeight >= 720.dp -> 68.dp
+            isUltraCompact -> 46.dp
+            isCompact -> 52.dp
+            else -> 60.dp
         }
         val wordmarkHeight = when {
-            screenHeight >= 720.dp -> 30.dp
-            isUltraCompact -> 20.dp
-            isCompact -> 24.dp
-            else -> 26.dp
+            screenHeight >= 720.dp -> 28.dp
+            isUltraCompact -> 18.dp
+            isCompact -> 22.dp
+            else -> 24.dp
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
             verticalArrangement = Arrangement.spacedBy(itemSpacing),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -276,46 +278,145 @@ fun SupportBackScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp, bottom = 14.dp),
+                    .padding(top = 2.dp, bottom = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 AzanLogoCard(size = logoSize)
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(itemSpacing))
                 AzanTimeWordmark(
                     height = wordmarkHeight,
-                    topPadding = 6.dp,
-                    bottomPadding = 6.dp
+                    topPadding = 2.dp,
+                    bottomPadding = 2.dp
                 )
             }
 
-            // Cards Container Placeholder (will be filled in next step)
-            Box(modifier = Modifier.height(1.dp))
-
-            // Slot 2: Request Add Masjid Card
-            Card(
+            // 3. Side-by-Side 2-Column Vertical Rectangular Cards
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showAddMasjidDialog = true },
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                border = BorderStroke(1.2.dp, Color(0x663DB88F))
+                    .padding(top = 0.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
+                // Card 1: Guest Masjid / Selected Masjid
+                Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .weight(1f)
+                        .clickable { onChangeMasjid() },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
+                    border = BorderStroke(1.2.dp, Color(0x663DB88F))
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(44.dp)
+                                .background(Color(0xFF162D22), CircleShape)
+                                .border(1.dp, Color(0xFF2E533F), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Mosque,
+                                contentDescription = "Guest Masjid",
+                                tint = Color(0xFFF3DE8E),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        val masjidTitle = if (uiState.selectedMasjid.id.equals("guest", ignoreCase = true) || uiState.selectedMasjid.name.isBlank()) {
+                            when (uiState.language) {
+                                "ur" -> "گیسٹ مسجد"
+                                "hi" -> "गेस्ट मस्जिद"
+                                else -> "Guest Masjid"
+                            }
+                        } else {
+                            uiState.selectedMasjid.name
+                        }
+
+                        Text(
+                            text = masjidTitle,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF3DE8E),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.LocationOn,
+                                contentDescription = null,
+                                tint = Color(0xFFF3DE8E),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = uiState.selectedMasjid.city.ifBlank { "Solapur City" },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White.copy(alpha = 0.75f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0x40162D22))
+                                .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
+                                .clickable { onChangeMasjid() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "تبدیل ⌵"
+                                    "hi" -> "बदलें ⌵"
+                                    else -> "Change ⌵"
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF3DE8E),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+
+                // Card 2: Request Add Masjid
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { showAddMasjidDialog = true },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
+                    border = BorderStroke(1.2.dp, Color(0x663DB88F))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
                                 .background(Color(0xFF162D22), CircleShape)
                                 .border(1.dp, Color(0xFF2E533F), CircleShape),
                             contentAlignment = Alignment.Center
@@ -327,63 +428,64 @@ fun SupportBackScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center
+
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "نئی مسجد شامل کریں"
+                                "hi" -> "नई मस्जिद जोड़ें"
+                                else -> "Request Add Masjid"
+                            },
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFF3DE8E),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Text(
+                            text = when (uiState.language) {
+                                "ur" -> "اوقاتِ نماز درج کریں"
+                                "hi" -> "लोकल टाइमिंग भेजें"
+                                else -> "Submit Local Timings"
+                            },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.75f),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0x40162D22))
+                                .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
+                                .clickable { showAddMasjidDialog = true },
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = when (uiState.language) {
-                                    "ur" -> "نئی مسجد شامل کریں"
-                                    "hi" -> "नई मस्जिद जोड़ें"
-                                    else -> "Request Add Masjid"
+                                    "ur" -> "درخواست +"
+                                    "hi" -> "जोड़ें +"
+                                    else -> "Request +"
                                 },
-                                fontSize = 16.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFF3DE8E),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "اوقاتِ نماز درج کریں"
-                                    "hi" -> "लोकल टाइमिंग भेजें"
-                                    else -> "Submit Local Timings"
-                                },
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White.copy(alpha = 0.75f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                textAlign = TextAlign.Center
                             )
                         }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .width(90.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0x40162D22))
-                            .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
-                            .padding(vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "درخواست +"
-                                "hi" -> "जोड़ें +"
-                                else -> "Request +"
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF3DE8E),
-                            textAlign = TextAlign.Center
-                        )
                     }
                 }
             }
 
-            // Slot 3: Support & Feedback Button Card (Opens Front Screen)
+            // 4. Support & Feedback Card (Full-width below)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -428,7 +530,7 @@ fun SupportBackScreen(
                                     "hi" -> "सपोर्ट और सुझाव"
                                     else -> "Support & Feedback"
                                 },
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFF3DE8E),
                                 maxLines = 1,
@@ -441,7 +543,7 @@ fun SupportBackScreen(
                                     "hi" -> "सपोर्ट, रेटिंग और फॉलो"
                                     else -> "Support, Rate Us & Follow Us"
                                 },
-                                fontSize = 11.5.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color.White.copy(alpha = 0.75f),
                                 maxLines = 1,
@@ -452,10 +554,11 @@ fun SupportBackScreen(
 
                     Box(
                         modifier = Modifier
-                            .width(90.dp)
+                            .width(80.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xFFF3DE8E))
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 6.dp)
+                            .clickable { onOpenFrontScreen() },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -464,7 +567,7 @@ fun SupportBackScreen(
                                 "hi" -> "खोलें >"
                                 else -> "Open >"
                             },
-                            fontSize = 12.5.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color(0xFF040E0A)
                         )
@@ -474,7 +577,7 @@ fun SupportBackScreen(
 
             // Footer
             AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
+                modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
             )
         }
     }
@@ -715,20 +818,20 @@ fun SupportFrontScreen(
         val isUltraCompact = screenHeight < 580.dp
 
         val itemSpacing = when {
-            screenHeight >= 720.dp -> 11.dp
-            isCompact -> 7.dp
-            else -> 9.dp
+            screenHeight >= 720.dp -> 8.dp
+            isCompact -> 4.dp
+            else -> 6.dp
         }
         val slotVerticalPadding = when {
-            screenHeight >= 720.dp -> 13.dp
-            isCompact -> 9.dp
-            else -> 11.dp
+            screenHeight >= 720.dp -> 8.dp
+            isCompact -> 4.dp
+            else -> 6.dp
         }
         val logoSize = when {
-            screenHeight >= 720.dp -> 96.dp
-            isUltraCompact -> 64.dp
-            isCompact -> 76.dp
-            else -> 86.dp
+            screenHeight >= 720.dp -> 86.dp
+            isUltraCompact -> 60.dp
+            isCompact -> 70.dp
+            else -> 80.dp
         }
         val wordmarkHeight = when {
             screenHeight >= 720.dp -> 46.dp
@@ -740,8 +843,7 @@ fun SupportFrontScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
+                .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 6.dp),
             verticalArrangement = Arrangement.spacedBy(itemSpacing),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -1130,7 +1232,7 @@ fun SupportFrontScreen(
 
             // Footer
             AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
+                modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
             )
         }
     }

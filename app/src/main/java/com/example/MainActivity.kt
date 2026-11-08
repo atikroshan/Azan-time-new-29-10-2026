@@ -229,13 +229,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             
-            // 1. Asynchronously initialize ViewModel and its dependencies to avoid blocking the first frame
+            // 1. Asynchronously initialize ViewModel and its dependencies on IO dispatcher to avoid blocking frame 1
             val viewModelState = androidx.compose.runtime.produceState<AzanViewModel?>(initialValue = null) {
-                val db = AzanDatabase.getDatabase(context)
-                val repo = AzanRepository(context, db.azanDao(), db.prayerLogDao())
-                val prefs = PreferencesRepository(context)
-                val scheduler = AlarmScheduler(context)
-                value = AzanViewModel(context.applicationContext, repo, prefs, scheduler)
+                val vm = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val db = AzanDatabase.getDatabase(context)
+                    val repo = AzanRepository(context, db.azanDao(), db.prayerLogDao())
+                    val prefs = PreferencesRepository(context)
+                    val scheduler = AlarmScheduler(context)
+                    AzanViewModel(context.applicationContext, repo, prefs, scheduler)
+                }
+                value = vm
+                mainViewModel = vm
             }
             val viewModel = viewModelState.value
 

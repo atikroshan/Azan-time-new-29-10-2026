@@ -123,6 +123,11 @@ fun SplashScreen(onFinished: () -> Unit) {
                         Color(0xFF050F0B)
                     )
                 )
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { isDismissing = true }
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -148,6 +153,9 @@ fun SplashScreen(onFinished: () -> Unit) {
                 center = centerOffset
             )
         }
+
+        // 1.5 Flying Golden Bubbles (Seamless drifting from top to bottom)
+        FlyingGoldenBubbles(modifier = Modifier.fillMaxSize().alpha(contentAlpha))
 
         // 2. Central Content: Logo + Typography + Google Studio AI Glow Bar
         Column(
@@ -203,3 +211,89 @@ fun SplashScreen(onFinished: () -> Unit) {
         }
     }
 }
+
+/**
+ * Flying Golden Bubbles:
+ * - Small golden light color transparent circles
+ * - Random sizes and initial positions
+ * - Flying very slow from top to bottom
+ * - Seamless looping animation
+ */
+@Composable
+fun FlyingGoldenBubbles(modifier: Modifier = Modifier) {
+    val bubbleCount = 22
+    val infiniteTransition = rememberInfiniteTransition(label = "bubbleTransition")
+
+    BoxWithConstraints(modifier = modifier) {
+        val width = maxWidth
+        val height = maxHeight
+
+        val bubbles = remember {
+            List(bubbleCount) {
+                BubbleData(
+                    xPos = (0..100).random() / 100f,
+                    size = (4..12).random().dp,
+                    duration = (8000..15000).random(),
+                    delay = (0..5000).random(),
+                    opacity = (0.15f..0.45f).random()
+                )
+            }
+        }
+
+        bubbles.forEach { bubble ->
+            val yProgress by infiniteTransition.animateFloat(
+                initialValue = -0.1f,
+                targetValue = 1.1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(
+                        durationMillis = bubble.duration,
+                        delayMillis = bubble.delay,
+                        easing = LinearEasing
+                    ),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "bubbleY"
+            )
+
+            val xWobble by infiniteTransition.animateFloat(
+                initialValue = -15f,
+                targetValue = 15f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = (2000..4000).random(), easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "bubbleXWobble"
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset(
+                        x = width * bubble.xPos + xWobble.dp,
+                        y = height * yProgress
+                    )
+                    .size(bubble.size)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFFF3DE8E).copy(alpha = bubble.opacity),
+                                Color(0xFFE5B842).copy(alpha = 0.05f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+            )
+        }
+    }
+}
+
+private data class BubbleData(
+    val xPos: Float,
+    val size: androidx.compose.ui.unit.Dp,
+    val duration: Int,
+    val delay: Int,
+    val opacity: Float
+)
+
+private fun ClosedRange<Float>.random() = 
+    start + (endInclusive - start) * java.util.Random().nextFloat()

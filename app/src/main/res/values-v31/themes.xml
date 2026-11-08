@@ -5,7 +5,6 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowBackground">#020403</item>
         <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
-        <item name="android:windowSplashScreenAnimationDuration">0</item>
         <item name="android:windowSplashScreenBackground">#020403</item>
     </style>
 </resources>

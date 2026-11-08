@@ -31,26 +31,15 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
-    var hasEntered by remember { mutableStateOf(true) }
     var isDismissing by remember { mutableStateOf(false) }
 
-    // Smooth entrance animations
-    val contentScale by animateFloatAsState(
-        targetValue = if (hasEntered) 1f else 0.86f,
-        animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing),
-        label = "splashEntranceScale"
-    )
-
-    val contentAlpha by animateFloatAsState(
-        targetValue = if (hasEntered) 1f else 0f,
-        animationSpec = tween(durationMillis = 600, easing = LinearOutSlowInEasing),
-        label = "splashEntranceAlpha"
-    )
+    val contentScale = 1f
+    val contentAlpha = 1f
 
     // Dissolve exit animation
     val screenAlpha by animateFloatAsState(
         targetValue = if (isDismissing) 0f else 1f,
-        animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
         label = "splashExitAlpha",
         finishedListener = { finalAlpha ->
             if (finalAlpha == 0f && isDismissing) {
@@ -107,7 +96,6 @@ fun SplashScreen(onFinished: () -> Unit) {
     )
 
     LaunchedEffect(Unit) {
-        hasEntered = true // Start entrance animation immediately
         delay(10000) // Total 10s duration
         isDismissing = true
     }
@@ -214,6 +202,7 @@ fun SplashScreen(onFinished: () -> Unit) {
 
 /**
  * Flying Golden Bubbles:
+ * - Ultra-lightweight, hardware-accelerated Canvas drawing (0 recompositions)
  * - Small golden light color transparent circles
  * - Random sizes and initial positions
  * - Flying very slow from top to bottom
@@ -221,79 +210,67 @@ fun SplashScreen(onFinished: () -> Unit) {
  */
 @Composable
 fun FlyingGoldenBubbles(modifier: Modifier = Modifier) {
-    val bubbleCount = 22
     val infiniteTransition = rememberInfiniteTransition(label = "bubbleTransition")
+    val time by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 60000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 60000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "bubbleTime"
+    )
 
-    BoxWithConstraints(modifier = modifier) {
-        val width = maxWidth
-        val height = maxHeight
-
-        val bubbles = remember {
-            List(bubbleCount) {
-                BubbleData(
-                    xPos = (0..100).random() / 100f,
-                    size = (4..12).random().dp,
-                    duration = (8000..15000).random(),
-                    delay = (0..5000).random(),
-                    opacity = (0.15f..0.45f).random()
-                )
-            }
+    val bubbles = remember {
+        List(24) { i ->
+            val rand = java.util.Random(i * 37L + 11L)
+            BubbleSpec(
+                xRatio = rand.nextFloat(),
+                yOffsetRatio = rand.nextFloat(),
+                radiusDp = 2.5f + rand.nextFloat() * 4.5f,
+                speedFactor = 0.00007f + rand.nextFloat() * 0.00006f,
+                wobbleFreq = 0.0018f + rand.nextFloat() * 0.0012f,
+                wobbleAmpDp = 6f + rand.nextFloat() * 8f,
+                alpha = 0.20f + rand.nextFloat() * 0.28f
+            )
         }
+    }
 
-        bubbles.forEach { bubble ->
-            val yProgress by infiniteTransition.animateFloat(
-                initialValue = -0.1f,
-                targetValue = 1.1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(
-                        durationMillis = bubble.duration,
-                        delayMillis = bubble.delay,
-                        easing = LinearEasing
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val t = time
+
+        bubbles.forEach { b ->
+            val progress = (b.yOffsetRatio + t * b.speedFactor) % 1.0f
+            val y = progress * (h + 60f) - 30f
+            val wobblePx = kotlin.math.sin(t * b.wobbleFreq) * b.wobbleAmpDp.dp.toPx()
+            val x = (b.xRatio * w + wobblePx).coerceIn(10f, w - 10f)
+            val rPx = b.radiusDp.dp.toPx()
+
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFF3DE8E).copy(alpha = b.alpha),
+                        Color(0xFFE5B842).copy(alpha = b.alpha * 0.35f),
+                        Color.Transparent
                     ),
-                    repeatMode = RepeatMode.Restart
+                    center = Offset(x, y),
+                    radius = rPx * 1.6f
                 ),
-                label = "bubbleY"
-            )
-
-            val xWobble by infiniteTransition.animateFloat(
-                initialValue = -15f,
-                targetValue = 15f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = (2000..4000).random(), easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "bubbleXWobble"
-            )
-
-            Box(
-                modifier = Modifier
-                    .offset(
-                        x = width * bubble.xPos + xWobble.dp,
-                        y = height * yProgress
-                    )
-                    .size(bubble.size)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color(0xFFF3DE8E).copy(alpha = bubble.opacity),
-                                Color(0xFFE5B842).copy(alpha = 0.05f),
-                                Color.Transparent
-                            )
-                        ),
-                        shape = CircleShape
-                    )
+                radius = rPx,
+                center = Offset(x, y)
             )
         }
     }
 }
 
-private data class BubbleData(
-    val xPos: Float,
-    val size: androidx.compose.ui.unit.Dp,
-    val duration: Int,
-    val delay: Int,
-    val opacity: Float
+private data class BubbleSpec(
+    val xRatio: Float,
+    val yOffsetRatio: Float,
+    val radiusDp: Float,
+    val speedFactor: Float,
+    val wobbleFreq: Float,
+    val wobbleAmpDp: Float,
+    val alpha: Float
 )
-
-private fun ClosedRange<Float>.random() = 
-    start + (endInclusive - start) * java.util.Random().nextFloat()

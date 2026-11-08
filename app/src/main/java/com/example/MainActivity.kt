@@ -219,17 +219,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            splashScreen.setOnExitAnimationListener { splashScreenView ->
-                splashScreenView.remove()
-            }
-        }
-
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
             
-            // 1. Asynchronously initialize ViewModel and its dependencies on IO dispatcher to avoid blocking frame 1
+            // 1. Asynchronously initialize ViewModel and its dependencies on IO dispatcher in parallel
             val viewModelState = androidx.compose.runtime.produceState<AzanViewModel?>(initialValue = null) {
                 val vm = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val db = AzanDatabase.getDatabase(context)
@@ -244,7 +238,6 @@ class MainActivity : ComponentActivity() {
             val viewModel = viewModelState.value
 
             MyApplicationTheme {
-                // 2. We use a local state for splash instead of the one in ViewModel to show it INSTANTLY
                 var showSplash by rememberSaveable { mutableStateOf(true) }
 
                 // Lock fontScale to 1.0f
@@ -255,7 +248,9 @@ class MainActivity : ComponentActivity() {
 
                 CompositionLocalProvider(LocalDensity provides fixedDensity) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        if (viewModel != null) {
+                        if (showSplash) {
+                            SplashScreen(onFinished = { showSplash = false })
+                        } else if (viewModel != null) {
                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                                 val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                                     contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
@@ -282,10 +277,6 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
-                        }
-
-                        if (showSplash) {
-                            SplashScreen(onFinished = { showSplash = false })
                         }
                     }
                 }

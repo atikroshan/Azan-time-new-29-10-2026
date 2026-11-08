@@ -201,37 +201,56 @@ fun SplashScreen(onFinished: () -> Unit) {
 }
 
 /**
- * Flying Golden Bubbles:
- * - Ultra-lightweight, hardware-accelerated Canvas drawing (0 recompositions)
- * - Small golden light color transparent circles
- * - Random sizes and initial positions
- * - Flying very slow from top to bottom
- * - Seamless looping animation
+ * Cinematic Flying Golden Bubbles:
+ * - Already distributed across the entire screen from frame 0 (no empty screen on startup)
+ * - Continuous, seamless top-to-bottom slow majestic drift
+ * - Natural horizontal sinusoidal sway
+ * - Multi-layered glowing golden light with soft radial halos
+ * - Ultra-smooth 60fps rendering
  */
 @Composable
 fun FlyingGoldenBubbles(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "bubbleTransition")
-    val time by infiniteTransition.animateFloat(
+    val bubbleCount = 28
+    val infiniteTransition = rememberInfiniteTransition(label = "cinematicBubbles")
+
+    // Master continuous progress loop (0f to 1f over 24 seconds, perfectly smooth)
+    val animationProgress by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 60000f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 60000, easing = LinearEasing),
+            animation = tween(durationMillis = 24000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "bubbleTime"
+        label = "masterProgress"
     )
 
-    val bubbles = remember {
-        List(24) { i ->
-            val rand = java.util.Random(i * 37L + 11L)
-            BubbleSpec(
-                xRatio = rand.nextFloat(),
-                yOffsetRatio = rand.nextFloat(),
-                radiusDp = 2.5f + rand.nextFloat() * 4.5f,
-                speedFactor = 0.00007f + rand.nextFloat() * 0.00006f,
-                wobbleFreq = 0.0018f + rand.nextFloat() * 0.0012f,
-                wobbleAmpDp = 6f + rand.nextFloat() * 8f,
-                alpha = 0.20f + rand.nextFloat() * 0.28f
+    // Pre-calculated deterministic specs for each bubble so they stay stable across recompositions
+    val bubbleSpecs = remember {
+        val rand = java.util.Random(1337L)
+        List(bubbleCount) { i ->
+            val sizeDp = when {
+                i % 7 == 0 -> 12f + rand.nextFloat() * 3.5f // Large cinematic bokeh orb (up to 15.5dp)
+                i % 3 == 0 -> 7f + rand.nextFloat() * 3f   // Medium golden bubble
+                else -> 3.5f + rand.nextFloat() * 2.5f     // Small floating particle
+            }
+            val speedCycles = 1.6f + rand.nextFloat() * 1.8f // how many full screen traversals in 24s (~7s to 15s per cycle)
+            val initialYFraction = rand.nextFloat() // 0.0 to 1.0 (already distributed across screen on frame 0!)
+            val xRatio = 0.04f + rand.nextFloat() * 0.92f
+            val wobbleSpeed = 3f + rand.nextFloat() * 4f // cycles per 24s
+            val wobbleAmp = 8f + rand.nextFloat() * 14f // dp amplitude
+            val alpha = when {
+                sizeDp > 10f -> 0.22f + rand.nextFloat() * 0.16f // softer for large bokeh
+                sizeDp > 6f -> 0.32f + rand.nextFloat() * 0.22f
+                else -> 0.38f + rand.nextFloat() * 0.32f
+            }
+            CinematicBubbleSpec(
+                xRatio = xRatio,
+                initialYFraction = initialYFraction,
+                sizeDp = sizeDp,
+                speedCycles = speedCycles,
+                wobbleSpeed = wobbleSpeed,
+                wobbleAmp = wobbleAmp,
+                alpha = alpha
             )
         }
     }
@@ -239,38 +258,45 @@ fun FlyingGoldenBubbles(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val t = time
 
-        bubbles.forEach { b ->
-            val progress = (b.yOffsetRatio + t * b.speedFactor) % 1.0f
-            val y = progress * (h + 60f) - 30f
-            val wobblePx = kotlin.math.sin(t * b.wobbleFreq) * b.wobbleAmpDp.dp.toPx()
+        bubbleSpecs.forEach { b ->
+            // Current vertical position with seamless wrap-around from top to bottom
+            val rawY = (b.initialYFraction + animationProgress * b.speedCycles) % 1.0f
+            // Map 0..1 to -30f..h+30f so they enter gracefully from the top and leave at the bottom
+            val y = rawY * (h + 80f) - 40f
+
+            // Gentle horizontal sway
+            val wobbleAngle = (animationProgress * b.wobbleSpeed * 2.0 * Math.PI).toFloat()
+            val wobblePx = kotlin.math.sin(wobbleAngle) * b.wobbleAmp.dp.toPx()
             val x = (b.xRatio * w + wobblePx).coerceIn(10f, w - 10f)
-            val rPx = b.radiusDp.dp.toPx()
 
+            val rPx = (b.sizeDp / 2f).dp.toPx()
+
+            // Cinematic warm golden radial glow matching version 3.1.57 aesthetics
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color(0xFFF3DE8E).copy(alpha = b.alpha),
+                        Color(0xFFFFFBEA).copy(alpha = b.alpha),
+                        Color(0xFFF3DE8E).copy(alpha = b.alpha * 0.85f),
                         Color(0xFFE5B842).copy(alpha = b.alpha * 0.35f),
-                        Color.Transparent
+                        Color(0x00E5B842)
                     ),
                     center = Offset(x, y),
-                    radius = rPx * 1.6f
+                    radius = rPx * 1.5f
                 ),
-                radius = rPx,
+                radius = rPx * 1.5f,
                 center = Offset(x, y)
             )
         }
     }
 }
 
-private data class BubbleSpec(
+private data class CinematicBubbleSpec(
     val xRatio: Float,
-    val yOffsetRatio: Float,
-    val radiusDp: Float,
-    val speedFactor: Float,
-    val wobbleFreq: Float,
-    val wobbleAmpDp: Float,
+    val initialYFraction: Float,
+    val sizeDp: Float,
+    val speedCycles: Float,
+    val wobbleSpeed: Float,
+    val wobbleAmp: Float,
     val alpha: Float
 )

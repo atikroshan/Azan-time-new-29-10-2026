@@ -1,5 +1,11 @@
 package com.example.ui
 
+import android.content.Context
+import android.media.MediaPlayer
+import android.net.Uri
+import android.view.TextureView
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -16,11 +22,17 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import com.example.R
 import kotlinx.coroutines.delay
 
 /**
  * Minimalist, ultra-attractive Splash Screen inspired by Google AI Studio / Gemini:
+ * - Real 720p Dust & Snow Particle Overlay Video Background running in slow cinematic speed
+ * - First 2 seconds cinematic camera shake (organic 3D-feel subtle micro-shake & rotation)
  * - Obsidian dark cosmic background with breathing ambient emerald-gold aura
  * - Centered squircle AzanLogoCard with continuous sweeping 45-degree shimmer
  * - CorelDRAW vector AzanTimeWordmark ("AZAN TIME" + "AAO ALLAH KI RAAH MEIN CHALE")
@@ -35,6 +47,37 @@ fun SplashScreen(onFinished: () -> Unit) {
 
     val contentScale = 1f
     val contentAlpha = 1f
+
+    // Camera Shake for the first 2 seconds (0 to 2000ms)
+    // Decays gracefully from 1.0f at start to 0.0f at 2.0s
+    val shakeIntensity = remember { Animatable(1.0f) }
+    LaunchedEffect(Unit) {
+        // High-energy cinematic impact during first 600ms, then organic decay settling by 2.0s
+        delay(600)
+        shakeIntensity.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = 1400, easing = FastOutSlowInEasing)
+        )
+    }
+
+    // High frequency shake oscillator (approx 16Hz micro camera shake)
+    val shakeTransition = rememberInfiniteTransition(label = "cameraShakeTransition")
+    val shakeCycle by shakeTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6.28318f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 130, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shakeCycle"
+    )
+
+    val currentShake = shakeIntensity.value
+    // Translation shake: horizontal +/- 5dp, vertical +/- 4dp, rotation +/- 0.7 deg
+    val shakeOffsetX = (kotlin.math.sin(shakeCycle * 1.7f) * 5.5f * currentShake)
+    val shakeOffsetY = (kotlin.math.cos(shakeCycle * 2.3f) * 4.0f * currentShake)
+    val shakeRotation = (kotlin.math.sin(shakeCycle) * 0.75f * currentShake)
+    val cameraScale = 1.0f + (0.025f * currentShake)
 
     // Dissolve exit animation
     val screenAlpha by animateFloatAsState(
@@ -104,21 +147,27 @@ fun SplashScreen(onFinished: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .alpha(screenAlpha)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFF020403),
-                        Color(0xFF050F0B)
-                    )
-                )
-            )
+            .background(Color(0xFF020403))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = { isDismissing = true }
-            ),
+            )
+            .graphicsLayer {
+                // Apply Camera Shake & Micro Zoom to entire screen viewport
+                translationX = shakeOffsetX.dp.toPx()
+                translationY = shakeOffsetY.dp.toPx()
+                rotationZ = shakeRotation
+                scaleX = cameraScale
+                scaleY = cameraScale
+            },
         contentAlignment = Alignment.Center
     ) {
+        // 0. Slow Cinematic Video Background (Random Dust, Snow & Smoke Particle Overlay)
+        SplashVideoBackground(
+            modifier = Modifier.fillMaxSize()
+        )
+
         // 1. Ambient Background Breathing Glow (Subtle cosmic gold & emerald halo)
         Canvas(
             modifier = Modifier
@@ -129,8 +178,8 @@ fun SplashScreen(onFinished: () -> Unit) {
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color(0xFFE5B842).copy(alpha = auraAlpha),
-                        Color(0xFF0E2F23).copy(alpha = auraAlpha * 0.75f),
+                        Color(0xFFE5B842).copy(alpha = auraAlpha * 0.70f),
+                        Color(0xFF0E2F23).copy(alpha = auraAlpha * 0.50f),
                         Color(0x10061A13),
                         Color.Transparent
                     ),
@@ -142,8 +191,12 @@ fun SplashScreen(onFinished: () -> Unit) {
             )
         }
 
-        // 1.5 Flying Golden Bubbles (Seamless drifting from top to bottom)
-        FlyingGoldenBubbles(modifier = Modifier.fillMaxSize().alpha(contentAlpha))
+        // 1.5 Soft Golden Ambient Light Dust Motes Overlay
+        CinematicFallingDust(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(contentAlpha * 0.55f)
+        )
 
         // 2. Central Content: Logo + Typography + Google Studio AI Glow Bar
         Column(
@@ -201,56 +254,61 @@ fun SplashScreen(onFinished: () -> Unit) {
 }
 
 /**
- * Cinematic Flying Golden Bubbles:
- * - Already distributed across the entire screen from frame 0 (no empty screen on startup)
- * - Continuous, seamless top-to-bottom slow majestic drift
- * - Natural horizontal sinusoidal sway
- * - Multi-layered glowing golden light with soft radial halos
- * - Ultra-smooth 60fps rendering
+ * Pure Cinematic Falling Dust Particles:
+ * - Natural golden dust motes gently drifting downwards from top to bottom
+ * - Ultra-fine dust specks (1.0 - 2.8dp) with soft atmospheric twinkling & air shimmer
+ * - No circular bubble rings or heavy orbs; pure cinematic dust / light motes
+ * - Distributed across the entire screen from frame 0 for zero startup void
+ * - Multi-speed parallax layers with natural horizontal air sway
  */
 @Composable
-fun FlyingGoldenBubbles(modifier: Modifier = Modifier) {
-    val bubbleCount = 28
-    val infiniteTransition = rememberInfiniteTransition(label = "cinematicBubbles")
+fun CinematicFallingDust(modifier: Modifier = Modifier) {
+    val dustCount = 42
+    val infiniteTransition = rememberInfiniteTransition(label = "cinematicFallingDust")
 
-    // Master continuous progress loop (0f to 1f over 24 seconds, perfectly smooth)
+    // Master continuous time progression (40s full cycle for slow, graceful downward fall)
     val animationProgress by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 24000, easing = LinearEasing),
+            animation = tween(durationMillis = 40000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "masterProgress"
+        label = "dustFallProgress"
     )
 
-    // Pre-calculated deterministic specs for each bubble so they stay stable across recompositions
-    val bubbleSpecs = remember {
-        val rand = java.util.Random(1337L)
-        List(bubbleCount) { i ->
+    val dustSpecs = remember {
+        val rand = java.util.Random(20261108L)
+        List(dustCount) { i ->
+            // Dust particle size: tiny glittering specks (1.0 - 2.8dp), rare soft bokeh fleck (3.5dp)
             val sizeDp = when {
-                i % 7 == 0 -> 12f + rand.nextFloat() * 3.5f // Large cinematic bokeh orb (up to 15.5dp)
-                i % 3 == 0 -> 7f + rand.nextFloat() * 3f   // Medium golden bubble
-                else -> 3.5f + rand.nextFloat() * 2.5f     // Small floating particle
+                i % 8 == 0 -> 2.8f + rand.nextFloat() * 0.8f   // Subtle soft bokeh dust fleck
+                i % 3 == 0 -> 1.8f + rand.nextFloat() * 0.8f   // Medium dust mote
+                else -> 1.0f + rand.nextFloat() * 0.7f         // Micro golden dust sparkle
             }
-            val speedCycles = 1.6f + rand.nextFloat() * 1.8f // how many full screen traversals in 24s (~7s to 15s per cycle)
-            val initialYFraction = rand.nextFloat() // 0.0 to 1.0 (already distributed across screen on frame 0!)
-            val xRatio = 0.04f + rand.nextFloat() * 0.92f
-            val wobbleSpeed = 3f + rand.nextFloat() * 4f // cycles per 24s
-            val wobbleAmp = 8f + rand.nextFloat() * 14f // dp amplitude
-            val alpha = when {
-                sizeDp > 10f -> 0.22f + rand.nextFloat() * 0.16f // softer for large bokeh
-                sizeDp > 6f -> 0.32f + rand.nextFloat() * 0.22f
-                else -> 0.38f + rand.nextFloat() * 0.32f
+            // Gentle falling speed: 1.0 to 1.8 screen height traversals per 40 seconds (22s to 40s per full screen fall)
+            val speedCycles = 1.0f + rand.nextFloat() * 0.8f
+            val initialYFraction = rand.nextFloat()
+            val xRatio = 0.02f + rand.nextFloat() * 0.96f
+            val swaySpeed = 1.5f + rand.nextFloat() * 2.5f
+            val swayAmp = 3f + rand.nextFloat() * 6f // gentle drift sway in air
+            val twinkleSpeed = 3f + rand.nextFloat() * 5f
+            val phase = rand.nextFloat() * 6.28318f
+            val baseAlpha = when {
+                sizeDp > 2.5f -> 0.35f + rand.nextFloat() * 0.25f
+                sizeDp > 1.7f -> 0.45f + rand.nextFloat() * 0.30f
+                else -> 0.55f + rand.nextFloat() * 0.35f
             }
-            CinematicBubbleSpec(
+            CinematicDustSpec(
                 xRatio = xRatio,
                 initialYFraction = initialYFraction,
                 sizeDp = sizeDp,
                 speedCycles = speedCycles,
-                wobbleSpeed = wobbleSpeed,
-                wobbleAmp = wobbleAmp,
-                alpha = alpha
+                swaySpeed = swaySpeed,
+                swayAmp = swayAmp,
+                twinkleSpeed = twinkleSpeed,
+                phase = phase,
+                alpha = baseAlpha
             )
         }
     }
@@ -259,44 +317,143 @@ fun FlyingGoldenBubbles(modifier: Modifier = Modifier) {
         val w = size.width
         val h = size.height
 
-        bubbleSpecs.forEach { b ->
-            // Current vertical position with seamless wrap-around from top to bottom
-            val rawY = (b.initialYFraction + animationProgress * b.speedCycles) % 1.0f
-            // Map 0..1 to -30f..h+30f so they enter gracefully from the top and leave at the bottom
-            val y = rawY * (h + 80f) - 40f
+        dustSpecs.forEach { d ->
+            // Downward traversal: initial position + progress * speed -> wrapped seamlessly
+            val rawY = (d.initialYFraction + animationProgress * d.speedCycles) % 1.0f
+            val y = rawY * (h + 40f) - 20f
 
-            // Gentle horizontal sway
-            val wobbleAngle = (animationProgress * b.wobbleSpeed * 2.0 * Math.PI).toFloat()
-            val wobblePx = kotlin.math.sin(wobbleAngle) * b.wobbleAmp.dp.toPx()
-            val x = (b.xRatio * w + wobblePx).coerceIn(10f, w - 10f)
+            // Atmospheric air currents horizontal sway
+            val swayAngle = (animationProgress * d.swaySpeed * 2.0 * Math.PI + d.phase).toFloat()
+            val swayPx = kotlin.math.sin(swayAngle) * d.swayAmp.dp.toPx()
+            val x = (d.xRatio * w + swayPx).coerceIn(4f, w - 4f)
 
-            val rPx = (b.sizeDp / 2f).dp.toPx()
+            // Cinematic dust twinkling
+            val twinkle = 0.75f + 0.25f * kotlin.math.sin((animationProgress * d.twinkleSpeed * 2.0 * Math.PI + d.phase).toFloat())
+            val effectiveAlpha = (d.alpha * twinkle).coerceIn(0.12f, 0.90f)
 
-            // Cinematic warm golden radial glow matching version 3.1.57 aesthetics
+            val rPx = (d.sizeDp / 2f).dp.toPx()
+
+            // Draw glowing golden dust mote (soft golden center with soft radiant halo)
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color(0xFFFFFBEA).copy(alpha = b.alpha),
-                        Color(0xFFF3DE8E).copy(alpha = b.alpha * 0.85f),
-                        Color(0xFFE5B842).copy(alpha = b.alpha * 0.35f),
-                        Color(0x00E5B842)
+                        Color(0xFFFFFBEA).copy(alpha = effectiveAlpha),
+                        Color(0xFFF3DE8E).copy(alpha = effectiveAlpha * 0.75f),
+                        Color(0xFFE5B842).copy(alpha = effectiveAlpha * 0.30f),
+                        Color.Transparent
                     ),
                     center = Offset(x, y),
-                    radius = rPx * 1.5f
+                    radius = rPx * 2.2f
                 ),
-                radius = rPx * 1.5f,
+                radius = rPx * 2.2f,
+                center = Offset(x, y)
+            )
+
+            // Sharp pinpoint glittering center for micro dust specks
+            drawCircle(
+                color = Color(0xFFFFFDF5).copy(alpha = effectiveAlpha),
+                radius = (rPx * 0.75f).coerceAtLeast(1.0f),
                 center = Offset(x, y)
             )
         }
     }
 }
 
-private data class CinematicBubbleSpec(
+private data class CinematicDustSpec(
     val xRatio: Float,
     val initialYFraction: Float,
     val sizeDp: Float,
     val speedCycles: Float,
-    val wobbleSpeed: Float,
-    val wobbleAmp: Float,
+    val swaySpeed: Float,
+    val swayAmp: Float,
+    val twinkleSpeed: Float,
+    val phase: Float,
     val alpha: Float
 )
+
+/**
+ * Hardware-accelerated Video Background:
+ * Plays the random dust, snow and smoke particle overlay video in slow cinematic speed (0.70x).
+ * Runs seamlessly on loop using TextureView without audio or black flicker.
+ */
+@Composable
+fun SplashVideoBackground(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var isVideoReady by remember { mutableStateOf(false) }
+
+    val videoAlpha by animateFloatAsState(
+        targetValue = if (isVideoReady) 1.0f else 0f,
+        animationSpec = tween(durationMillis = 350, easing = LinearEasing),
+        label = "splashVideoAlpha"
+    )
+
+    Box(modifier = modifier) {
+        AndroidView(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(videoAlpha),
+            factory = { ctx ->
+                TextureView(ctx).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                        private var mediaPlayer: MediaPlayer? = null
+
+                        override fun onSurfaceTextureAvailable(
+                            surface: android.graphics.SurfaceTexture,
+                            width: Int,
+                            height: Int
+                        ) {
+                            try {
+                                val mp = MediaPlayer().apply {
+                                    setSurface(android.view.Surface(surface))
+                                    val uri = Uri.parse("android.resource://${ctx.packageName}/${R.raw.splash_dust_bg}")
+                                    setDataSource(ctx, uri)
+                                    isLooping = true
+                                    setVolume(0f, 0f)
+                                    setOnPreparedListener { player ->
+                                        try {
+                                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                                                player.playbackParams = player.playbackParams.setSpeed(0.70f)
+                                            }
+                                        } catch (_: Throwable) {
+                                        }
+                                        player.start()
+                                        isVideoReady = true
+                                    }
+                                    prepareAsync()
+                                }
+                                mediaPlayer = mp
+                            } catch (e: Throwable) {
+                                e.printStackTrace()
+                            }
+                        }
+
+                        override fun onSurfaceTextureSizeChanged(
+                            surface: android.graphics.SurfaceTexture,
+                            width: Int,
+                            height: Int
+                        ) {
+                        }
+
+                        override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
+                            try {
+                                mediaPlayer?.stop()
+                                mediaPlayer?.release()
+                            } catch (_: Throwable) {
+                            }
+                            mediaPlayer = null
+                            return true
+                        }
+
+                        override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) {
+                        }
+                    }
+                }
+            }
+        )
+    }
+}
+

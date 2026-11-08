@@ -31,7 +31,7 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
-    var hasEntered by remember { mutableStateOf(false) }
+    var hasEntered by remember { mutableStateOf(true) }
     var isDismissing by remember { mutableStateOf(false) }
 
     // Smooth entrance animations

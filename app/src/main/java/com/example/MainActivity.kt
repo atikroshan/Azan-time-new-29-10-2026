@@ -151,6 +151,7 @@ import com.example.data.getStopLabel
 import com.example.data.getMuteLabel
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.lifecycle.lifecycleScope
 import com.example.ui.MasjidSelectorDropdown
 import com.example.ui.MasjidSelectionDialog
 
@@ -177,41 +178,45 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         ensureSystemScreenTimeout()
         
-        try {
-            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Kolkata"))
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
-        try {
-            com.example.service.AzanForegroundService.initFromPrefs(this)
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
-        try {
-            com.example.worker.PrayerWorkScheduler.scheduleDailySync(applicationContext)
-        } catch (e: Throwable) {
-            e.printStackTrace()
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Kolkata"))
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
+            try {
+                com.example.service.AzanForegroundService.initFromPrefs(this@MainActivity)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
+            try {
+                com.example.worker.PrayerWorkScheduler.scheduleDailySync(applicationContext)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
         }
 
-        try {
-            val imageLoader = coil.ImageLoader.Builder(applicationContext)
-                .memoryCache {
-                    coil.memory.MemoryCache.Builder(applicationContext)
-                        .maxSizePercent(0.30)
-                        .build()
-                }
-                .diskCache {
-                    coil.disk.DiskCache.Builder()
-                        .directory(applicationContext.cacheDir.resolve("image_cache"))
-                        .maxSizeBytes(100L * 1024 * 1024)
-                        .build()
-                }
-                .respectCacheHeaders(false)
-                .crossfade(true)
-                .build()
-            coil.Coil.setImageLoader(imageLoader)
-        } catch (e: Throwable) {
-            e.printStackTrace()
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val imageLoader = coil.ImageLoader.Builder(applicationContext)
+                    .memoryCache {
+                        coil.memory.MemoryCache.Builder(applicationContext)
+                            .maxSizePercent(0.30)
+                            .build()
+                    }
+                    .diskCache {
+                        coil.disk.DiskCache.Builder()
+                            .directory(applicationContext.cacheDir.resolve("image_cache"))
+                            .maxSizeBytes(100L * 1024 * 1024)
+                            .build()
+                    }
+                    .respectCacheHeaders(false)
+                    .crossfade(true)
+                    .build()
+                coil.Coil.setImageLoader(imageLoader)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -224,62 +229,60 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.RequestPermission()
-                ) { isGranted ->
-                    // Handle permission grant
-                }
-                
-                LaunchedEffect(Unit) {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                }
+            // 1. Asynchronously initialize ViewModel and its dependencies to avoid blocking the first frame
+            val viewModelState = androidx.compose.runtime.produceState<AzanViewModel?>(initialValue = null) {
+                val db = AzanDatabase.getDatabase(context)
+                val repo = AzanRepository(context, db.azanDao(), db.prayerLogDao())
+                val prefs = PreferencesRepository(context)
+                val scheduler = AlarmScheduler(context)
+                value = AzanViewModel(context.applicationContext, repo, prefs, scheduler)
             }
-
-            val db = remember { AzanDatabase.getDatabase(context) }
-            val repo = remember { AzanRepository(context, db.azanDao(), db.prayerLogDao()) }
-            val prefs = remember { PreferencesRepository(context) }
-            val scheduler = remember { AlarmScheduler(context) }
-
-            val factory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return AzanViewModel(context.applicationContext, repo, prefs, scheduler) as T
-                }
-            }
-            val viewModel: AzanViewModel = viewModel(factory = factory)
-            mainViewModel = viewModel
+            val viewModel = viewModelState.value
 
             MyApplicationTheme {
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                
-                val strings = when (uiState.language) {
-                    "hi" -> HindiStrings
-                    "ur" -> UrduStrings
-                    else -> EnglishStrings
-                }
+                // 2. We use a local state for splash instead of the one in ViewModel to show it INSTANTLY
+                var showSplash by rememberSaveable { mutableStateOf(true) }
 
-                val isAlarmIntent = intent.getBooleanExtra("FROM_ALARM", false)
-                // Lock fontScale to 1.0f to guarantee exact, identical typography rendering across all mobile devices
+                // Lock fontScale to 1.0f
                 val currentDensity = LocalDensity.current
                 val fixedDensity = remember(currentDensity.density) {
-                    Density(
-                        density = currentDensity.density,
-                        fontScale = 1.0f
-                    )
+                    Density(density = currentDensity.density, fontScale = 1.0f)
                 }
 
-                CompositionLocalProvider(
-                    LocalDensity provides fixedDensity,
-                    LocalAppStrings provides strings
-                ) {
-                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                        AzanScreen(
-                            viewModel = viewModel,
-                            uiState = uiState,
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                CompositionLocalProvider(LocalDensity provides fixedDensity) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (viewModel != null) {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                                    contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+                                ) { }
+                                LaunchedEffect(Unit) {
+                                    if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                }
+                            }
+                            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                            val strings = when (uiState.language) {
+                                "hi" -> HindiStrings
+                                "ur" -> UrduStrings
+                                else -> EnglishStrings
+                            }
+                            
+                            CompositionLocalProvider(LocalAppStrings provides strings) {
+                                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                                    AzanScreen(
+                                        viewModel = viewModel,
+                                        uiState = uiState,
+                                        modifier = Modifier.padding(innerPadding)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (showSplash) {
+                            SplashScreen(onFinished = { showSplash = false })
+                        }
                     }
                 }
             }
@@ -324,7 +327,7 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
     var showAdminLoginDialog by remember { mutableStateOf(false) }
     var showAdminPanel by remember { mutableStateOf(false) }
     var showMasjidSelectorScreen by remember { mutableStateOf(false) }
-    var showSplash by rememberSaveable { mutableStateOf(true) }
+
     var ramazanTapCount by remember { mutableIntStateOf(0) }
     var forcedRamazanActive by remember { mutableStateOf(false) }
     val effectiveRamazanActive = isRamazanActive || forcedRamazanActive
@@ -653,11 +656,7 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
         )
     }
 
-        if (showSplash) {
-            SplashScreen(
-                onFinished = { showSplash = false }
-            )
-        }
+
     }
 }
 

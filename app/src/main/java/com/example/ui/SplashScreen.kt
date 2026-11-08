@@ -108,7 +108,7 @@ fun SplashScreen(onFinished: () -> Unit) {
 
     LaunchedEffect(Unit) {
         hasEntered = true
-        delay(4000)
+        delay(2500)
         isDismissing = true
     }
 
@@ -123,15 +123,7 @@ fun SplashScreen(onFinished: () -> Unit) {
                         Color(0xFF050F0B)
                     )
                 )
-            )
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                if (!isDismissing) {
-                    isDismissing = true
-                }
-            },
+            ),
         contentAlignment = Alignment.Center
     ) {
         // 1. Ambient Background Breathing Glow (Subtle cosmic gold & emerald halo)

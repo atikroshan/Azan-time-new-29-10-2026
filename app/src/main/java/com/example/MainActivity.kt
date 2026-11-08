@@ -525,7 +525,8 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                                 onSelectMasjid = { masjid ->
                                     viewModel.selectMasjid(masjid.id)
                                     triggerTabSwitch("home")
-                                }
+                                },
+                                onOpenAdminLogin = { showAdminLoginDialog = true }
                             )
                         }
                         "ramazan" -> {
@@ -1120,7 +1121,7 @@ fun AzanHomeContent(
                     }
 
                     if (!isPlayingAzan || !isPulledDown) {
-                        // Support Masjid QR Button (Animated spin loop when QR present, static 🚫 icon when missing)
+                        // Animated QR icon button (white-golden color change spin animation, square rounded corner)
                         com.example.ui.AnimatedTopQrIconButton(
                             hasQr = hasQrCode,
                             onClick = {
@@ -1131,27 +1132,6 @@ fun AzanHomeContent(
                                 }
                             }
                         )
-
-                        // Admin icon button (Profile/Avatar)
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFF3DE8E))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = ripple(bounded = true),
-                                    onClick = { onOpenAdminLogin() }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Person,
-                                contentDescription = "Admin Profile",
-                                tint = Color.Black,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
                     }
                 }
             }

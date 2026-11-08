@@ -836,7 +836,7 @@ fun AnimatedTopQrIconButton(
     Box(
         modifier = modifier
             .size(38.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(bounded = true),
@@ -862,8 +862,12 @@ fun AnimatedTopQrIconButton(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(bgColor)
-                    .border(1.dp, if (bgColor == Color(0xFFFFFFFF)) Color(0xFFE2E8F0) else Color(0xFFE5B842), RoundedCornerShape(8.dp)),
+                    .background(bgColor, RoundedCornerShape(10.dp))
+                    .border(
+                        1.2.dp,
+                        if (bgColor == Color(0xFFFFFFFF)) Color(0xFFE2E8F0) else Color(0xFFE5B842),
+                        RoundedCornerShape(10.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

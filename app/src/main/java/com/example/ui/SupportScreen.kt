@@ -74,6 +74,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -110,6 +111,7 @@ fun SupportScreen(
     onChangeMasjid: () -> Unit = {},
     onSelectMasjid: (MasjidItem) -> Unit = {},
     onOpenSupportFrontScreen: () -> Unit = {},
+    onOpenAdminLogin: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showFrontScreen by remember { mutableStateOf(false) }
@@ -123,6 +125,7 @@ fun SupportScreen(
             onMasjidSubmitted = onMasjidSubmitted,
             onChangeMasjid = onChangeMasjid,
             onSelectMasjid = onSelectMasjid,
+            onOpenAdminLogin = onOpenAdminLogin,
             onOpenFrontScreen = { showFrontScreen = true },
             modifier = Modifier
                 .fillMaxSize()
@@ -205,6 +208,7 @@ fun SupportBackScreen(
     onChangeMasjid: () -> Unit = {},
     onSelectMasjid: (MasjidItem) -> Unit = {},
     onOpenFrontScreen: () -> Unit = {},
+    onOpenAdminLogin: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showAddMasjidDialog by remember { mutableStateOf(false) }
@@ -240,24 +244,24 @@ fun SupportBackScreen(
             else -> 8.dp
         }
         val logoSize = when {
-            screenHeight >= 720.dp -> 68.dp
-            isUltraCompact -> 46.dp
-            isCompact -> 52.dp
-            else -> 60.dp
+            screenHeight >= 720.dp -> 82.dp
+            isUltraCompact -> 56.dp
+            isCompact -> 62.dp
+            else -> 72.dp
         }
         val wordmarkHeight = when {
-            screenHeight >= 720.dp -> 28.dp
-            isUltraCompact -> 18.dp
-            isCompact -> 22.dp
-            else -> 24.dp
+            screenHeight >= 720.dp -> 34.dp
+            isUltraCompact -> 22.dp
+            isCompact -> 26.dp
+            else -> 30.dp
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(itemSpacing),
+                .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. Top Bar: Language Buttons at top left
@@ -291,46 +295,31 @@ fun SupportBackScreen(
                 )
             }
 
-            // 3. Side-by-Side 2-Column Vertical Rectangular Cards
-            Row(
+            // 3. 2-Row 2-Column Vertical Rectangular Cards Grid
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 0.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Top
+                    .padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Card 1: Guest Masjid / Selected Masjid
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onChangeMasjid() },
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                    border = BorderStroke(1.2.dp, Color(0x663DB88F))
+                // Row 1: Admin side | Change
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(Color(0xFF162D22), CircleShape)
-                                .border(1.dp, Color(0xFF2E533F), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Mosque,
-                                contentDescription = "Guest Masjid",
-                                tint = Color(0xFFF3DE8E),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        val masjidTitle = if (uiState.selectedMasjid.id.equals("guest", ignoreCase = true) || uiState.selectedMasjid.name.isBlank()) {
+                    SupportGridItem(
+                        title = when (uiState.language) {
+                            "ur" -> "ایڈمن لاگ ان"
+                            "hi" -> "एडमिन लॉगिन"
+                            else -> "Admin Login"
+                        },
+                        subtitle = "Manage Timings",
+                        icon = Icons.Filled.Person,
+                        onClick = onOpenAdminLogin,
+                        modifier = Modifier.weight(1f)
+                    )
+                    SupportGridItem(
+                        title = if (uiState.selectedMasjid.id.equals("guest", ignoreCase = true) || uiState.selectedMasjid.name.isBlank()) {
                             when (uiState.language) {
                                 "ur" -> "گیسٹ مسجد"
                                 "hi" -> "गेस्ट मस्जिद"
@@ -338,246 +327,62 @@ fun SupportBackScreen(
                             }
                         } else {
                             uiState.selectedMasjid.name
-                        }
-
-                        Text(
-                            text = masjidTitle,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF3DE8E),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.LocationOn,
-                                contentDescription = null,
-                                tint = Color(0xFFF3DE8E),
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = uiState.selectedMasjid.city.ifBlank { "Solapur City" },
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White.copy(alpha = 0.75f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(34.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0x40162D22))
-                                .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
-                                .clickable { onChangeMasjid() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "تبدیل ⌵"
-                                    "hi" -> "बदलें ⌵"
-                                    else -> "Change ⌵"
-                                },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF3DE8E),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-
-                // Card 2: Request Add Masjid
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { showAddMasjidDialog = true },
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                    border = BorderStroke(1.2.dp, Color(0x663DB88F))
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(Color(0xFF162D22), CircleShape)
-                                .border(1.dp, Color(0xFF2E533F), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.AddLocationAlt,
-                                contentDescription = "Request Add Masjid",
-                                tint = Color(0xFFF3DE8E),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "نئی مسجد شامل کریں"
-                                "hi" -> "नई मस्जिद जोड़ें"
-                                else -> "Request Add Masjid"
-                            },
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF3DE8E),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "اوقاتِ نماز درج کریں"
-                                "hi" -> "लोकल टाइमिंग भेजें"
-                                else -> "Submit Local Timings"
-                            },
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White.copy(alpha = 0.75f),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(34.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0x40162D22))
-                                .border(1.dp, Color(0x803DB88F), RoundedCornerShape(10.dp))
-                                .clickable { showAddMasjidDialog = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "درخواست +"
-                                    "hi" -> "जोड़ें +"
-                                    else -> "Request +"
-                                },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF3DE8E),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 4. Support & Feedback Card (Full-width below)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpenFrontScreen() },
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                border = BorderStroke(1.2.dp, Color(0x663DB88F))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
+                        },
+                        subtitle = uiState.selectedMasjid.city.ifBlank { "Solapur City" },
+                        icon = Icons.Outlined.Mosque,
+                        onClick = onChangeMasjid,
                         modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .background(Color(0xFF162D22), CircleShape)
-                                .border(1.dp, Color(0xFF2E533F), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.HeadsetMic,
-                                contentDescription = "Support",
-                                tint = Color(0xFFF3DE8E),
-                                modifier = Modifier.size(22.dp)
-                            )
+                        actionText = when (uiState.language) {
+                            "ur" -> "تبدیل ⌵"
+                            "hi" -> "बदलें ⌵"
+                            else -> "Change ⌵"
                         }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "سپورٹ اور فیڈبیک"
-                                    "hi" -> "सपोर्ट और सुझाव"
-                                    else -> "Support & Feedback"
-                                },
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF3DE8E),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "سپورٹ، ریٹنگ اور فالو کریں"
-                                    "hi" -> "सपोर्ट, रेटिंग और फॉलो"
-                                    else -> "Support, Rate Us & Follow Us"
-                                },
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White.copy(alpha = 0.75f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                    )
+                }
 
-                    Box(
-                        modifier = Modifier
-                            .width(80.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFF3DE8E))
-                            .padding(vertical = 6.dp)
-                            .clickable { onOpenFrontScreen() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "کھولیں >"
-                                "hi" -> "खोलें >"
-                                else -> "Open >"
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF040E0A)
-                        )
-                    }
+                // Row 2: Request | Support
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    SupportGridItem(
+                        title = when (uiState.language) {
+                            "ur" -> "نئی مسجد"
+                            "hi" -> "नई मस्जिद"
+                            else -> "Request Add"
+                        },
+                        subtitle = "Submit Timings",
+                        icon = Icons.Outlined.AddLocationAlt,
+                        onClick = { showAddMasjidDialog = true },
+                        modifier = Modifier.weight(1f),
+                        actionText = when (uiState.language) {
+                            "ur" -> "درخواست +"
+                            "hi" -> "जोड़ें +"
+                            else -> "Request +"
+                        }
+                    )
+                    SupportGridItem(
+                        title = when (uiState.language) {
+                            "ur" -> "سپورٹ"
+                            "hi" -> "सपोर्ट"
+                            else -> "Support"
+                        },
+                        subtitle = "Rate & Follow",
+                        icon = Icons.Outlined.HeadsetMic,
+                        onClick = onOpenFrontScreen,
+                        modifier = Modifier.weight(1f),
+                        actionText = when (uiState.language) {
+                            "ur" -> "کھولیں >"
+                            "hi" -> "खोलें >"
+                            else -> "Open >"
+                        }
+                    )
                 }
             }
 
             // Footer
             AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
             )
         }
     }
@@ -613,7 +418,6 @@ fun SupportBackScreen(
                     modifier = Modifier.fillMaxWidth(0.90f),
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A)),
-                    border = BorderStroke(1.5.dp, Color(0xFF10B981).copy(alpha = 0.7f)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
                     Column(
@@ -863,9 +667,8 @@ fun SupportFrontScreen(
                 IconButton(
                     onClick = onClose,
                     modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0x40162D22), CircleShape)
-                        .border(1.dp, Color(0x803DB88F), CircleShape)
+                        .size(32.dp)
+                        .background(Color(0x26FFFFFF), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -896,8 +699,7 @@ fun SupportFrontScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                border = BorderStroke(1.2.dp, Color(0x663DB88F))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))
             ) {
                 Column(
                     modifier = Modifier
@@ -951,50 +753,54 @@ fun SupportFrontScreen(
                                     selectedContributionAmount = amt
                                     showUpiAppChooserDialog = true
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF143827)),
-                                border = BorderStroke(1.dp, Color(0xFF3DB88F)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = Color.White
+                                ),
+                                border = BorderStroke(1.dp, Color(0xFF424242)),
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(36.dp)
+                                    .height(38.dp)
                             ) {
                                 Text(
                                     text = "₹$amt",
                                     fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
 
                         Button(
                             onClick = { showOtherAmountDialog = true },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF143827)),
-                            border = BorderStroke(1.dp, Color(0xFFE5B842)),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = primaryGold
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFF424242)),
                             shape = RoundedCornerShape(10.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(36.dp)
+                                .height(38.dp)
                         ) {
                             Text(
                                 text = "Other",
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = primaryGold
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
                     // Scan QR Button
-                    OutlinedButton(
+                    Button(
                         onClick = { showQrDialog = true },
-                        border = BorderStroke(1.dp, Color(0xFF3DB88F)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x1A34D399)),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(38.dp)
+                            .height(40.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -1017,32 +823,28 @@ fun SupportFrontScreen(
                 }
             }
 
-            // Slot 2: Support & Feedback (Left) & Rate Us (Right)
+            // Slot 2: Support & Feedback (Full Width)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                border = BorderStroke(1.2.dp, Color(0x663DB88F))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clickable { openWhatsApp() }
                         .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Left Half: Support & Feedback (WhatsApp)
                     Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { openWhatsApp() },
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_whatsapp_outlined),
                             contentDescription = "WhatsApp",
-                            modifier = Modifier.size(31.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                         Column {
                             Text(
@@ -1051,7 +853,7 @@ fun SupportFrontScreen(
                                     "hi" -> "सपोर्ट और सुझाव"
                                     else -> "Support & Feedback"
                                 },
-                                fontSize = 12.5.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 maxLines = 1
@@ -1069,30 +871,53 @@ fun SupportFrontScreen(
                             )
                         }
                     }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Right Half: Rate Us 5★
+            // Slot 3: Rate Us (Full Width)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showRateUsDialog = true }
+                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
                     Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { showRateUsDialog = true },
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(Color(0x26F3DE8E), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = primaryGold,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
                                     text = String.format(Locale.US, "%.1f", appRatingDisplay),
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = primaryGold
                                 )
                                 Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
@@ -1102,47 +927,40 @@ fun SupportFrontScreen(
                                             appRatingDisplay >= i - 0.5 -> 0.5f
                                             else -> 0f
                                         }
-                                        StarIconDisplay(fillRatio = fillRatio, size = 11.dp)
+                                        StarIconDisplay(fillRatio = fillRatio, size = 10.dp)
                                     }
                                 }
                             }
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0x40143827))
-                                    .border(1.dp, Color(0xB3E5B842), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 9.dp, vertical = 3.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Star,
-                                        contentDescription = "Rate Us",
-                                        tint = primaryGold,
-                                        modifier = Modifier.size(11.dp)
-                                    )
-                                    Text(
-                                        text = "Rate Us 5★",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = primaryGold,
-                                        maxLines = 1
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "Rate us on Play Store",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
                         }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(primaryGold)
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = "Rate Us 5★",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF040E0A)
+                        )
                     }
                 }
             }
 
-            // Slot 3: Follow Us
+            // Slot 4: Follow Us
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0x380C261D)),
-                border = BorderStroke(1.2.dp, Color(0x663DB88F))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))
             ) {
                 Row(
                     modifier = Modifier
@@ -1230,9 +1048,11 @@ fun SupportFrontScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.weight(1f))
+
             // Footer
             AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                modifier = Modifier.padding(top = 0.dp, bottom = 2.dp)
             )
         }
     }
@@ -1253,7 +1073,6 @@ fun SupportFrontScreen(
             Card(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E17)),
-                border = BorderStroke(1.dp, primaryGold.copy(alpha = 0.5f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 24.dp)
@@ -1324,7 +1143,6 @@ fun SupportFrontScreen(
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1B15)),
-                border = BorderStroke(1.5.dp, Color(0xFFE5B842).copy(alpha = 0.55f)),
                 modifier = Modifier
                     .fillMaxWidth(0.95f)
                     .padding(12.dp)
@@ -1352,7 +1170,6 @@ fun SupportFrontScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .background(Color(0xFF1E293B), CircleShape)
-                                .border(1.2.dp, primaryGold, CircleShape)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
@@ -1367,7 +1184,6 @@ fun SupportFrontScreen(
                         modifier = Modifier
                             .size(220.dp)
                             .background(Color.White, RoundedCornerShape(14.dp))
-                            .border(1.5.dp, primaryGold.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1399,7 +1215,6 @@ fun SupportFrontScreen(
             Card(
                 shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E17)),
-                border = BorderStroke(1.5.dp, primaryGold.copy(alpha = 0.6f)),
                 modifier = Modifier.fillMaxWidth().padding(16.dp)
             ) {
                 Column(
@@ -1422,7 +1237,6 @@ fun SupportFrontScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .background(Color(0xFF1E293B), CircleShape)
-                                .border(1.2.dp, primaryGold, CircleShape)
                                 .align(Alignment.CenterEnd)
                         ) {
                             Icon(
@@ -3116,6 +2930,92 @@ fun ColorfulConfettiOverlay(
                         size = androidx.compose.ui.geometry.Size(p.width, kotlin.math.abs(effectiveHeight).coerceAtLeast(2.5f))
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SupportGridItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    actionText: String? = null
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A)),
+        border = BorderStroke(1.dp, Color(0xFFE5B842).copy(alpha = 0.45f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color(0xFF143827), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = Color(0xFFF3DE8E),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Text(
+                text = title,
+                fontSize = 14.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFF3DE8E),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = subtitle,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(34.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF143827))
+                    .border(
+                        1.2.dp, 
+                        if (actionText != null) Color(0xFF10B981).copy(alpha = 0.6f) else Color.White.copy(alpha = 0.1f), 
+                        RoundedCornerShape(10.dp)
+                    )
+                    .clickable { onClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = actionText ?: "Open",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFF3DE8E),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

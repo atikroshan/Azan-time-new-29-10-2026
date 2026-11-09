@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -56,15 +57,24 @@ private val languages = listOf(
 
 /**
  * One-Time Initial Language Selection Screen.
- * Displayed on first launch BEFORE FirstTimeSetupScreen.
+ * Displayed on first launch as a foreground overlay BEFORE FirstTimeSetupScreen.
  *
- * Cinematic Animation:
- * 1. When a button is tapped (e.g. English):
- *    - The other 2 buttons slide directly into the tapped button with vertical motion blur and disappear (merge).
- * 2. Once merged:
- *    - The tapped button shoots off to the right screen with horizontal motion blur.
- *    - The entire screen follows right behind the button to the right.
- * 3. Immediately transitions into FirstTimeSetupScreen in the chosen language.
+ * Cinematic Animation Sequence ("Phele button jana hai phir baki screen aur background mai setup screen dekhni chahiye"):
+ * 1. When a button is tapped (English, Hindi, or Urdu):
+ *    - The unselected 2 buttons smoothly glide vertically (550ms) into the tapped button.
+ *    - As they glide, they scale down and fade out with vertical motion blur.
+ *    - Tapped button pulses up to 1.12x absorbing them, then settles.
+ * 2. Settle Pause (160ms):
+ *    - User clearly registers the single golden pill button.
+ * 3. Tapped Button Leads the Exit ("Phele button jana hai"):
+ *    - Tapped button accelerates and flies off to the right screen edge with horizontal motion blur.
+ * 4. Screen Follows Behind ("phir baki screen"):
+ *    - After a 160ms head-start for the button, the entire screen (content + dark emerald background)
+ *      sweeps smoothly to the right edge with horizontal motion blur.
+ * 5. Background Reveal ("background mai setup screen dekhni chahiye"):
+ *    - Because FirstTimeSetupScreen is rendered directly underneath in MainActivity,
+ *      sliding this screen off to the right physically uncovers FirstTimeSetupScreen right in the background!
+ * 6. Finishes and transitions seamlessly into setup in the chosen language.
  */
 @Composable
 fun InitialLanguageScreen(
@@ -75,23 +85,27 @@ fun InitialLanguageScreen(
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     var isTransitioning by remember { mutableStateOf(false) }
 
-    // Merge animation progress for the unselected buttons (0f -> 1f)
+    // Merge animation progress for unselected buttons (0f -> 1f) - slower, visible glide
     val mergeProgress = remember { Animatable(0f) }
     val mergeAlpha = remember { Animatable(1f) }
     val mergeScale = remember { Animatable(1f) }
 
-    // Exit animation for tapped button and entire screen
+    // Tapped button absorption pulse scale
+    val tappedPulseScale = remember { Animatable(1f) }
+
+    // Exit animation: Button exits first, then screen follows
     val buttonExitX = remember { Animatable(0f) }
     val screenExitX = remember { Animatable(0f) }
-    val screenAlpha = remember { Animatable(1f) }
 
     // Spacing calculations: button height 44dp + gap 14dp = 58dp center-to-center
     val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
     val buttonStepPx = with(density) { 58.dp.toPx() }
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
 
     val otherButtonBlurY = (mergeProgress.value * 16f).dp
-    val selectedButtonBlurX = ((buttonExitX.value / 1800f) * 26f).coerceIn(0f, 26f).dp
-    val screenBlurX = ((screenExitX.value / 2200f) * 16f).coerceIn(0f, 16f).dp
+    val selectedButtonBlurX = ((buttonExitX.value / (screenWidthPx * 1.35f)) * 20f).coerceIn(0f, 20f).dp
+    val screenBlurX = ((screenExitX.value / screenWidthPx) * 14f).coerceIn(0f, 14f).dp
 
     fun handleLanguageTap(index: Int, code: String) {
         if (isTransitioning) return
@@ -99,35 +113,46 @@ fun InitialLanguageScreen(
         selectedIndex = index
 
         coroutineScope.launch {
-            // PHASE 1: MERGE (260ms) - unselected buttons slide into tapped button, shrinking & blurring
+            // PHASE 1: SLOW SMOOTH MERGE (550ms) - unselected buttons glide smoothly into tapped button
             launch {
-                mergeProgress.animateTo(1f, tween(260, easing = FastOutSlowInEasing))
+                mergeProgress.animateTo(1f, tween(550, easing = FastOutSlowInEasing))
             }
             launch {
-                mergeAlpha.animateTo(0f, tween(240, easing = FastOutLinearInEasing))
+                mergeAlpha.animateTo(0f, tween(480, delayMillis = 60, easing = FastOutLinearInEasing))
             }
             launch {
-                mergeScale.animateTo(0.6f, tween(260, easing = FastOutSlowInEasing))
+                mergeScale.animateTo(0.35f, tween(550, easing = FastOutSlowInEasing))
             }
-
-            delay(270L) // Wait for merge into the tapped button
-
-            // PHASE 2: LAUNCH RIGHT (340ms) - tapped button shoots right, screen follows 50ms behind
+            // Tapped button expands slightly to absorb them, then settles
             launch {
-                buttonExitX.animateTo(1800f, tween(340, easing = FastOutLinearInEasing))
+                tappedPulseScale.animateTo(1.12f, tween(280, easing = FastOutSlowInEasing))
+                tappedPulseScale.animateTo(1.0f, tween(270, easing = FastOutSlowInEasing))
             }
 
-            delay(50L) // Screen chases behind the button
+            delay(560L) // Wait for merge animation to complete
+            delay(160L) // Settle pause so user clearly registers the single merged button!
+
+            // PHASE 2: TAPPED BUTTON EXITS FIRST TO THE RIGHT ("Phele button jana hai")
             launch {
-                screenExitX.animateTo(2200f, tween(320, easing = FastOutLinearInEasing))
-            }
-            launch {
-                screenAlpha.animateTo(0f, tween(320))
+                buttonExitX.animateTo(
+                    screenWidthPx * 1.35f,
+                    tween(420, easing = FastOutSlowInEasing)
+                )
             }
 
-            delay(330L)
+            // PHASE 3: SCREEN FOLLOWS BEHIND ("phir baki screen aur background mai setup screen dekhni chahiye")
+            delay(160L) // Give the button a visible head start!
 
-            // PHASE 3: Navigate directly to setup screen in selected language
+            launch {
+                screenExitX.animateTo(
+                    screenWidthPx * 1.05f,
+                    tween(500, easing = FastOutSlowInEasing)
+                )
+            }
+
+            delay(520L) // Wait for screen slide to finish
+
+            // PHASE 4: Navigate directly to setup screen in selected language
             onLanguageSelect(code)
         }
     }
@@ -137,7 +162,6 @@ fun InitialLanguageScreen(
             .fillMaxSize()
             .graphicsLayer {
                 this.translationX = screenExitX.value
-                this.alpha = screenAlpha.value
             }
             .blur(radiusX = screenBlurX, radiusY = 0.dp)
             .background(
@@ -200,7 +224,7 @@ fun InitialLanguageScreen(
                 )
             }
 
-            // Moved lower down as requested ("Language button thoda niche loa")
+            // Lower down as requested ("Language button thoda niche loa")
             Spacer(modifier = Modifier.height(44.dp))
 
             // 4. VERTICAL STACK OF LANGUAGE PILL BUTTONS WITH MERGE & LAUNCH ANIMATION
@@ -222,7 +246,7 @@ fun InitialLanguageScreen(
                     }
 
                     val buttonScale = when {
-                        isTapped -> 1.05f
+                        isTapped -> tappedPulseScale.value
                         isOther -> mergeScale.value
                         else -> 1f
                     }

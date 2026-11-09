@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.ui.FirstTimeSetupScreen
 import com.example.ui.InitialLanguageScreen
@@ -345,38 +346,20 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
             val prevTab = selectedTab
             isGenieBusy = true
             coroutineScope.launch {
-                val snapshot = try {
-                    pageGraphicsLayer.toImageBitmap().asAndroidBitmap()
-                } catch (_: Exception) {
-                    null
-                }
-
                 outgoingTab = prevTab
-                outgoingBitmap = snapshot
                 selectedTab = targetTab
                 if (targetTab == "home") {
                     viewModel.selectToday()
                 }
 
-                if (snapshot != null && !prefersReducedMotion) {
-                    genieProgress.snapTo(0f)
-                    genieProgress.animateTo(
-                        targetValue = 1f,
-                        animationSpec = androidx.compose.animation.core.tween(
-                            durationMillis = com.example.ui.GENIE_DUR.toInt(),
-                            easing = androidx.compose.animation.core.LinearEasing
-                        )
+                genieProgress.snapTo(0f)
+                genieProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = if (prefersReducedMotion) 240 else 640,
+                        easing = androidx.compose.animation.core.LinearEasing
                     )
-                } else {
-                    genieProgress.snapTo(0f)
-                    genieProgress.animateTo(
-                        targetValue = 1f,
-                        animationSpec = androidx.compose.animation.core.tween(
-                            durationMillis = 260,
-                            easing = androidx.compose.animation.core.LinearEasing
-                        )
-                    )
-                }
+                )
 
                 outgoingTab = null
                 outgoingBitmap = null
@@ -431,15 +414,8 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
     var forceShowSetupAfterLanguage by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (!uiState.isInitialLanguageChosen) {
-            InitialLanguageScreen(
-                onLanguageSelect = { lang ->
-                    viewModel.setLanguage(lang)
-                    viewModel.setInitialLanguageChosen(true)
-                    forceShowSetupAfterLanguage = true
-                }
-            )
-        } else if (!uiState.isSetupCompleted || forceShowSetupAfterLanguage) {
+        if (!uiState.isInitialLanguageChosen || (!uiState.isSetupCompleted || forceShowSetupAfterLanguage)) {
+            // Layer 1: Setup screen rendered directly underneath in the background
             FirstTimeSetupScreen(
                 uiState = uiState,
                 onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
@@ -450,6 +426,17 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                 onRefresh = { viewModel.syncGoogleSheet() },
                 onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
             )
+
+            // Layer 2: Initial Language Screen overlay on top (slides off to reveal setup screen)
+            if (!uiState.isInitialLanguageChosen) {
+                InitialLanguageScreen(
+                    onLanguageSelect = { lang ->
+                        viewModel.setLanguage(lang)
+                        viewModel.setInitialLanguageChosen(true)
+                        forceShowSetupAfterLanguage = true
+                    }
+                )
+            }
         } else if (showAdminPanel) {
             BackHandler { showAdminPanel = false }
             AdminPanelScreen(
@@ -513,15 +500,21 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     }
             ) {
                 // Layer 1: Newly selected incoming page (rendered immediately underneath)
+                val incomingScale = if (isGenieBusy) {
+                    0.94f + 0.06f * genieProgress.value
+                } else 1f
+                val incomingAlpha = if (isGenieBusy) {
+                    0.5f + 0.5f * genieProgress.value
+                } else 1f
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .drawWithContent {
-                            pageGraphicsLayer.record {
-                                this@drawWithContent.drawContent()
-                            }
-                            drawContent()
+                        .graphicsLayer {
+                            this.scaleX = incomingScale
+                            this.scaleY = incomingScale
+                            this.alpha = incomingAlpha
                         }
                 ) {
                     when (selectedTab) {
@@ -558,15 +551,73 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     }
                 }
 
-                // Layer 2: Outgoing page kept mounted during the animation until finished
+                // Layer 2: Outgoing page with macOS Genie animation (bounces slightly, then funnels down into target tab with motion blur)
                 val currentOutgoingTab = outgoingTab
-                if (currentOutgoingTab != null && outgoingBitmap == null) {
-                    // Reduced motion / simple fade fallback
+                if (isGenieBusy && currentOutgoingTab != null) {
+                    val destinationKey = selectedTab
+                    val measuredTarget = tabTargets[destinationKey] ?: tabTargets[currentOutgoingTab]
+                    val targetCenterX = measuredTarget?.centerX?.takeIf { it > 0f } ?: when (destinationKey) {
+                        "support" -> containerWidthPx * (1f / 6f)
+                        "ramazan" -> containerWidthPx * (5f / 6f)
+                        else -> containerWidthPx * 0.5f
+                    }
+                    val targetCenterY = measuredTarget?.centerY?.takeIf { it > 0f } ?: containerHeightPx
+
+                    val p = genieProgress.value
+
+                    // macOS Genie physics:
+                    // Phase 1 (p: 0f..0.15f): Initial bounce & lift ("Setting page card thoda bounce hoke phir niche jayega")
+                    // Phase 2 (p: 0.15f..1.0f): S-curve funnel suck down towards destination tab button
+                    val bounceProgress = (p / 0.15f).coerceIn(0f, 1f)
+                    val bounceSin = kotlin.math.sin(bounceProgress * kotlin.math.PI.toFloat())
+
+                    val suckProgress = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
+                    val sCurve = suckProgress * suckProgress * (3f - 2f * suckProgress)
+
+                    val targetPivotX = if (containerWidthPx > 0f) {
+                        (targetCenterX / containerWidthPx).coerceIn(0.12f, 0.88f)
+                    } else 0.5f
+
+                    val outgoingScaleX = if (p < 0.15f) {
+                        1f + 0.025f * bounceSin
+                    } else {
+                        (1f - 0.94f * sCurve).coerceAtLeast(0.04f)
+                    }
+
+                    val outgoingScaleY = if (p < 0.15f) {
+                        1f + 0.025f * bounceSin
+                    } else {
+                        (1f - 0.96f * sCurve).coerceAtLeast(0.02f)
+                    }
+
+                    val outgoingTranslationY = if (p < 0.15f) {
+                        -with(density) { 12.dp.toPx() } * bounceSin
+                    } else {
+                        val totalDrop = (targetCenterY - containerHeightPx * 0.45f).coerceAtLeast(containerHeightPx * 0.4f)
+                        totalDrop * sCurve
+                    }
+
+                    val outgoingAlpha = if (suckProgress > 0.86f) {
+                        ((1f - suckProgress) / 0.14f).coerceIn(0f, 1f)
+                    } else {
+                        1f
+                    }
+
+                    val blurX = (sCurve * 8f).dp
+                    val blurY = (sCurve * 16f).dp
+
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding)
-                            .alpha((1f - genieProgress.value).coerceIn(0f, 1f))
+                            .graphicsLayer {
+                                this.transformOrigin = androidx.compose.ui.graphics.TransformOrigin(targetPivotX, 1.0f)
+                                this.scaleX = outgoingScaleX
+                                this.scaleY = outgoingScaleY
+                                this.translationY = outgoingTranslationY
+                                this.alpha = outgoingAlpha
+                            }
+                            .blur(radiusX = blurX, radiusY = blurY)
                     ) {
                         when (currentOutgoingTab) {
                             "support" -> {
@@ -597,40 +648,6 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                             }
                         }
                     }
-                }
-
-                // Layer 3: macOS Genie Fold overlay layer (strip-based 2D matrix transform)
-                val currentOutgoingBitmap = outgoingBitmap
-                val outgoingKey = outgoingTab
-                if (isGenieBusy && currentOutgoingBitmap != null && outgoingKey != null) {
-                    val measuredTarget = tabTargets[outgoingKey]
-                    val fallbackTarget = remember(outgoingKey, containerWidthPx, containerHeightPx) {
-                        val w = containerWidthPx
-                        val h = containerHeightPx
-                        val tabW = w / 3f
-                        val cx = when (outgoingKey) {
-                            "support" -> tabW * 0.5f
-                            "ramazan" -> tabW * 2.5f
-                            else -> tabW * 1.5f
-                        }
-                        val barH = with(density) { 72.dp.toPx() }
-                        com.example.ui.TabTarget(
-                            centerX = cx,
-                            centerY = h - (barH / 2f),
-                            width = tabW,
-                            height = barH
-                        )
-                    }
-                    val target = measuredTarget ?: fallbackTarget
-
-                    com.example.ui.GenieFoldOverlay(
-                        bitmap = currentOutgoingBitmap,
-                        progress = genieProgress.value,
-                        target = target,
-                        containerWidth = containerWidthPx,
-                        containerHeight = containerHeightPx,
-                        modifier = Modifier.fillMaxSize()
-                    )
                 }
             }
         }

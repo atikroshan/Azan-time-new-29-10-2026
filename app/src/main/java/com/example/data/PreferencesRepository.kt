@@ -53,9 +53,7 @@ class PreferencesRepository(private val context: Context) {
     fun isInitialLanguageChosenSync(): Boolean {
         return try {
             val sp = context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
-            val chosen = sp.getBoolean("initial_lang_chosen", false)
-            val setupCompleted = sp.getBoolean("setup_completed", false)
-            chosen || setupCompleted
+            sp.getBoolean("initial_lang_chosen", false)
         } catch (e: Exception) {
             false
         }
@@ -65,8 +63,7 @@ class PreferencesRepository(private val context: Context) {
         val sp = try { context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE) } catch (_: Exception) { null }
         val dsChosen = prefs[KEY_INITIAL_LANG_CHOSEN]
         val spChosen = sp?.getBoolean("initial_lang_chosen", false) ?: false
-        val setupDone = prefs[KEY_SETUP_COMPLETED] ?: sp?.getBoolean("setup_completed", false) ?: false
-        (dsChosen ?: spChosen) || setupDone
+        dsChosen ?: spChosen
     }
 
     suspend fun setInitialLanguageChosen(chosen: Boolean) {

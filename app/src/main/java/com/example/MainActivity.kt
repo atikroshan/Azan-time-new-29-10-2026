@@ -429,25 +429,23 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (!uiState.isSetupCompleted) {
-            if (!uiState.isInitialLanguageChosen) {
-                InitialLanguageScreen(
-                    onLanguageSelect = { lang ->
-                        viewModel.setLanguage(lang)
-                        viewModel.setInitialLanguageChosen(true)
-                    }
-                )
-            } else {
-                FirstTimeSetupScreen(
-                    uiState = uiState,
-                    onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
-                    onFinishSetup = { masjidId ->
-                        viewModel.completeSetup(masjidId)
-                    },
-                    onRefresh = { viewModel.syncGoogleSheet() },
-                    onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
-                )
-            }
+        if (!uiState.isInitialLanguageChosen) {
+            InitialLanguageScreen(
+                onLanguageSelect = { lang ->
+                    viewModel.setLanguage(lang)
+                    viewModel.setInitialLanguageChosen(true)
+                }
+            )
+        } else if (!uiState.isSetupCompleted) {
+            FirstTimeSetupScreen(
+                uiState = uiState,
+                onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
+                onFinishSetup = { masjidId ->
+                    viewModel.completeSetup(masjidId)
+                },
+                onRefresh = { viewModel.syncGoogleSheet() },
+                onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
+            )
         } else if (showAdminPanel) {
             BackHandler { showAdminPanel = false }
             AdminPanelScreen(

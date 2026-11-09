@@ -33,6 +33,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -66,6 +69,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
@@ -74,6 +78,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
@@ -290,29 +295,53 @@ fun SupportBackScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
+                .padding(top = 6.dp, bottom = 8.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Top Bar: Language Buttons at top left
+            // 1. Top Bar: Language Buttons at top left + Admin Circle Button at top right
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 2.dp),
+                    .padding(start = 24.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 LanguageCirclesRow(
                     currentLang = uiState.language,
                     onLangSelect = onLangSelect
                 )
+
+                Box(
+                    modifier = Modifier
+                        .padding(end = 24.dp)
+                        .size(38.dp)
+                        .background(
+                            color = Color(0xFFF3DE8E),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .border(
+                            width = 1.2.dp,
+                            color = Color(0xFFF3DE8E),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .clickable { onOpenAdminLogin() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = "Admin Login",
+                        tint = Color(0xFF040E0A),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
             // 2. Center: Logo & AZAN TIME Wordmark with Punchline
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 4.dp),
+                    .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -325,94 +354,345 @@ fun SupportBackScreen(
                 )
             }
 
-            // 3. 2-Row 2-Column Vertical Rectangular Cards Grid
-            Column(
+            // 3. Continuous Auto-Sliding Horizontal Carousel (Narrow width, 350dp tall height, active card prominent, side cards recessed)
+            val pagerState = rememberPagerState(initialPage = 5001, pageCount = { 10000 })
+            val coroutineScope = rememberCoroutineScope()
+
+
+
+            val settingCards = listOf(
+
+                Triple(
+                    when (uiState.language) {
+                        "ur" -> "موجودہ مسجد"
+                        "hi" -> "वर्तमान मस्जिद"
+                        else -> "CURRENT MASJID"
+                    },
+                    "",
+                    Icons.Outlined.Mosque
+                ),
+                Triple(
+                    when (uiState.language) {
+                        "ur" -> "نئی مسجد کے لیے\nدرخواست"
+                        "hi" -> "नई मस्जिद जोड़ने की\nगुजारिश"
+                        else -> "ADD NEW MASJID"
+                    },
+                    when (uiState.language) {
+                        "ur" -> "تفصیلات جمع کروائیں"
+                        "hi" -> "विवरण जमा करें"
+                        else -> "Submit Details"
+                    },
+                    Icons.Outlined.AddLocationAlt
+                ),
+                Triple(
+                    when (uiState.language) {
+                        "ur" -> "ہماری حمایت کریں"
+                        "hi" -> "हमारा समर्थन करें"
+                        else -> "SUPPORT US"
+                    },
+                    when (uiState.language) {
+                        "ur" -> "فیڈبک کے ساتھ ایپ کو سپورٹ کریں، 5 اسٹار ریٹنگ دیں"
+                        "hi" -> "फीडबैक के साथ ऐप को सपोर्ट करें, 5 स्टार रेटिंग दें"
+                        else -> "Support Our App\nYour Feedback\n5 Star Rating"
+                    },
+                    Icons.Outlined.HeadsetMic
+                )
+            )
+
+            val actions = listOf(
+                { onChangeMasjid() },
+                { showAddMasjidDialog = true },
+                { onOpenFrontScreen() }
+            )
+
+            val actionTexts = listOf(
+                when (uiState.language) { "ur" -> "تبدیل"; "hi" -> "बदलें"; else -> "CHANGE" },
+                when (uiState.language) { "ur" -> "درخواست"; "hi" -> "जोड़ें"; else -> "ADD" },
+                when (uiState.language) { "ur" -> "کھولیں"; "hi" -> "खोलें"; else -> "OPEN" }
+            )
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
             ) {
-                // Row 1: Admin side | Change
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    SupportGridItem(
-                        title = when (uiState.language) {
-                            "ur" -> "ایڈمن لاگ ان"
-                            "hi" -> "एडमिन लॉगिन"
-                            else -> "Admin Login"
-                        },
-                        subtitle = "Manage Timings",
-                        icon = Icons.Filled.Person,
-                        onClick = onOpenAdminLogin,
-                        modifier = Modifier.weight(1f)
+                HorizontalPager(
+                    state = pagerState,
+                    contentPadding = PaddingValues(horizontal = 84.dp),
+                    pageSpacing = 12.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                ) { page ->
+                    val realIndex = page % 3
+                    val isSelected = (pagerState.currentPage == page)
+                    val (title, subtitle, icon) = settingCards[realIndex]
+
+                    val scaleY = animateFloatAsState(
+                        targetValue = if (isSelected) 1.0f else 0.80f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                        label = "cardScaleY"
+                    ).value
+
+                    val scaleX = animateFloatAsState(
+                        targetValue = if (isSelected) 1.0f else 0.90f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                        label = "cardScaleX"
+                    ).value
+
+                    val cardAlpha = animateFloatAsState(
+                        targetValue = if (isSelected) 1.0f else 0.82f,
+                        animationSpec = tween(250),
+                        label = "cardAlpha"
+                    ).value
+
+                    var isCardPressed by remember { mutableStateOf(false) }
+                    val cardPressedOffsetY by animateFloatAsState(
+                        targetValue = if (isCardPressed) 1000f else 0f,
+                        animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
+                        label = "cardPressedOffsetY"
                     )
-                    SupportGridItem(
-                        title = if (uiState.selectedMasjid.id.equals("guest", ignoreCase = true) || uiState.selectedMasjid.name.isBlank()) {
-                            when (uiState.language) {
-                                "ur" -> "گیسٹ مسجد"
-                                "hi" -> "गेस्ट मस्जिद"
-                                else -> "Guest Masjid"
+
+                    fun handleCardClick() {
+                        if (isSelected) {
+                            coroutineScope.launch {
+                                isCardPressed = true
+                                delay(220L)
+                                isCardPressed = false
+                                actions[realIndex]()
                             }
                         } else {
-                            uiState.selectedMasjid.name
-                        },
-                        subtitle = uiState.selectedMasjid.city.ifBlank { "Solapur City" },
-                        icon = Icons.Outlined.Mosque,
-                        onClick = onChangeMasjid,
-                        modifier = Modifier.weight(1f),
-                        actionText = when (uiState.language) {
-                            "ur" -> "تبدیل ⌵"
-                            "hi" -> "बदलें ⌵"
-                            else -> "Change ⌵"
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(page)
+                            }
                         }
-                    )
-                }
+                    }
 
-                // Row 2: Request | Support
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    SupportGridItem(
-                        title = when (uiState.language) {
-                            "ur" -> "نئی مسجد"
-                            "hi" -> "नई मस्जिद"
-                            else -> "Request Add"
-                        },
-                        subtitle = "Submit Timings",
-                        icon = Icons.Outlined.AddLocationAlt,
-                        onClick = { showAddMasjidDialog = true },
-                        modifier = Modifier.weight(1f),
-                        actionText = when (uiState.language) {
-                            "ur" -> "درخواست +"
-                            "hi" -> "जोड़ें +"
-                            else -> "Request +"
+                    Card(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                this.scaleX = scaleX
+                                this.scaleY = scaleY
+                                this.translationY = cardPressedOffsetY
+                            }
+                            .alpha(cardAlpha)
+                            .clickable { handleCardClick() },
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) Color.Transparent else Color(0xFF0D281C)
+                        ),
+                        border = BorderStroke(
+                            width = if (isSelected) 2.dp else 1.2.dp,
+                            color = if (isSelected) Color(0xFFE5B842) else Color(0xFFE5B842).copy(alpha = 0.45f)
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    if (isSelected) {
+                                        Brush.verticalGradient(
+                                            listOf(Color(0xFF1B4E38), Color(0xFF071D13))
+                                        )
+                                    } else {
+                                        Brush.verticalGradient(
+                                            listOf(Color(0xFF103324), Color(0xFF091E15))
+                                        )
+                                    }
+                                )
+                                .padding(horizontal = 12.dp, vertical = 12.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .align(Alignment.TopCenter),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(if (isSelected) 54.dp else 42.dp)
+                                        .background(
+                                            Color(0xFFF8F9FA),
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = title,
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(if (isSelected) 26.dp else 20.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = if (isSelected) 54.dp else 42.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        // Badge for Header (All Titles)
+                                        Surface(
+                                            color = Color(0xFFF3DE8E).copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.3f))
+                                        ) {
+                                            Text(
+                                                text = title.replace("\n", " "),
+                                                fontSize = if (isSelected) 14.sp else 11.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFFF3DE8E),
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+
+                                        if (realIndex == 0) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            Text(
+                                                text = if (uiState.selectedMasjid.id.equals("guest", ignoreCase = true) || uiState.selectedMasjid.name.isBlank()) {
+                                                    when (uiState.language) {
+                                                        "ur" -> "گیسٹ مسجد"
+                                                        "hi" -> "गेस्ट मस्जिद"
+                                                        else -> "GUEST MASJID"
+                                                    }
+                                                } else {
+                                                    uiState.selectedMasjid.name.uppercase(Locale.ROOT)
+                                                },
+                                                fontSize = if (isSelected) 17.sp else 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) Color(0xFFE5B842) else Color(0xFFF3DE8E),
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.LocationOn,
+                                                    contentDescription = "Location",
+                                                    tint = Color(0xFF3B82F6),
+                                                    modifier = Modifier
+                                                        .size(15.dp)
+                                                        .padding(end = 4.dp)
+                                                )
+                                                Text(
+                                                    text = run {
+                                                        val city = uiState.selectedMasjid.city.ifBlank { "Solapur" }
+                                                        val addr = uiState.selectedMasjid.address
+                                                        if (addr.isNotBlank()) {
+                                                            if (!addr.contains(city, ignoreCase = true)) "$addr, $city" else addr
+                                                        } else {
+                                                            if (uiState.selectedMasjid.city.isNotBlank()) uiState.selectedMasjid.city else "Solapur City, Maharashtra"
+                                                        }
+                                                    },
+                                                    fontSize = if (isSelected) 13.sp else 10.5.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = Color.White,
+                                                    textAlign = TextAlign.Center,
+                                                    maxLines = 4,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    lineHeight = 16.sp
+                                                )
+                                            }
+                                        } else if (realIndex == 1) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = subtitle,
+                                                fontSize = if (isSelected) 13.sp else 10.5.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color.White,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 5,
+                                                overflow = TextOverflow.Ellipsis,
+                                                lineHeight = 16.sp,
+                                                modifier = Modifier.padding(horizontal = 14.dp)
+                                            )
+                                        } else {
+                                            // realIndex == 2: Support Us
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                val s1 = when (uiState.language) { "ur" -> "ہماری ایپ کو سپورٹ کریں"; "hi" -> "हमारे ऐप को सपोर्ट करें"; else -> "Support Our App" }
+                                                val s2 = when (uiState.language) { "ur" -> "آپ کی رائے"; "hi" -> "आपकी प्रतिक्रिया"; else -> "Your Feedback" }
+                                                val s3 = when (uiState.language) { "ur" -> "ریٹنگ"; "hi" -> "रेटिंग"; else -> "Rating" }
+
+                                                Text(text = s1, fontSize = if (isSelected) 13.sp else 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                                                Text(text = s2, fontSize = if (isSelected) 13.sp else 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                                                
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center
+                                                ) {
+                                                    Text(text = "5 ", fontSize = if (isSelected) 13.sp else 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFF3DE8E))
+                                                    Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                                                        repeat(5) {
+                                                            Icon(
+                                                                imageVector = Icons.Filled.Star,
+                                                                contentDescription = null,
+                                                                tint = Color(0xFFF3DE8E),
+                                                                modifier = Modifier.size(if (isSelected) 14.dp else 11.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                    Text(text = " $s3", fontSize = if (isSelected) 13.sp else 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (isSelected) {
+                                Button(
+                                    onClick = { handleCardClick() },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFF3DE8E),
+                                        contentColor = Color(0xFF040E0A)
+                                    ),
+                                    shape = RoundedCornerShape(14.dp),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 8.dp)
+                                        .width(135.dp)
+                                        .height(38.dp)
+                                ) {
+                                    Text(
+                                        text = actionTexts[realIndex],
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
                         }
-                    )
-                    SupportGridItem(
-                        title = when (uiState.language) {
-                            "ur" -> "سپورٹ"
-                            "hi" -> "सपोर्ट"
-                            else -> "Support"
-                        },
-                        subtitle = "Rate & Follow",
-                        icon = Icons.Outlined.HeadsetMic,
-                        onClick = onOpenFrontScreen,
-                        modifier = Modifier.weight(1f),
-                        actionText = when (uiState.language) {
-                            "ur" -> "کھولیں >"
-                            "hi" -> "खोलें >"
-                            else -> "Open >"
-                        }
-                    )
+                    }
                 }
             }
 
             // Footer
             AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp)
             )
         }
     }
@@ -1010,7 +1290,7 @@ fun SupportFrontScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "v3.1.66",
+                        text = "v3.1.71",
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = primaryGold

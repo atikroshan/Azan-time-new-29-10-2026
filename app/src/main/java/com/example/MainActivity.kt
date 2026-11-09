@@ -1070,7 +1070,7 @@ fun AzanHomeContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 0.dp)
+                    .padding(start = 24.dp, end = 16.dp, top = 8.dp, bottom = 0.dp)
                     .onSizeChanged { langRowHeightPx = it.height },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
@@ -1115,17 +1115,19 @@ fun AzanHomeContent(
                     }
 
                     if (!isPlayingAzan || !isPulledDown) {
-                        // Animated QR icon button (white-golden color change spin animation, square rounded corner)
-                        com.example.ui.AnimatedTopQrIconButton(
-                            hasQr = hasQrCode,
-                            onClick = {
-                                if (hasQrCode) {
-                                    showSupportPopup = true
-                                } else {
-                                    android.widget.Toast.makeText(context, "QR code not available for this masjid", android.widget.Toast.LENGTH_SHORT).show()
+                        Box(modifier = Modifier.padding(end = 24.dp)) {
+                            // Animated QR icon button (white-golden color change spin animation, square rounded corner)
+                            com.example.ui.AnimatedTopQrIconButton(
+                                hasQr = hasQrCode,
+                                onClick = {
+                                    if (hasQrCode) {
+                                        showSupportPopup = true
+                                    } else {
+                                        android.widget.Toast.makeText(context, "QR code not available for this masjid", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

@@ -3214,7 +3214,7 @@ fun RamazanScreenContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 2.dp),
+                            .padding(start = 24.dp, end = 16.dp),
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {

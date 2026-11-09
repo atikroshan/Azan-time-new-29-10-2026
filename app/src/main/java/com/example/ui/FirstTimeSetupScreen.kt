@@ -232,8 +232,8 @@ fun FirstTimeSetupScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 0.dp),
-                horizontalArrangement = Arrangement.Center,
+                    .padding(start = 24.dp, end = 16.dp, top = 0.dp),
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LanguageCirclesRow(
@@ -433,7 +433,7 @@ fun FirstTimeSetupScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Box(
+                                 Box(
                                     modifier = Modifier
                                         .background(
                                             Color(0xFF1E293B),
@@ -452,6 +452,34 @@ fun FirstTimeSetupScreen(
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFFF2CA50)
                                     )
+                                }
+
+                                if (masjidToConfirm.id == uiState.selectedMasjid.id) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .background(
+                                                Color(0xFFF3DE8E).copy(alpha = 0.15f),
+                                                RoundedCornerShape(8.dp)
+                                            )
+                                            .border(
+                                                1.dp,
+                                                Color(0xFFF3DE8E).copy(alpha = 0.6f),
+                                                RoundedCornerShape(8.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            text = when (uiState.language) {
+                                                "ur" -> "منتخب شدہ"
+                                                "hi" -> "चुनी गई"
+                                                else -> "SELECTED"
+                                            },
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFF3DE8E)
+                                        )
+                                    }
                                 }
                             }
 
@@ -995,27 +1023,64 @@ private fun SearchResultsList(
                                 )
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Badges Row: ID and Selected side by side
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(Color(0xFF1E2836).copy(alpha = 0.8f), RoundedCornerShape(6.dp))
+                                    .border(1.dp, Color(0xFFF2CA50).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "#${item.id}",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFF2CA50)
+                                )
+                            }
+
+                            if (isCurrent) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(Color(0xFFF3DE8E).copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                        .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = when (language) {
+                                            "ur" -> "منتخب شدہ"
+                                            "hi" -> "चुनी गई"
+                                            else -> "SELECTED"
+                                        },
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFF3DE8E)
+                                    )
+                                }
+                            }
+                        }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                Color(0xFF1E2836).copy(alpha = 0.8f),
-                                RoundedCornerShape(6.dp)
+                    if (isCurrent) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(Color(0xFFF2CA50), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = Color(0xFF0F151C),
+                                modifier = Modifier.size(14.dp)
                             )
-                            .border(
-                                1.dp,
-                                Color(0xFFF2CA50).copy(alpha = 0.35f),
-                                RoundedCornerShape(6.dp)
-                            )
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "#${item.id}",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0xFFF2CA50)
-                        )
+                        }
                     }
                 }
             }

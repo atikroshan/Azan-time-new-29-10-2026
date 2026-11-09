@@ -672,63 +672,67 @@ fun MasjidSelectionDialog(
 
                                         Spacer(modifier = Modifier.height(4.dp))
 
-                                        // 3. ID Tag
-                                        Box(
-                                            modifier = Modifier
-                                                .background(Color(0xFF1E293B), RoundedCornerShape(6.dp))
-                                                .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        // 3. Badges Row: ID Tag and Selected Badge side by side
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            val idPrefix = when (language) {
-                                                "ur" -> "آئی ڈی"
-                                                "hi" -> "आईडी"
-                                                else -> "ID"
+                                            // ID Tag
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(Color(0xFF1E293B), RoundedCornerShape(6.dp))
+                                                    .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                val idPrefix = when (language) {
+                                                    "ur" -> "آئی ڈی"
+                                                    "hi" -> "आईडी"
+                                                    else -> "ID"
+                                                }
+                                                Text(
+                                                    text = "$idPrefix: #${masjid.id}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFF3DE8E)
+                                                )
                                             }
-                                            Text(
-                                                text = "$idPrefix: #${masjid.id}",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFF3DE8E)
-                                            )
+
+                                            if (isCurrent) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .background(Color(0xFFF3DE8E).copy(alpha = 0.2f), RoundedCornerShape(6.dp))
+                                                        .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = when (language) {
+                                                            "ur" -> "منتخب شدہ"
+                                                            "hi" -> "चुनी गई"
+                                                            else -> "Selected"
+                                                        },
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFFF3DE8E)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
 
                                 if (isCurrent) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(Color(0xFFE5A93C), CircleShape),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(Color(0xFFF3DE8E).copy(alpha = 0.2f), RoundedCornerShape(6.dp))
-                                                .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = when (language) {
-                                                    "ur" -> "منتخب شدہ"
-                                                    "hi" -> "चुनी गई"
-                                                    else -> "Selected"
-                                                },
-                                                fontSize = 10.5.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFF3DE8E)
-                                            )
-                                        }
-                                        Box(
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .background(Color(0xFFE5A93C), CircleShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = "Selected",
-                                                tint = Color(0xFF0F172A),
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = Color(0xFF0F172A),
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                     }
                                 }
                             }
@@ -859,6 +863,34 @@ fun MasjidSelectionDialog(
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFF2CA50)
                                 )
+                            }
+
+                            if (targetMasjid.id == selectedMasjid.id) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            Color(0xFFF3DE8E).copy(alpha = 0.15f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .border(
+                                            1.dp,
+                                            Color(0xFFF3DE8E).copy(alpha = 0.6f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = when (language) {
+                                            "ur" -> "منتخب شدہ"
+                                            "hi" -> "चुनी गई"
+                                            else -> "SELECTED"
+                                        },
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFF3DE8E)
+                                    )
+                                }
                             }
                         }
 

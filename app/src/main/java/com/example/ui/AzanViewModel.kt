@@ -50,6 +50,7 @@ data class UIState(
     val allMasajid: List<MasjidItem> = MasjidRepository.getAllMasajid(),
     val restoredTaqwaPoints: Int = 0,
     val taqwaSyncUser: String = "",
+    val isInitialLanguageChosen: Boolean = false,
     val isSetupCompleted: Boolean = false,
     val isSyncingSheet: Boolean = false,
     val appsScriptUrl: String = "",
@@ -282,13 +283,19 @@ class AzanViewModel(
         ) { cj, ja, setupDone, syncing, (restoredPoints, syncUser) ->
             Triple(Pair(cj, ja), Triple(setupDone, syncing, syncUser), restoredPoints)
         },
-        combine(prefs.appsScriptUrlFlow, _lastSyncStatusMessage, prefs.splashShownFlow) { url, msg, splashShown ->
-            Triple(url, msg, splashShown)
+        combine(
+            prefs.appsScriptUrlFlow,
+            _lastSyncStatusMessage,
+            prefs.splashShownFlow,
+            prefs.isInitialLanguageChosenFlow
+        ) { url, msg, splashShown, initLangChosen ->
+            Pair(Triple(url, msg, splashShown), initLangChosen)
         }
-    ) { (language, toggles, calMasjidPoints), allLogs, timings, (jammatPair, setupTriple, restoredPoints), (appsScriptUrl, syncMsg, splashShown) ->
+    ) { (language, toggles, calMasjidPoints), allLogs, timings, (jammatPair, setupTriple, restoredPoints), (splashTriple, isInitialLanguageChosen) ->
         val (cal, selectedMasjid, masajid) = calMasjidPoints
         val (customJammat, customJumahAzan) = jammatPair
         val (isSetupCompleted, isSyncingSheet, taqwaSyncUser) = setupTriple
+        val (appsScriptUrl, syncMsg, splashShown) = splashTriple
         val m = cal.get(Calendar.MONTH) + 1
         val d = cal.get(Calendar.DAY_OF_MONTH)
         val isFriday = cal.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
@@ -340,13 +347,20 @@ class AzanViewModel(
             allMasajid = masajid,
             restoredTaqwaPoints = restoredPoints,
             taqwaSyncUser = taqwaSyncUser,
+            isInitialLanguageChosen = isInitialLanguageChosen,
             isSetupCompleted = isSetupCompleted,
             isSyncingSheet = isSyncingSheet,
             appsScriptUrl = appsScriptUrl,
             lastSyncStatusMessage = syncMsg,
             splashShown = splashShown
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, UIState(isSetupCompleted = prefs.isSetupCompletedSync()))
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, UIState(isSetupCompleted = prefs.isSetupCompletedSync(), isInitialLanguageChosen = prefs.isInitialLanguageChosenSync()))
+
+    fun setInitialLanguageChosen(chosen: Boolean) {
+        viewModelScope.launch {
+            prefs.setInitialLanguageChosen(chosen)
+        }
+    }
 
     fun setRestoredTaqwaPoints(points: Int) {
         viewModelScope.launch {

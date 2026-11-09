@@ -48,6 +48,40 @@ class PreferencesRepository(private val context: Context) {
     }
 
     private val KEY_LAST_SETUP_VERSION = androidx.datastore.preferences.core.intPreferencesKey("last_setup_version")
+    private val KEY_INITIAL_LANG_CHOSEN = booleanPreferencesKey("initial_lang_chosen")
+
+    fun isInitialLanguageChosenSync(): Boolean {
+        return try {
+            val sp = context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
+            val chosen = sp.getBoolean("initial_lang_chosen", false)
+            val setupCompleted = sp.getBoolean("setup_completed", false)
+            chosen || setupCompleted
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    val isInitialLanguageChosenFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        val sp = try { context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE) } catch (_: Exception) { null }
+        val dsChosen = prefs[KEY_INITIAL_LANG_CHOSEN]
+        val spChosen = sp?.getBoolean("initial_lang_chosen", false) ?: false
+        val setupDone = prefs[KEY_SETUP_COMPLETED] ?: sp?.getBoolean("setup_completed", false) ?: false
+        (dsChosen ?: spChosen) || setupDone
+    }
+
+    suspend fun setInitialLanguageChosen(chosen: Boolean) {
+        try {
+            context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean("initial_lang_chosen", chosen)
+                .commit()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        context.dataStore.edit { prefs ->
+            prefs[KEY_INITIAL_LANG_CHOSEN] = chosen
+        }
+    }
 
     fun isSetupCompletedSync(): Boolean {
         return try {

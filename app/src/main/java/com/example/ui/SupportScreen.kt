@@ -27,7 +27,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -447,20 +449,55 @@ fun SupportBackScreen(
                         label = "cardAlpha"
                     ).value
 
-                    var isCardPressed by remember { mutableStateOf(false) }
-                    val cardPressedOffsetY by animateFloatAsState(
-                        targetValue = if (isCardPressed) 1000f else 0f,
-                        animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
-                        label = "cardPressedOffsetY"
-                    )
+                    var isPlunging by remember { mutableStateOf(false) }
+                    val cardAnimOffsetY = remember { Animatable(0f) }
+                    val cardBounceScaleX = remember { Animatable(1f) }
+                    val cardBounceScaleY = remember { Animatable(1f) }
+
+                    val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                    val absOffset = kotlin.math.abs(pageOffset).coerceIn(0f, 1f)
+                    val horizontalMotionBlur = (absOffset * 18f).dp
+                    val verticalMotionBlur = if (cardAnimOffsetY.value > 0f) {
+                        ((cardAnimOffsetY.value / 2400f) * 26f).coerceIn(0f, 26f).dp
+                    } else if (cardAnimOffsetY.value < 0f) {
+                        (kotlin.math.abs(cardAnimOffsetY.value) / 50f * 6f).dp
+                    } else {
+                        0.dp
+                    }
 
                     fun handleCardClick() {
                         if (isSelected) {
+                            if (isPlunging) return
                             coroutineScope.launch {
-                                isCardPressed = true
-                                delay(220L)
-                                isCardPressed = false
+                                isPlunging = true
+
+                                // 1. Cinematic anticipation: slight upward bounce recoil & squish
+                                launch {
+                                    cardBounceScaleX.animateTo(1.05f, tween(130, easing = FastOutSlowInEasing))
+                                }
+                                launch {
+                                    cardBounceScaleY.animateTo(0.92f, tween(130, easing = FastOutSlowInEasing))
+                                }
+                                cardAnimOffsetY.animateTo(-50f, tween(130, easing = FastOutSlowInEasing))
+
+                                // 2. High-speed plunge downward past bottom navigation bar with motion stretch
+                                launch {
+                                    cardBounceScaleX.animateTo(0.92f, tween(380, easing = FastOutLinearInEasing))
+                                }
+                                launch {
+                                    cardBounceScaleY.animateTo(1.18f, tween(380, easing = FastOutLinearInEasing))
+                                }
+                                cardAnimOffsetY.animateTo(2400f, tween(380, easing = FastOutLinearInEasing))
+
+                                // 3. Open action dialog/screen once card has completely dropped out of sight
                                 actions[realIndex]()
+
+                                // 4. Keep offscreen during transition, then reset cleanly for when dialog closes
+                                delay(500L)
+                                cardAnimOffsetY.snapTo(0f)
+                                cardBounceScaleX.snapTo(1f)
+                                cardBounceScaleY.snapTo(1f)
+                                isPlunging = false
                             }
                         } else {
                             coroutineScope.launch {
@@ -473,11 +510,12 @@ fun SupportBackScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer {
-                                this.scaleX = scaleX
-                                this.scaleY = scaleY
-                                this.translationY = cardPressedOffsetY
+                                this.scaleX = (scaleX * (1f - absOffset * 0.08f)) * cardBounceScaleX.value
+                                this.scaleY = (scaleY * (1f - absOffset * 0.08f)) * cardBounceScaleY.value
+                                this.translationY = cardAnimOffsetY.value
                             }
                             .alpha(cardAlpha)
+                            .blur(radiusX = horizontalMotionBlur, radiusY = verticalMotionBlur)
                             .clickable { handleCardClick() },
                         shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(
@@ -581,36 +619,45 @@ fun SupportBackScreen(
                                             Spacer(modifier = Modifier.height(6.dp))
 
                                             Row(
-                                                verticalAlignment = Alignment.CenterVertically,
+                                                verticalAlignment = Alignment.Top,
                                                 horizontalArrangement = Arrangement.Center,
-                                                modifier = Modifier.fillMaxWidth()
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 14.dp)
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.LocationOn,
-                                                    contentDescription = "Location",
-                                                    tint = Color(0xFF3B82F6),
-                                                    modifier = Modifier
-                                                        .size(15.dp)
-                                                        .padding(end = 4.dp)
-                                                )
-                                                Text(
-                                                    text = run {
-                                                        val city = uiState.selectedMasjid.city.ifBlank { "Solapur" }
-                                                        val addr = uiState.selectedMasjid.address
-                                                        if (addr.isNotBlank()) {
-                                                            if (!addr.contains(city, ignoreCase = true)) "$addr, $city" else addr
-                                                        } else {
-                                                            if (uiState.selectedMasjid.city.isNotBlank()) uiState.selectedMasjid.city else "Solapur City, Maharashtra"
-                                                        }
-                                                    },
-                                                    fontSize = if (isSelected) 13.sp else 10.5.sp,
-                                                    fontWeight = FontWeight.Medium,
-                                                    color = Color.White,
-                                                    textAlign = TextAlign.Center,
-                                                    maxLines = 4,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    lineHeight = 16.sp
-                                                )
+                                                Row(
+                                                    verticalAlignment = Alignment.Top,
+                                                    horizontalArrangement = Arrangement.Start,
+                                                    modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.LocationOn,
+                                                        contentDescription = "Location",
+                                                        tint = Color(0xFF3B82F6),
+                                                        modifier = Modifier
+                                                            .size(15.dp)
+                                                            .padding(top = 2.dp, end = 4.dp)
+                                                    )
+                                                    Text(
+                                                        text = run {
+                                                            val city = uiState.selectedMasjid.city.ifBlank { "Solapur" }
+                                                            val addr = uiState.selectedMasjid.address
+                                                            if (addr.isNotBlank()) {
+                                                                if (!addr.contains(city, ignoreCase = true)) "$addr, $city" else addr
+                                                            } else {
+                                                                if (uiState.selectedMasjid.city.isNotBlank()) uiState.selectedMasjid.city else "Solapur City, Maharashtra"
+                                                            }
+                                                        },
+                                                        fontSize = if (isSelected) 13.sp else 10.5.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = Color.White,
+                                                        textAlign = TextAlign.Start,
+                                                        maxLines = 4,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        lineHeight = 16.sp,
+                                                        modifier = Modifier.weight(1f, fill = false)
+                                                    )
+                                                }
                                             }
                                         } else if (realIndex == 1) {
                                             Spacer(modifier = Modifier.height(8.dp))

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.ui.FirstTimeSetupScreen
+import com.example.ui.InitialLanguageScreen
 import com.example.ui.AiStudioLoadingFooter
 import com.example.ui.SplashScreen
 import com.example.data.GoogleSheetMasjidSync
@@ -429,15 +430,24 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
 
     Box(modifier = modifier.fillMaxSize()) {
         if (!uiState.isSetupCompleted) {
-            FirstTimeSetupScreen(
-                uiState = uiState,
-                onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
-                onFinishSetup = { masjidId ->
-                    viewModel.completeSetup(masjidId)
-                },
-                onRefresh = { viewModel.syncGoogleSheet() },
-                onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
-            )
+            if (!uiState.isInitialLanguageChosen) {
+                InitialLanguageScreen(
+                    onLanguageSelect = { lang ->
+                        viewModel.setLanguage(lang)
+                        viewModel.setInitialLanguageChosen(true)
+                    }
+                )
+            } else {
+                FirstTimeSetupScreen(
+                    uiState = uiState,
+                    onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
+                    onFinishSetup = { masjidId ->
+                        viewModel.completeSetup(masjidId)
+                    },
+                    onRefresh = { viewModel.syncGoogleSheet() },
+                    onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
+                )
+            }
         } else if (showAdminPanel) {
             BackHandler { showAdminPanel = false }
             AdminPanelScreen(

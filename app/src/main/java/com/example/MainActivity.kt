@@ -428,20 +428,24 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
         else -> "Ramazan"
     }
 
+    var forceShowSetupAfterLanguage by rememberSaveable { mutableStateOf(false) }
+
     Box(modifier = modifier.fillMaxSize()) {
         if (!uiState.isInitialLanguageChosen) {
             InitialLanguageScreen(
                 onLanguageSelect = { lang ->
                     viewModel.setLanguage(lang)
                     viewModel.setInitialLanguageChosen(true)
+                    forceShowSetupAfterLanguage = true
                 }
             )
-        } else if (!uiState.isSetupCompleted) {
+        } else if (!uiState.isSetupCompleted || forceShowSetupAfterLanguage) {
             FirstTimeSetupScreen(
                 uiState = uiState,
                 onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
                 onFinishSetup = { masjidId ->
                     viewModel.completeSetup(masjidId)
+                    forceShowSetupAfterLanguage = false
                 },
                 onRefresh = { viewModel.syncGoogleSheet() },
                 onLanguageSelect = { lang -> viewModel.setLanguage(lang) }

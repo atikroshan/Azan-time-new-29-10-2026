@@ -1,8 +1,12 @@
 package com.example.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,10 +22,13 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,20 +56,15 @@ private val languages = listOf(
 
 /**
  * One-Time Initial Language Selection Screen.
- * Displayed only on first launch BEFORE FirstTimeSetupScreen.
+ * Displayed on first launch BEFORE FirstTimeSetupScreen.
  *
- * Structure:
- * - Top: Squircle AzanLogoCard + CorelDRAW AzanTimeWordmark ("AZAN TIME" + "AAO ALLAH KI RAAH MEIN CHALE")
- * - Subtitle: Multilingual prompt
- * - Vertically stacked ("ek ke niche ek") compact capsule pill buttons matching Home Page language button aesthetic:
- *   1. ENGLISH
- *   2. हिंदी
- *   3. اردو
- *
- * On selection:
- * - Saves selected language
- * - Marks initial language chosen (persisted in DataStore & SharedPreferences)
- * - Proceeds immediately to FirstTimeSetupScreen rendered in that language.
+ * Cinematic Animation:
+ * 1. When a button is tapped (e.g. English):
+ *    - The other 2 buttons slide directly into the tapped button with vertical motion blur and disappear (merge).
+ * 2. Once merged:
+ *    - The tapped button shoots off to the right screen with horizontal motion blur.
+ *    - The entire screen follows right behind the button to the right.
+ * 3. Immediately transitions into FirstTimeSetupScreen in the chosen language.
  */
 @Composable
 fun InitialLanguageScreen(
@@ -70,11 +72,74 @@ fun InitialLanguageScreen(
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var selectedCode by remember { mutableStateOf("en") }
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    var isTransitioning by remember { mutableStateOf(false) }
+
+    // Merge animation progress for the unselected buttons (0f -> 1f)
+    val mergeProgress = remember { Animatable(0f) }
+    val mergeAlpha = remember { Animatable(1f) }
+    val mergeScale = remember { Animatable(1f) }
+
+    // Exit animation for tapped button and entire screen
+    val buttonExitX = remember { Animatable(0f) }
+    val screenExitX = remember { Animatable(0f) }
+    val screenAlpha = remember { Animatable(1f) }
+
+    // Spacing calculations: button height 44dp + gap 14dp = 58dp center-to-center
+    val density = LocalDensity.current
+    val buttonStepPx = with(density) { 58.dp.toPx() }
+
+    val otherButtonBlurY = (mergeProgress.value * 16f).dp
+    val selectedButtonBlurX = ((buttonExitX.value / 1800f) * 26f).coerceIn(0f, 26f).dp
+    val screenBlurX = ((screenExitX.value / 2200f) * 16f).coerceIn(0f, 16f).dp
+
+    fun handleLanguageTap(index: Int, code: String) {
+        if (isTransitioning) return
+        isTransitioning = true
+        selectedIndex = index
+
+        coroutineScope.launch {
+            // PHASE 1: MERGE (260ms) - unselected buttons slide into tapped button, shrinking & blurring
+            launch {
+                mergeProgress.animateTo(1f, tween(260, easing = FastOutSlowInEasing))
+            }
+            launch {
+                mergeAlpha.animateTo(0f, tween(240, easing = FastOutLinearInEasing))
+            }
+            launch {
+                mergeScale.animateTo(0.6f, tween(260, easing = FastOutSlowInEasing))
+            }
+
+            delay(270L) // Wait for merge into the tapped button
+
+            // PHASE 2: LAUNCH RIGHT (340ms) - tapped button shoots right, screen follows 50ms behind
+            launch {
+                buttonExitX.animateTo(1800f, tween(340, easing = FastOutLinearInEasing))
+            }
+
+            delay(50L) // Screen chases behind the button
+            launch {
+                screenExitX.animateTo(2200f, tween(320, easing = FastOutLinearInEasing))
+            }
+            launch {
+                screenAlpha.animateTo(0f, tween(320))
+            }
+
+            delay(330L)
+
+            // PHASE 3: Navigate directly to setup screen in selected language
+            onLanguageSelect(code)
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
+            .graphicsLayer {
+                this.translationX = screenExitX.value
+                this.alpha = screenAlpha.value
+            }
+            .blur(radiusX = screenBlurX, radiusY = 0.dp)
             .background(
                 Brush.verticalGradient(
                     listOf(DarkEmeraldTop, DarkEmeraldMid, DarkEmeraldBottom)
@@ -93,7 +158,7 @@ fun InitialLanguageScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // 1. BRAND LOGO (Squircle AzanLogoCard)
             AzanLogoCard(size = 92.dp)
@@ -135,56 +200,83 @@ fun InitialLanguageScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            // Moved lower down as requested ("Language button thoda niche loa")
+            Spacer(modifier = Modifier.height(44.dp))
 
-            // 4. VERTICAL STACK OF LANGUAGE PILL BUTTONS ("ek ke niche ek", Home Page style)
+            // 4. VERTICAL STACK OF LANGUAGE PILL BUTTONS WITH MERGE & LAUNCH ANIMATION
             Column(
+                modifier = Modifier.wrapContentSize(),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                languages.forEach { option ->
-                    val isCurrentSelected = selectedCode == option.code
+                languages.forEachIndexed { i, option ->
+                    val isTapped = selectedIndex == i
+                    val isOther = selectedIndex != null && !isTapped
+                    val isInitiallySelected = selectedIndex == null && option.code == "en"
+
+                    // Calculate translation towards tapped button
+                    val targetOffsetY = if (selectedIndex != null) {
+                        (selectedIndex!! - i) * buttonStepPx * mergeProgress.value
+                    } else {
+                        0f
+                    }
+
+                    val buttonScale = when {
+                        isTapped -> 1.05f
+                        isOther -> mergeScale.value
+                        else -> 1f
+                    }
+
+                    val buttonAlpha = if (isOther) mergeAlpha.value else 1f
+                    val buttonExitTranslationX = if (isTapped) buttonExitX.value else 0f
+                    val buttonBlurX = if (isTapped) selectedButtonBlurX else 0.dp
+                    val buttonBlurY = if (isOther) otherButtonBlurY else 0.dp
 
                     LanguagePillButton(
                         option = option,
-                        isSelected = isCurrentSelected,
-                        onClick = {
-                            selectedCode = option.code
-                            coroutineScope.launch {
-                                delay(180L) // Visual confirmation animation
-                                onLanguageSelect(option.code)
+                        isSelected = isTapped || isInitiallySelected,
+                        modifier = Modifier
+                            .graphicsLayer {
+                                this.translationY = targetOffsetY
+                                this.translationX = buttonExitTranslationX
+                                this.scaleX = buttonScale
+                                this.scaleY = buttonScale
+                                this.alpha = buttonAlpha
                             }
+                            .blur(radiusX = buttonBlurX, radiusY = buttonBlurY),
+                        onClick = {
+                            handleLanguageTap(i, option.code)
                         }
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
-            // 5. SUBTLE BRANDING FOOTER
+            // 5. FOOTER: Version and Powered By as requested ("last line nikal ke version aur powered by line dalo")
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 12.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(6.dp)
-                        .background(GoldAccent.copy(alpha = 0.6f), CircleShape)
+                        .size(5.dp)
+                        .background(GoldAccent.copy(alpha = 0.7f), CircleShape)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Offline Azan Time • Solapur",
-                    fontSize = 11.sp,
+                    text = "v${com.example.BuildConfig.VERSION_NAME} • Powered by @tek",
+                    fontSize = 12.sp,
                     color = Color(0xFF8BAA9B),
-                    fontWeight = FontWeight.Normal,
+                    fontWeight = FontWeight.Medium,
                     letterSpacing = 0.6.sp
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
-                        .size(6.dp)
-                        .background(GoldAccent.copy(alpha = 0.6f), CircleShape)
+                        .size(5.dp)
+                        .background(GoldAccent.copy(alpha = 0.7f), CircleShape)
                 )
             }
         }
@@ -201,31 +293,28 @@ fun InitialLanguageScreen(
 private fun LanguagePillButton(
     option: LanguageOption,
     isSelected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    val scale by animateFloatAsState(
-        targetValue = when {
-            isPressed -> 0.95f
-            isSelected -> 1.04f
-            else -> 1f
-        },
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
         animationSpec = spring(
             stiffness = Spring.StiffnessMediumLow,
             dampingRatio = Spring.DampingRatioLowBouncy
         ),
-        label = "lang_pill_scale"
+        label = "lang_pill_press_scale"
     )
 
     val shape = RoundedCornerShape(percent = 50)
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .width(172.dp)
             .height(44.dp)
-            .scale(scale)
+            .scale(pressScale)
             .clip(shape)
             .background(
                 brush = if (isSelected) {

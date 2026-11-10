@@ -27,7 +27,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -37,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.math.cos
 
 private val GoldAccent = Color(0xFFE5B842)
 private val GoldLight = Color(0xFFFFF2B2)
@@ -59,22 +64,22 @@ private val languages = listOf(
  * One-Time Initial Language Selection Screen.
  * Displayed on first launch as a foreground overlay BEFORE FirstTimeSetupScreen.
  *
- * Cinematic Animation Sequence ("Phele button jana hai phir baki screen aur background mai setup screen dekhni chahiye"):
- * 1. When a button is tapped (English, Hindi, or Urdu):
- *    - The unselected 2 buttons smoothly glide vertically (550ms) into the tapped button.
- *    - As they glide, they scale down and fade out with vertical motion blur.
+ * Cinematic macOS Genie Fold Animation:
+ * 1. Tap language button (English, Hindi, or Urdu):
+ *    - Unselected buttons smoothly merge (520ms) into the tapped button with vertical motion blur.
  *    - Tapped button pulses up to 1.12x absorbing them, then settles.
- * 2. Settle Pause (160ms):
+ * 2. Settle Pause (150ms):
  *    - User clearly registers the single golden pill button.
- * 3. Tapped Button Leads the Exit ("Phele button jana hai"):
- *    - Tapped button accelerates and flies off to the right screen edge with horizontal motion blur.
- * 4. Screen Follows Behind ("phir baki screen"):
- *    - After a 160ms head-start for the button, the entire screen (content + dark emerald background)
- *      sweeps smoothly to the right edge with horizontal motion blur.
- * 5. Background Reveal ("background mai setup screen dekhni chahiye"):
- *    - Because FirstTimeSetupScreen is rendered directly underneath in MainActivity,
- *      sliding this screen off to the right physically uncovers FirstTimeSetupScreen right in the background!
- * 6. Finishes and transitions seamlessly into setup in the chosen language.
+ * 3. Tapped Button Leads the Exit:
+ *    - Accelerates to the right screen edge with horizontal motion blur.
+ * 4. macOS Genie Fold Screen Exit (matching mobile-genie-nav physics):
+ *    - Screen DOES NOT simply slide flat. Instead, it funnels and folds into the button's right exit point
+ *      using the two-phase S-curve smoothstep physics from macOS Genie:
+ *      - Phase 1 (p < 0.25): Funnel formation, pulling the leading edge toward the button vortex.
+ *      - Phase 2 (p >= 0.25): S-curve suction where the screen narrows, bends, and flows like silk into the right-edge vortex point.
+ *      - 3D perspective fold (rotationY + rotationZ) and directional motion blur.
+ *    - As the language page funnels and collapses into the right-edge vortex, FirstTimeSetupScreen (rendered directly underneath)
+ *      is dramatically revealed in the background!
  */
 @Composable
 fun InitialLanguageScreen(
@@ -85,7 +90,7 @@ fun InitialLanguageScreen(
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
     var isTransitioning by remember { mutableStateOf(false) }
 
-    // Merge animation progress for unselected buttons (0f -> 1f) - slower, visible glide
+    // Merge animation progress for unselected buttons (0f -> 1f)
     val mergeProgress = remember { Animatable(0f) }
     val mergeAlpha = remember { Animatable(1f) }
     val mergeScale = remember { Animatable(1f) }
@@ -93,19 +98,76 @@ fun InitialLanguageScreen(
     // Tapped button absorption pulse scale
     val tappedPulseScale = remember { Animatable(1f) }
 
-    // Exit animation: Button exits first, then screen follows
+    // Exit animation: Tapped button rush to the right
     val buttonExitX = remember { Animatable(0f) }
-    val screenExitX = remember { Animatable(0f) }
 
-    // Spacing calculations: button height 44dp + gap 14dp = 58dp center-to-center
+    // macOS Genie Fold progress (0f -> 1f) over 740ms
+    val genieProgress = remember { Animatable(0f) }
+
+    // Screen and button positioning measurements
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val buttonStepPx = with(density) { 58.dp.toPx() }
     val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+
+    // Track button Y centers
+    val buttonCenterYs = remember { mutableStateMapOf<Int, Float>() }
 
     val otherButtonBlurY = (mergeProgress.value * 16f).dp
     val selectedButtonBlurX = ((buttonExitX.value / (screenWidthPx * 1.35f)) * 20f).coerceIn(0f, 20f).dp
-    val screenBlurX = ((screenExitX.value / screenWidthPx) * 14f).coerceIn(0f, 14f).dp
+
+    // Measured or calculated pivot Y fraction for the tapped button
+    val targetPivotY = remember(selectedIndex, buttonCenterYs.size, screenHeightPx) {
+        val measuredY = selectedIndex?.let { buttonCenterYs[it] }
+        if (measuredY != null && screenHeightPx > 0f) {
+            (measuredY / screenHeightPx).coerceIn(0.25f, 0.75f)
+        } else {
+            when (selectedIndex) {
+                0 -> 0.48f
+                1 -> 0.56f
+                else -> 0.64f
+            }
+        }
+    }
+
+    // macOS Genie two-phase S-curve calculations (from mobile-genie-nav.html)
+    val u = genieProgress.value.coerceIn(0f, 1f)
+    // Sine ease-in-out: smooth departure and fluid deceleration
+    val p = (0.5f - 0.5f * cos(PI.toFloat() * u)).coerceIn(0f, 1f)
+
+    // Smoothstep function
+    fun ss(x: Float): Float {
+        val cx = x.coerceIn(0f, 1f)
+        return cx * cx * (3f - 2f * cx)
+    }
+
+    // Phase 1 (p: 0..0.55): Leading edge pulled into funnel vortex
+    val n = ss(p / 0.55f)
+    // Phase 2 (p: 0.20..1.0): Full page body flows through S-curve funnel into the exit vortex
+    val flowProgress = ss((p - 0.20f) / 0.80f)
+
+    // Genie funnel transformations
+    val genieScaleX = if (p < 0.20f) {
+        1f + 0.08f * n
+    } else {
+        (1.08f - 1.05f * flowProgress).coerceAtLeast(0.02f)
+    }
+
+    val genieScaleY = (1f - 0.96f * flowProgress).coerceAtLeast(0.02f)
+    val genieTransX = (screenWidthPx * 0.30f * n) + (screenWidthPx * 0.90f * flowProgress)
+    val genieRotationY = 28f * flowProgress
+    val genieRotationZ = -5f * (1f - targetPivotY) * flowProgress
+
+    val genieBlurX = (flowProgress * 22f).dp
+    val genieBlurY = (flowProgress * 12f).dp
+
+    // Keep page completely visible and opaque during the funnel, fading only in the final 8%
+    val genieOpacity = if (p > 0.92f) {
+        ((1f - p) / 0.08f).coerceIn(0f, 1f)
+    } else {
+        1f
+    }
 
     fun handleLanguageTap(index: Int, code: String) {
         if (isTransitioning) return
@@ -113,46 +175,46 @@ fun InitialLanguageScreen(
         selectedIndex = index
 
         coroutineScope.launch {
-            // PHASE 1: SLOW SMOOTH MERGE (550ms) - unselected buttons glide smoothly into tapped button
+            // PHASE 1: JUICY SMOOTH MERGE (520ms) - unselected buttons glide smoothly into tapped button
             launch {
-                mergeProgress.animateTo(1f, tween(550, easing = FastOutSlowInEasing))
+                mergeProgress.animateTo(1f, tween(520, easing = FastOutSlowInEasing))
             }
             launch {
-                mergeAlpha.animateTo(0f, tween(480, delayMillis = 60, easing = FastOutLinearInEasing))
+                mergeAlpha.animateTo(0f, tween(460, delayMillis = 50, easing = FastOutLinearInEasing))
             }
             launch {
-                mergeScale.animateTo(0.35f, tween(550, easing = FastOutSlowInEasing))
+                mergeScale.animateTo(0.35f, tween(520, easing = FastOutSlowInEasing))
             }
             // Tapped button expands slightly to absorb them, then settles
             launch {
-                tappedPulseScale.animateTo(1.12f, tween(280, easing = FastOutSlowInEasing))
-                tappedPulseScale.animateTo(1.0f, tween(270, easing = FastOutSlowInEasing))
+                tappedPulseScale.animateTo(1.12f, tween(260, easing = FastOutSlowInEasing))
+                tappedPulseScale.animateTo(1.0f, tween(260, easing = FastOutSlowInEasing))
             }
 
-            delay(560L) // Wait for merge animation to complete
-            delay(160L) // Settle pause so user clearly registers the single merged button!
+            delay(530L) // Wait for merge animation to complete
+            delay(150L) // Settle pause so user clearly registers the single merged button!
 
-            // PHASE 2: TAPPED BUTTON EXITS FIRST TO THE RIGHT ("Phele button jana hai")
+            // PHASE 2: TAPPED BUTTON RUSHES TO THE RIGHT
             launch {
                 buttonExitX.animateTo(
                     screenWidthPx * 1.35f,
-                    tween(420, easing = FastOutSlowInEasing)
+                    tween(460, easing = FastOutSlowInEasing)
                 )
             }
 
-            // PHASE 3: SCREEN FOLLOWS BEHIND ("phir baki screen aur background mai setup screen dekhni chahiye")
-            delay(160L) // Give the button a visible head start!
+            // PHASE 3: MACOS GENIE FOLD EXIT (740ms) - Screen funnels into the button exit vortex
+            delay(50L) // Slight stagger so the button clearly leads into the right edge
 
             launch {
-                screenExitX.animateTo(
-                    screenWidthPx * 1.05f,
-                    tween(500, easing = FastOutSlowInEasing)
+                genieProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(740, easing = androidx.compose.animation.core.LinearEasing)
                 )
             }
 
-            delay(520L) // Wait for screen slide to finish
+            delay(750L) // Complete macOS Genie fold
 
-            // PHASE 4: Navigate directly to setup screen in selected language
+            // PHASE 4: Transition directly to setup screen in chosen language
             onLanguageSelect(code)
         }
     }
@@ -161,9 +223,16 @@ fun InitialLanguageScreen(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
-                this.translationX = screenExitX.value
+                this.transformOrigin = TransformOrigin(1.0f, targetPivotY)
+                this.scaleX = genieScaleX
+                this.scaleY = genieScaleY
+                this.translationX = genieTransX
+                this.rotationY = genieRotationY
+                this.rotationZ = genieRotationZ
+                this.cameraDistance = 16f * density.density
+                this.alpha = genieOpacity
             }
-            .blur(radiusX = screenBlurX, radiusY = 0.dp)
+            .blur(radiusX = genieBlurX, radiusY = genieBlurY)
             .background(
                 Brush.verticalGradient(
                     listOf(DarkEmeraldTop, DarkEmeraldMid, DarkEmeraldBottom)
@@ -260,6 +329,10 @@ fun InitialLanguageScreen(
                         option = option,
                         isSelected = isTapped || isInitiallySelected,
                         modifier = Modifier
+                            .onGloballyPositioned { coords ->
+                                val pos = coords.positionInRoot()
+                                buttonCenterYs[i] = pos.y + (coords.size.height / 2f)
+                            }
                             .graphicsLayer {
                                 this.translationY = targetOffsetY
                                 this.translationX = buttonExitTranslationX
@@ -277,7 +350,7 @@ fun InitialLanguageScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // 5. FOOTER: Version and Powered By as requested ("last line nikal ke version aur powered by line dalo")
+            // 5. FOOTER: Version and Powered By as requested
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,

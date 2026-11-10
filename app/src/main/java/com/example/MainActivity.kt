@@ -346,7 +346,14 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
             val prevTab = selectedTab
             isGenieBusy = true
             coroutineScope.launch {
+                val snapshot = try {
+                    pageGraphicsLayer.toImageBitmap().asAndroidBitmap()
+                } catch (_: Exception) {
+                    null
+                }
+
                 outgoingTab = prevTab
+                outgoingBitmap = snapshot
                 selectedTab = targetTab
                 if (targetTab == "home") {
                     viewModel.selectToday()
@@ -356,7 +363,7 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                 genieProgress.animateTo(
                     targetValue = 1f,
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = if (prefersReducedMotion) 240 else 640,
+                        durationMillis = if (prefersReducedMotion) 240 else com.example.ui.GENIE_DUR.toInt(),
                         easing = androidx.compose.animation.core.LinearEasing
                     )
                 )
@@ -511,10 +518,11 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .graphicsLayer {
-                            this.scaleX = incomingScale
-                            this.scaleY = incomingScale
-                            this.alpha = incomingAlpha
+                        .drawWithContent {
+                            pageGraphicsLayer.record {
+                                this@drawWithContent.drawContent()
+                            }
+                            drawContent()
                         }
                 ) {
                     when (selectedTab) {
@@ -551,9 +559,41 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     }
                 }
 
-                // Layer 2: Outgoing page with macOS Genie animation (bounces slightly, then funnels down into target tab with motion blur)
+                // Layer 2: macOS Genie Fold cloth effect (56-strip 2D affine matrix transform from mobile-genie-nav)
+                val currentOutgoingBitmap = outgoingBitmap
                 val currentOutgoingTab = outgoingTab
-                if (isGenieBusy && currentOutgoingTab != null) {
+                val outgoingKey = currentOutgoingTab
+                if (isGenieBusy && currentOutgoingBitmap != null && outgoingKey != null) {
+                    val measuredTarget = tabTargets[outgoingKey]
+                    val fallbackTarget = remember(outgoingKey, containerWidthPx, containerHeightPx) {
+                        val w = containerWidthPx
+                        val h = containerHeightPx
+                        val tabW = w / 3f
+                        val cx = when (outgoingKey) {
+                            "support" -> tabW * 0.5f
+                            "ramazan" -> tabW * 2.5f
+                            else -> tabW * 1.5f
+                        }
+                        val barH = with(density) { 72.dp.toPx() }
+                        com.example.ui.TabTarget(
+                            centerX = cx,
+                            centerY = h - (barH / 2f),
+                            width = tabW,
+                            height = barH
+                        )
+                    }
+                    val target = measuredTarget ?: fallbackTarget
+
+                    com.example.ui.GenieFoldOverlay(
+                        bitmap = currentOutgoingBitmap,
+                        progress = genieProgress.value,
+                        target = target,
+                        containerWidth = containerWidthPx,
+                        containerHeight = containerHeightPx,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else if (isGenieBusy && currentOutgoingTab != null) {
+                    // Fallback when bitmap capture is unavailable
                     val destinationKey = selectedTab
                     val measuredTarget = tabTargets[destinationKey] ?: tabTargets[currentOutgoingTab]
                     val targetCenterX = measuredTarget?.centerX?.takeIf { it > 0f } ?: when (destinationKey) {
@@ -564,10 +604,6 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     val targetCenterY = measuredTarget?.centerY?.takeIf { it > 0f } ?: containerHeightPx
 
                     val p = genieProgress.value
-
-                    // macOS Genie physics:
-                    // Phase 1 (p: 0f..0.15f): Initial bounce & lift ("Setting page card thoda bounce hoke phir niche jayega")
-                    // Phase 2 (p: 0.15f..1.0f): S-curve funnel suck down towards destination tab button
                     val bounceProgress = (p / 0.15f).coerceIn(0f, 1f)
                     val bounceSin = kotlin.math.sin(bounceProgress * kotlin.math.PI.toFloat())
 

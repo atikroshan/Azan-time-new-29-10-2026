@@ -567,19 +567,18 @@ fun SupportBackScreen(
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(16.dp))
 
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = if (isSelected) 54.dp else 42.dp),
+                                        .fillMaxWidth(),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center
                                     ) {
-                                        // Badge for Header (All Titles)
+                                // Badge for Header (All Titles)
                                         Surface(
                                             color = Color(0xFFF3DE8E).copy(alpha = 0.15f),
                                             shape = RoundedCornerShape(8.dp),
@@ -596,7 +595,7 @@ fun SupportBackScreen(
                                         }
 
                                         if (realIndex == 0) {
-                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Spacer(modifier = Modifier.height(16.dp))
 
                                             Text(
                                                 text = if (uiState.selectedMasjid.id.equals("guest", ignoreCase = true) || uiState.selectedMasjid.name.isBlank()) {
@@ -660,7 +659,7 @@ fun SupportBackScreen(
                                                 }
                                             }
                                         } else if (realIndex == 1) {
-                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Spacer(modifier = Modifier.height(16.dp))
                                             Text(
                                                 text = subtitle,
                                                 fontSize = if (isSelected) 13.sp else 10.5.sp,
@@ -674,7 +673,7 @@ fun SupportBackScreen(
                                             )
                                         } else {
                                             // realIndex == 2: Support Us
-                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Spacer(modifier = Modifier.height(16.dp))
                                             Column(
                                                 horizontalAlignment = Alignment.CenterHorizontally,
                                                 verticalArrangement = Arrangement.Center

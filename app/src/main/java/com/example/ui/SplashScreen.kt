@@ -28,6 +28,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.R
 import kotlinx.coroutines.delay
+import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.VolumeOff
+import com.example.service.AzanForegroundService
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 /**
  * Minimalist, ultra-attractive Splash Screen inspired by Google AI Studio / Gemini:
@@ -143,6 +153,10 @@ fun SplashScreen(onFinished: () -> Unit) {
         isDismissing = true
     }
 
+    val context = LocalContext.current
+    val isPlayingAzan by AzanForegroundService.isPlayingAzan.collectAsState()
+    val isMuted by AzanForegroundService.isMuted.collectAsState()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -167,6 +181,89 @@ fun SplashScreen(onFinished: () -> Unit) {
         SplashVideoBackground(
             modifier = Modifier.fillMaxSize()
         )
+
+        // Active Audio Player Banner on Splash Screen when Azan is playing
+        if (isPlayingAzan) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 48.dp)
+                    .zIndex(10f),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, if (isMuted) Color(0xFFD97706) else Color(0xFFEAB308))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isMuted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
+                                contentDescription = if (isMuted) "Azan Muted" else "Azan Playing",
+                                tint = if (isMuted) Color(0xFFD97706) else Color(0xFFEAB308),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = if (isMuted) "Azan Muted" else "Azan Playing",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = if (isMuted) "Audio is muted • Playing silently" else "Playing once • Auto closing",
+                                    fontSize = 10.sp,
+                                    color = Color.White.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    AzanForegroundService.stopService(context)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFDC2626),
+                                    contentColor = Color.White
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Stop", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = {
+                                    AzanForegroundService.toggleMuteService(context)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isMuted) Color(0xFFD97706) else Color(0xFF4B5563),
+                                    contentColor = Color.White
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(if (isMuted) "Unmute" else "Mute", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         // 1. Ambient Background Breathing Glow (Subtle cosmic gold & emerald halo)
         Canvas(

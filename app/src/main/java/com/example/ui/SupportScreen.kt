@@ -74,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontFamily
@@ -240,7 +241,7 @@ fun SupportScreen(
     }
 }
 
-private val MosqueArchShape = object : Shape {
+private val MinarDomeShape = object : Shape {
     override fun createOutline(
         size: androidx.compose.ui.geometry.Size,
         layoutDirection: androidx.compose.ui.unit.LayoutDirection,
@@ -248,33 +249,124 @@ private val MosqueArchShape = object : Shape {
     ): Outline {
         val w = size.width
         val h = size.height
+        // SVG crown height ratio to width: 1.28479 / 2.89862 = 0.44324f
+        val cH = (w * 0.44324f).coerceAtMost(h * 0.42f)
         val path = Path().apply {
+            // Start at bottom-left corner
             moveTo(0f, h)
-            lineTo(0f, h * 0.35f)
-            cubicTo(
-                0f, h * 0.25f,
-                w * 0.08f, h * 0.18f,
-                w * 0.22f, h * 0.15f
-            )
-            cubicTo(
-                w * 0.35f, h * 0.12f,
-                w * 0.42f, h * 0.06f,
-                w * 0.5f, 0f
-            )
-            cubicTo(
-                w * 0.58f, h * 0.06f,
-                w * 0.65f, h * 0.12f,
-                w * 0.78f, h * 0.15f
-            )
-            cubicTo(
-                w * 0.92f, h * 0.18f,
-                w, h * 0.25f,
-                w, h * 0.35f
-            )
+            // Left vertical side up to crown shoulder
+            lineTo(0f, cH)
+
+            // Crown path reconstructed from minar.svg:
+            // Left shoulder flare to intermediate step
+            cubicTo(-0.0004f * w, 0.9866f * cH, -0.0031f * w, 0.8497f * cH, 0.0900f * w, 0.8238f * cH)
+            lineTo(0.0914f * w, 0.8234f * cH)
+            lineTo(0.0913f * w, 0.8209f * cH)
+
+            // Step inward to base of onion dome
+            cubicTo(0.0913f * w, 0.8204f * cH, 0.0907f * w, 0.7791f * cH, 0.1074f * w, 0.7483f * cH)
+            cubicTo(0.1196f * w, 0.7256f * cH, 0.1380f * w, 0.7141f * cH, 0.1620f * w, 0.7141f * cH)
+            lineTo(0.1643f * w, 0.7141f * cH)
+            lineTo(0.1635f * w, 0.7102f * cH)
+
+            // Main bulbous onion dome curve up to tip
+            cubicTo(0.1632f * w, 0.7088f * cH, 0.1330f * w, 0.5653f * cH, 0.1722f * w, 0.4134f * cH)
+            cubicTo(0.2038f * w, 0.2909f * cH, 0.2705f * w, 0.1970f * cH, 0.3705f * w, 0.1343f * cH)
+            cubicTo(0.3713f * w, 0.1337f * cH, 0.4469f * w, 0.0816f * cH, 0.4876f * w, 0.0091f * cH)
+
+            // Pinnacle point at top center
+            cubicTo(0.4944f * w, -0.0030f * cH, 0.5055f * w, -0.0030f * cH, 0.5123f * w, 0.0091f * cH)
+
+            // Symmetric right half down from pinnacle to base of dome
+            cubicTo(0.5531f * w, 0.0816f * cH, 0.6287f * w, 0.1337f * cH, 0.6295f * w, 0.1343f * cH)
+            cubicTo(0.7295f * w, 0.1970f * cH, 0.7962f * w, 0.2909f * cH, 0.8277f * w, 0.4134f * cH)
+            cubicTo(0.8669f * w, 0.5653f * cH, 0.8368f * w, 0.7088f * cH, 0.8365f * w, 0.7102f * cH)
+            lineTo(0.8357f * w, 0.7141f * cH)
+            lineTo(0.8380f * w, 0.7141f * cH)
+
+            // Step outward to intermediate right step
+            cubicTo(0.8620f * w, 0.7141f * cH, 0.8804f * w, 0.7256f * cH, 0.8926f * w, 0.7483f * cH)
+            cubicTo(0.9092f * w, 0.7791f * cH, 0.9086f * w, 0.8204f * cH, 0.9086f * w, 0.8209f * cH)
+            lineTo(0.9086f * w, 0.8234f * cH)
+            lineTo(0.9100f * w, 0.8238f * cH)
+
+            // Flare to right shoulder
+            cubicTo(1.0031f * w, 0.8497f * cH, 1.0004f * w, 0.9866f * cH, w, cH)
+
+            // Right vertical side down to bottom
             lineTo(w, h)
             close()
         }
         return Outline.Generic(path)
+    }
+}
+
+private val DoubleVerticalRectangleArchShape = object : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density
+    ): Outline {
+        val w = size.width
+        val h = size.height
+        val corner = with(density) { 10.dp.toPx() }
+        val step = with(density) { 7.dp.toPx() } // slight offset between the two vertically stacked rectangular tiers
+        val midH = h * 0.48f // vertical proportion separating the two tiers
+
+        val path = Path().apply {
+            // Upper Tier (slightly narrower / stepped in)
+            moveTo(step, corner)
+            cubicTo(step, 0f, step, 0f, step + corner, 0f)
+            lineTo(w - step - corner, 0f)
+            cubicTo(w - step, 0f, w - step, 0f, w - step, corner)
+            lineTo(w - step, midH - step)
+
+            // Step out to Lower Tier
+            lineTo(w - corner, midH)
+            cubicTo(w, midH, w, midH, w, midH + corner)
+            lineTo(w, h - corner)
+            cubicTo(w, h, w, h, w - corner, h)
+            lineTo(corner, h)
+            cubicTo(0f, h, 0f, h, 0f, h - corner)
+            lineTo(0f, midH + corner)
+            cubicTo(0f, midH, 0f, midH, corner, midH)
+
+            // Step in to Upper Tier
+            lineTo(step, midH - step)
+            close()
+        }
+        return Outline.Generic(path)
+    }
+}
+
+private fun Modifier.cardIslamicStarOverlay(alpha: Float = 0.055f): Modifier = this.drawBehind {
+    val step = 42.dp.toPx()
+    val patternColor = Color(0xFFF3DE8E).copy(alpha = alpha)
+    val r = 12.dp.toPx()
+    val rIn = r * 0.52f
+
+    var y = 0f
+    while (y < size.height + step) {
+        var x = 0f
+        while (x < size.width + step) {
+            val starPath = Path()
+            for (i in 0 until 16) {
+                val angle = (i * Math.PI / 8.0).toFloat()
+                val radius = if (i % 2 == 0) r else rIn
+                val px = x + radius * kotlin.math.cos(angle)
+                val py = y + radius * kotlin.math.sin(angle)
+                if (i == 0) starPath.moveTo(px, py) else starPath.lineTo(px, py)
+            }
+            starPath.close()
+
+            drawPath(
+                path = starPath,
+                color = patternColor,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+            )
+            x += step
+        }
+        y += step
     }
 }
 
@@ -338,8 +430,7 @@ fun SupportBackScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(top = 6.dp, bottom = 8.dp),
+                .padding(top = 6.dp, bottom = 0.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -385,16 +476,16 @@ fun SupportBackScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 4.dp),
+                    .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 AzanLogoCard(size = logoSize)
-                Spacer(modifier = Modifier.height(itemSpacing))
+                Spacer(modifier = Modifier.height(itemSpacing + 4.dp))
                 AzanTimeWordmark(
                     height = wordmarkHeight,
-                    topPadding = 2.dp,
-                    bottomPadding = 2.dp
+                    topPadding = 4.dp,
+                    bottomPadding = 4.dp
                 )
             }
 
@@ -458,7 +549,8 @@ fun SupportBackScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .weight(1f)
+                    .padding(top = 2.dp, bottom = 0.dp),
                 contentAlignment = Alignment.Center
             ) {
                 HorizontalPager(
@@ -467,7 +559,7 @@ fun SupportBackScreen(
                     pageSpacing = 12.dp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(400.dp)
+                        .fillMaxHeight()
                 ) { page ->
                     val realIndex = page % 3
                     val isSelected = (pagerState.currentPage == page)
@@ -548,6 +640,28 @@ fun SupportBackScreen(
                         }
                     }
 
+                    val cardBorderBrush = if (isSelected) {
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color(0xFFE5B842),
+                                0.78f to Color(0xFFE5B842),
+                                0.90f to Color(0xFFE5B842).copy(alpha = 0.35f),
+                                0.97f to Color.Transparent,
+                                1.0f to Color.Transparent
+                            )
+                        )
+                    } else {
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color(0xFFE5B842).copy(alpha = 0.45f),
+                                0.78f to Color(0xFFE5B842).copy(alpha = 0.45f),
+                                0.90f to Color(0xFFE5B842).copy(alpha = 0.15f),
+                                0.97f to Color.Transparent,
+                                1.0f to Color.Transparent
+                            )
+                        )
+                    }
+
                     Card(
                         modifier = Modifier
                             .fillMaxSize()
@@ -559,13 +673,13 @@ fun SupportBackScreen(
                             .alpha(cardAlpha)
                             .blur(radiusX = horizontalMotionBlur, radiusY = verticalMotionBlur)
                             .clickable { handleCardClick() },
-                        shape = MosqueArchShape,
+                        shape = MinarDomeShape,
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) Color.Transparent else Color(0xFF0D281C)
                         ),
                         border = BorderStroke(
                             width = if (isSelected) 2.dp else 1.2.dp,
-                            color = if (isSelected) Color(0xFFE5B842) else Color(0xFFE5B842).copy(alpha = 0.45f)
+                            brush = cardBorderBrush
                         )
                     ) {
                         Box(
@@ -574,16 +688,28 @@ fun SupportBackScreen(
                                 .background(
                                     if (isSelected) {
                                         Brush.verticalGradient(
-                                            listOf(Color(0xFF1B4E38), Color(0xFF071D13))
+                                            colorStops = arrayOf(
+                                                0.0f to Color(0xFF1B4E38),
+                                                0.65f to Color(0xFF0F3524),
+                                                0.85f to Color(0xFF071D13),
+                                                0.95f to Color(0xFF05150E).copy(alpha = 0.85f),
+                                                1.0f to Color.Transparent
+                                            )
                                         )
                                     } else {
                                         Brush.verticalGradient(
-                                            listOf(Color(0xFF103324), Color(0xFF091E15))
+                                            colorStops = arrayOf(
+                                                0.0f to Color(0xFF103324),
+                                                0.65f to Color(0xFF0B2519),
+                                                0.85f to Color(0xFF091E15),
+                                                0.95f to Color(0xFF06140D).copy(alpha = 0.85f),
+                                                1.0f to Color.Transparent
+                                            )
                                         )
                                     }
                                 )
-                                .islamicStarBackground(Color(0xFFF3DE8E).copy(alpha = 0.05f))
-                                .padding(horizontal = 12.dp, vertical = 12.dp)
+                                .cardIslamicStarOverlay(alpha = 0.055f)
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -591,7 +717,7 @@ fun SupportBackScreen(
                                     .align(Alignment.TopCenter),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Spacer(modifier = Modifier.height(10.dp))
+                                Spacer(modifier = Modifier.height(26.dp))
 
                                 Box(
                                     modifier = Modifier
@@ -638,13 +764,63 @@ fun SupportBackScreen(
                                         }
 
                                         if (realIndex == 0) {
-                                            Spacer(modifier = Modifier.height(16.dp))
+                                            Spacer(modifier = Modifier.height(10.dp))
+
+                                            val context = androidx.compose.ui.platform.LocalContext.current
+                                            val photoData = remember(uiState.selectedMasjid.id, uiState.selectedMasjid.photoUrl) {
+                                                com.example.data.MasjidLocalCacheManager.getPhotoModel(
+                                                    context,
+                                                    uiState.selectedMasjid.id,
+                                                    uiState.selectedMasjid.photoUrl
+                                                )
+                                            }
+
+                                            // Masjid Photo in Vertical Rectangle Shape (Double Vertical Rectangle / Multi-tier Frame)
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 14.dp)
+                                                    .height(if (isSelected) 175.dp else 135.dp)
+                                                    .clip(DoubleVerticalRectangleArchShape)
+                                                    .background(Color(0xFF071B12))
+                                                    .border(1.5.dp, Color(0xFFE5B842), DoubleVerticalRectangleArchShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (photoData != null) {
+                                                    // Subtle ambient fill background for letterboxed areas
+                                                    coil.compose.AsyncImage(
+                                                        model = photoData,
+                                                        contentDescription = null,
+                                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .alpha(0.20f)
+                                                    )
+                                                    // Full crisp photo auto-fit inside holder
+                                                    coil.compose.AsyncImage(
+                                                        model = photoData,
+                                                        contentDescription = uiState.selectedMasjid.getLocalizedName(uiState.language),
+                                                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                                                        alignment = Alignment.Center,
+                                                        modifier = Modifier.fillMaxSize()
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.Mosque,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFFF3DE8E).copy(alpha = 0.65f),
+                                                        modifier = Modifier.size(46.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(10.dp))
 
                                             Text(
                                                 text = uiState.selectedMasjid.getLocalizedName(uiState.language).let { name ->
                                                     if (uiState.language == "en") name.uppercase(Locale.ROOT) else name
                                                 },
-                                                fontSize = if (isSelected) 17.sp else 12.sp,
+                                                fontSize = if (isSelected) 16.sp else 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = if (isSelected) Color(0xFFE5B842) else Color(0xFFF3DE8E),
                                                 textAlign = TextAlign.Center,
@@ -652,7 +828,7 @@ fun SupportBackScreen(
                                                 overflow = TextOverflow.Ellipsis
                                             )
 
-                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Spacer(modifier = Modifier.height(4.dp))
 
                                             Row(
                                                 verticalAlignment = Alignment.Top,
@@ -671,18 +847,18 @@ fun SupportBackScreen(
                                                         contentDescription = "Location",
                                                         tint = Color(0xFF3B82F6),
                                                         modifier = Modifier
-                                                            .size(15.dp)
+                                                            .size(14.dp)
                                                             .padding(top = 2.dp, end = 4.dp)
                                                     )
                                                     Text(
                                                         text = uiState.selectedMasjid.getLocalizedFullLocation(uiState.language),
-                                                        fontSize = if (isSelected) 13.sp else 10.5.sp,
+                                                        fontSize = if (isSelected) 12.sp else 10.sp,
                                                         fontWeight = FontWeight.Medium,
                                                         color = Color.White,
                                                         textAlign = TextAlign.Start,
-                                                        maxLines = 4,
+                                                        maxLines = 3,
                                                         overflow = TextOverflow.Ellipsis,
-                                                        lineHeight = 16.sp,
+                                                        lineHeight = 15.sp,
                                                         modifier = Modifier.weight(1f, fill = false)
                                                     )
                                                 }
@@ -739,24 +915,34 @@ fun SupportBackScreen(
                             }
 
                             if (isSelected) {
+                                val activeLangBrush = Brush.verticalGradient(
+                                    listOf(Color(0xFFF3DE8E), Color(0xFFD49B37))
+                                )
                                 Button(
                                     onClick = { handleCardClick() },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFF3DE8E),
-                                        contentColor = Color(0xFF040E0A)
+                                        containerColor = Color.Transparent,
+                                        contentColor = Color(0xFF0C101B)
                                     ),
                                     shape = RoundedCornerShape(14.dp),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                                    contentPadding = PaddingValues(0.dp),
+                                    border = BorderStroke(1.2.dp, Color(0xFFFFD700)),
+                                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)
-                                        .padding(bottom = 8.dp)
+                                        .padding(bottom = 28.dp)
                                         .width(135.dp)
                                         .height(38.dp)
+                                        .background(
+                                            brush = activeLangBrush,
+                                            shape = RoundedCornerShape(14.dp)
+                                        )
                                 ) {
                                     Text(
                                         text = actionTexts[realIndex],
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.ExtraBold
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF0C101B)
                                     )
                                 }
                             }
@@ -764,11 +950,6 @@ fun SupportBackScreen(
                     }
                 }
             }
-
-            // Footer
-            AiStudioLoadingFooter(
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp)
-            )
         }
     }
 
@@ -1388,38 +1569,6 @@ fun SupportFrontScreen(
                             color = Color(0xFF040E0A)
                         )
                     }
-                }
-            }
-
-            // App Version Line Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = slotVerticalPadding),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = when (uiState.language) {
-                            "ur" -> "ایپ ورژن"
-                            "hi" -> "ऐप वर्ज़न"
-                            else -> "App Version"
-                        },
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "v${BuildConfig.VERSION_NAME}",
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = primaryGold
-                    )
                 }
             }
 

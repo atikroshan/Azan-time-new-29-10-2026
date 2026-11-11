@@ -3074,18 +3074,29 @@ fun RamazanMonthHistoryDialog(
                     }
 
                     // Month Header Subtitle
+                    val ramazanDateRangeText = when (uiState.language) {
+                        "hi" -> "9 फ़रवरी 2027 – 10 मार्च 2027"
+                        "ur" -> "9 فروری 2027 – 10 مارچ 2027"
+                        else -> "9 FEB 2027 – 10 MAR 2027"
+                    }
+                    val ramazanPointsRuleText = when (uiState.language) {
+                        "hi" -> "प्रति रोज़ा 1 अंक • कुल 30 रोज़े"
+                        "ur" -> "فی روزہ 1 پوائنٹ • کل 30 روزے"
+                        else -> "1 pt per Roza • 30 Roza Total"
+                    }
+
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "9 FEB 2027 – 10 MAR 2027",
+                            text = ramazanDateRangeText,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White.copy(alpha = 0.90f)
                         )
                         Text(
-                            text = "1 pt per Roza • 30 Roza Total",
+                            text = ramazanPointsRuleText,
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Medium,
                             color = TextMuted
@@ -3245,9 +3256,19 @@ fun RamazanMonthHistoryDialog(
                                                     }
                                                 )
                                                 if (dayNum == 9 && monthNum == 2) {
-                                                    Text("Feb", fontSize = 6.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                                                    val febLabel = when (uiState.language) {
+                                                        "hi" -> "फ़र"
+                                                        "ur" -> "فر"
+                                                        else -> "Feb"
+                                                    }
+                                                    Text(febLabel, fontSize = 6.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
                                                 } else if (dayNum == 1 && monthNum == 3) {
-                                                    Text("Mar", fontSize = 6.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                                                    val marLabel = when (uiState.language) {
+                                                        "hi" -> "मार्च"
+                                                        "ur" -> "مارچ"
+                                                        else -> "Mar"
+                                                    }
+                                                    Text(marLabel, fontSize = 6.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
                                                 }
                                             }
 

@@ -1061,12 +1061,20 @@ function repairSheet1TenRows(sheet) {
 
         fun flushCurrent() {
             if (currentName.isNotBlank()) {
-                val finalId = if (currentId.isNotBlank()) {
-                    currentId.trim()
-                } else {
-                    // Generate stable 9-digit numeric ID if admin hasn't filled ID column yet
-                    val num = Math.abs(currentName.trim().hashCode() % 900000 + 100000)
-                    "100$num"
+                val rawId = currentId.trim()
+                val nonGuestIndex = list.count { !it.id.equals("Guest", ignoreCase = true) }
+                val finalId = when {
+                    rawId.equals("guest", ignoreCase = true) -> "Guest"
+                    rawId == "100111111" -> "1001"
+                    rawId == "100111112" -> "1002"
+                    rawId == "100111113" -> "1003"
+                    rawId == "100111114" -> "1004"
+                    rawId.length >= 10 && rawId.all { it.isDigit() } -> {
+                        // Converts long timestamp IDs (e.g. 1794370337736) to clean sequential 4-digit IDs
+                        (1001 + nonGuestIndex).toString()
+                    }
+                    rawId.isNotBlank() -> rawId
+                    else -> (1001 + nonGuestIndex).toString()
                 }
 
                 // Azan: Fajr (AM), Zohar (PM), Asr (PM), Maghrib (PM), Isha (PM), Jummah (12:30 PM)
@@ -1252,7 +1260,7 @@ function repairSheet1TenRows(sheet) {
             val targetUrl = webAppUrl?.trim()?.ifBlank { null } ?: APPS_SCRIPT_WEBAPP_URL.trim()
             val postData = StringBuilder()
             postData.append("action=").append(java.net.URLEncoder.encode("requestMasjidToSheet", "UTF-8"))
-            postData.append("&id=").append(System.currentTimeMillis())
+            postData.append("&id=")
             postData.append("&name=").append(java.net.URLEncoder.encode(name, "UTF-8"))
             postData.append("&location=").append(java.net.URLEncoder.encode(location, "UTF-8"))
             postData.append("&admin=").append(java.net.URLEncoder.encode(adminName, "UTF-8"))

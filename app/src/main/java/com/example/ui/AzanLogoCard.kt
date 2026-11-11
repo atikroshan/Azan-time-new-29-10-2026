@@ -35,33 +35,38 @@ fun AzanLogoCard(
     modifier: Modifier = Modifier,
     size: Dp = 80.dp,
     cornerRadius: Dp = (size.value * 0.28f).dp,
-    logoPadding: Dp = (size.value * 0.18f).dp
+    logoPadding: Dp = (size.value * 0.18f).dp,
+    animateShimmer: Boolean = true
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "logo45Shimmer")
 
-    // Continuous slow 45-degree shiny shimmer sweep (8000ms cycle for a gentle, luxurious glide)
-    val shimmerPos by infiniteTransition.animateFloat(
-        initialValue = -350f,
-        targetValue = 950f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 8000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerPos"
-    )
+    val shimmerPos by if (animateShimmer) {
+        infiniteTransition.animateFloat(
+            initialValue = -350f,
+            targetValue = 950f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 8000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "shimmerPos"
+        )
+    } else {
+        remember { mutableStateOf(0f) }
+    }
 
-    // 45-degree diagonal warm golden sheen brush (darker/warmer, no stark white glow)
-    val shimmer45Brush = Brush.linearGradient(
-        colors = listOf(
-            Color.Transparent,
-            Color(0x0FB38938), // Muted dark gold ambient
-            Color(0x40F3DE8E), // Soft warm gold sheen center
-            Color(0x0FB38938), // Muted dark gold ambient
-            Color.Transparent
-        ),
-        start = Offset(shimmerPos - 180f, shimmerPos - 180f),
-        end = Offset(shimmerPos + 180f, shimmerPos + 180f)
-    )
+    val shimmer45Brush = if (animateShimmer) {
+        Brush.linearGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color(0x0FB38938),
+                Color(0x40F3DE8E),
+                Color(0x0FB38938),
+                Color.Transparent
+            ),
+            start = Offset(shimmerPos - 180f, shimmerPos - 180f),
+            end = Offset(shimmerPos + 180f, shimmerPos + 180f)
+        )
+    } else null
 
     Box(
         modifier = modifier
@@ -76,11 +81,14 @@ fun AzanLogoCard(
                 BorderStroke(1.2.dp, Color(0xFFE5B842).copy(alpha = 0.65f)),
                 shape = RoundedCornerShape(cornerRadius)
             )
-            .drawWithContent {
-                drawContent()
-                // Overlay 45-degree shiny shimmer beam
-                drawRect(brush = shimmer45Brush)
-            },
+            .then(
+                if (shimmer45Brush != null) {
+                    Modifier.drawWithContent {
+                        drawContent()
+                        drawRect(brush = shimmer45Brush)
+                    }
+                } else Modifier
+            ),
         contentAlignment = Alignment.Center
     ) {
         Image(

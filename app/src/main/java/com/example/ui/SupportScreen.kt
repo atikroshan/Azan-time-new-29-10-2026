@@ -102,6 +102,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.graphics.nativeCanvas
 import coil.compose.AsyncImage
 import com.example.BuildConfig
 import com.example.LanguageCirclesRow
@@ -109,6 +110,7 @@ import com.example.R
 import com.example.appBackground
 import com.example.data.GoogleSheetMasjidSync
 import com.example.data.MasjidItem
+import com.example.data.displayId
 import com.example.data.getLocalizedName
 import com.example.data.getLocalizedFullLocation
 import com.example.islamicStarBackground
@@ -672,7 +674,11 @@ fun SupportBackScreen(
                             }
                             .alpha(cardAlpha)
                             .blur(radiusX = horizontalMotionBlur, radiusY = verticalMotionBlur)
-                            .clickable { handleCardClick() },
+                            .clip(MinarDomeShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { handleCardClick() },
                         shape = MinarDomeShape,
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) Color.Transparent else Color(0xFF0D281C)
@@ -685,6 +691,7 @@ fun SupportBackScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .clip(MinarDomeShape)
                                 .background(
                                     if (isSelected) {
                                         Brush.verticalGradient(
@@ -709,14 +716,36 @@ fun SupportBackScreen(
                                     }
                                 )
                                 .cardIslamicStarOverlay(alpha = 0.055f)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            Column(
+                            // Cinematic Floating Urdu Characters behind card content
+                            Canvas(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                                val urduChars = listOf("ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش")
+                                val paint = android.graphics.Paint().apply {
+                                    color = android.graphics.Color.argb((0.08f * 255).toInt(), 0xF3, 0xDE, 0x8E)
+                                    textSize = 32.sp.toPx()
+                                    isAntiAlias = true
+                                    textAlign = android.graphics.Paint.Align.CENTER
+                                }
+
+                                // Simplification: Draw few static-positioned letters for demonstration; 
+                                // full dynamic animation requires a separate state-management system to avoid performance degradation.
+                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.2f, size.height * 0.2f, paint)
+                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.8f, size.height * 0.4f, paint)
+                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.4f, size.height * 0.7f, paint)
+                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.7f, size.height * 0.8f, paint)
+                            }
+
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .align(Alignment.TopCenter),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .align(Alignment.TopCenter),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
                                 Spacer(modifier = Modifier.height(26.dp))
 
                                 Box(
@@ -775,93 +804,115 @@ fun SupportBackScreen(
                                                 )
                                             }
 
-                                            // Masjid Photo in Vertical Rectangle Shape (Double Vertical Rectangle / Multi-tier Frame)
+                                            // Top Photo / Logo Container matching image.png
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(horizontal = 14.dp)
+                                                    .padding(horizontal = 8.dp)
                                                     .height(if (isSelected) 175.dp else 135.dp)
-                                                    .clip(DoubleVerticalRectangleArchShape)
-                                                    .background(Color(0xFF071B12))
-                                                    .border(1.5.dp, Color(0xFFE5B842), DoubleVerticalRectangleArchShape),
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(Color(0xFF071B12)),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 if (photoData != null) {
-                                                    // Subtle ambient fill background for letterboxed areas
-                                                    coil.compose.AsyncImage(
-                                                        model = photoData,
-                                                        contentDescription = null,
-                                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .alpha(0.20f)
-                                                    )
-                                                    // Full crisp photo auto-fit inside holder
                                                     coil.compose.AsyncImage(
                                                         model = photoData,
                                                         contentDescription = uiState.selectedMasjid.getLocalizedName(uiState.language),
-                                                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                                         alignment = Alignment.Center,
                                                         modifier = Modifier.fillMaxSize()
                                                     )
                                                 } else {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.Mosque,
-                                                        contentDescription = null,
-                                                        tint = Color(0xFFF3DE8E).copy(alpha = 0.65f),
-                                                        modifier = Modifier.size(46.dp)
+                                                    Column(
+                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                        verticalArrangement = Arrangement.Center,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    ) {
+                                                        AzanLogoCard(size = if (isSelected) 68.dp else 50.dp, animateShimmer = false)
+                                                        AzanTimeWordmark(
+                                                            height = if (isSelected) 34.dp else 24.dp,
+                                                            topPadding = 8.dp,
+                                                            bottomPadding = 0.dp
+                                                        )
+                                                    }
+                                                }
+
+                                                // Top-Right ID Badge Overlay inside photo box (matching image.png)
+                                                Surface(
+                                                    color = Color(0xFF1E293B).copy(alpha = 0.85f),
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.5f)),
+                                                    modifier = Modifier
+                                                        .align(Alignment.TopEnd)
+                                                        .padding(top = 8.dp, end = 8.dp)
+                                                ) {
+                                                    val idStr = uiState.selectedMasjid.displayId
+                                                    Text(
+                                                        text = if (idStr.equals("Guest", ignoreCase = true)) "Guest" else "#$idStr",
+                                                        fontSize = if (isSelected) 11.sp else 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFFF3DE8E),
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                     )
                                                 }
                                             }
 
                                             Spacer(modifier = Modifier.height(10.dp))
 
+                                            // Masjid Name (Takes full width, up to 3 lines for long names)
                                             Text(
                                                 text = uiState.selectedMasjid.getLocalizedName(uiState.language).let { name ->
                                                     if (uiState.language == "en") name.uppercase(Locale.ROOT) else name
                                                 },
-                                                fontSize = if (isSelected) 16.sp else 12.sp,
+                                                fontSize = if (isSelected) 15.sp else 12.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (isSelected) Color(0xFFE5B842) else Color(0xFFF3DE8E),
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-
-                                            Spacer(modifier = Modifier.height(4.dp))
-
-                                            Row(
-                                                verticalAlignment = Alignment.Top,
-                                                horizontalArrangement = Arrangement.Center,
+                                                color = Color.White,
+                                                maxLines = 3,
+                                                overflow = TextOverflow.Ellipsis,
+                                                textAlign = TextAlign.Start,
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(horizontal = 14.dp)
+                                                    .padding(horizontal = 12.dp)
+                                            )
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            // Subtle Divider Line between Name and Address (matching image.png)
+                                            HorizontalDivider(
+                                                modifier = Modifier.padding(horizontal = 12.dp),
+                                                thickness = 0.8.dp,
+                                                color = Color(0xFFF3DE8E).copy(alpha = 0.20f)
+                                            )
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            // Row: Blue Location Pin + Location Text (matching image.png)
+                                            Row(
+                                                verticalAlignment = Alignment.Top,
+                                                horizontalArrangement = Arrangement.Start,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 12.dp)
                                             ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.Top,
-                                                    horizontalArrangement = Arrangement.Start,
-                                                    modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Outlined.LocationOn,
-                                                        contentDescription = "Location",
-                                                        tint = Color(0xFF3B82F6),
-                                                        modifier = Modifier
-                                                            .size(14.dp)
-                                                            .padding(top = 2.dp, end = 4.dp)
-                                                    )
-                                                    Text(
-                                                        text = uiState.selectedMasjid.getLocalizedFullLocation(uiState.language),
-                                                        fontSize = if (isSelected) 12.sp else 10.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        color = Color.White,
-                                                        textAlign = TextAlign.Start,
-                                                        maxLines = 3,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                        lineHeight = 15.sp,
-                                                        modifier = Modifier.weight(1f, fill = false)
-                                                    )
-                                                }
+                                                Icon(
+                                                    imageVector = Icons.Outlined.LocationOn,
+                                                    contentDescription = "Location",
+                                                    tint = Color(0xFF3B82F6),
+                                                    modifier = Modifier
+                                                        .size(15.dp)
+                                                        .padding(top = 2.dp, end = 4.dp)
+                                                )
+                                                Text(
+                                                    text = uiState.selectedMasjid.getLocalizedFullLocation(uiState.language),
+                                                    fontSize = if (isSelected) 11.5.sp else 9.5.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = Color.White.copy(alpha = 0.85f),
+                                                    textAlign = TextAlign.Start,
+                                                    maxLines = 3,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    lineHeight = 15.sp,
+                                                    modifier = Modifier.weight(1f)
+                                                )
                                             }
                                         } else if (realIndex == 1) {
                                             Spacer(modifier = Modifier.height(16.dp))
@@ -913,6 +964,7 @@ fun SupportBackScreen(
                                     }
                                 }
                             }
+                        }
 
                             if (isSelected) {
                                 val activeLangBrush = Brush.verticalGradient(
@@ -926,7 +978,6 @@ fun SupportBackScreen(
                                     ),
                                     shape = RoundedCornerShape(14.dp),
                                     contentPadding = PaddingValues(0.dp),
-                                    border = BorderStroke(1.2.dp, Color(0xFFFFD700)),
                                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)

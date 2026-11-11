@@ -53,6 +53,7 @@ import androidx.core.content.ContextCompat
 import java.util.Locale
 import com.example.LanguageCirclesRow
 import com.example.data.MasjidItem
+import com.example.data.displayId
 import com.example.data.getLocalizedName
 import com.example.data.getLocalizedArea
 import com.example.data.getLocalizedCity
@@ -683,8 +684,10 @@ fun MasjidSelectionDialog(
                                                     "hi" -> "आईडी"
                                                     else -> "ID"
                                                 }
+                                                val idVal = masjid.displayId
+                                                val formattedIdText = if (idVal.equals("Guest", ignoreCase = true)) "$idPrefix: Guest" else "$idPrefix: #$idVal"
                                                 Text(
-                                                    text = "$idPrefix: #${masjid.id}",
+                                                    text = formattedIdText,
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = Color(0xFFF3DE8E)

@@ -58,6 +58,20 @@ fun AzanTiming.applyMasjidOffsets(masjid: MasjidItem): AzanTiming {
     )
 }
 
+val MasjidItem.displayId: String
+    get() {
+        val clean = id.trim()
+        return when {
+            clean.equals("guest", ignoreCase = true) -> "Guest"
+            clean == "100111111" || clean == "1001" -> "1001"
+            clean == "100111112" || clean == "1002" -> "1002"
+            clean == "100111113" || clean == "1003" -> "1003"
+            clean == "100111114" || clean == "1004" -> "1004"
+            clean.length >= 10 && clean.all { it.isDigit() } -> clean.takeLast(4)
+            else -> clean
+        }
+    }
+
 object MasjidRepository {
     private var _dynamicMasajid: List<MasjidItem> = emptyList()
     val dynamicMasajid: List<MasjidItem>

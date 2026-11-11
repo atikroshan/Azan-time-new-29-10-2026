@@ -58,6 +58,8 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import com.example.data.getLocalizedName
+import com.example.data.getLocalizedFullLocation
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -392,8 +394,15 @@ fun SupportMasjidPopup(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        val masjidTitle = selectedMasjid?.name?.uppercase(Locale.ROOT)?.ifBlank { "SUPPORT MASJID" } ?: "SUPPORT MASJID"
-                        val masjidLoc = selectedMasjid?.address ?: ""
+                        val fallbackTitle = when (language) {
+                            "ur" -> "مسجد کی حمایت کریں"
+                            "hi" -> "मस्जिद का सहयोग करें"
+                            else -> "SUPPORT MASJID"
+                        }
+                        val masjidTitle = selectedMasjid?.getLocalizedName(language)?.let {
+                            if (language == "en") it.uppercase(Locale.ROOT) else it
+                        }?.ifBlank { fallbackTitle } ?: fallbackTitle
+                        val masjidLoc = selectedMasjid?.getLocalizedFullLocation(language) ?: (selectedMasjid?.address ?: "")
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
@@ -570,6 +579,11 @@ fun SupportMasjidPopup(
                             }
                         }
 
+                        val otherLabel = when (language) {
+                            "ur" -> "دیگر"
+                            "hi" -> "अन्य"
+                            else -> "Other"
+                        }
                         val isOtherSelected = !amounts.contains(selectedAmount)
                         Box(
                             modifier = Modifier
@@ -586,7 +600,7 @@ fun SupportMasjidPopup(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (isOtherSelected) "₹$selectedAmount" else "Other",
+                                text = if (isOtherSelected) "₹$selectedAmount" else otherLabel,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isOtherSelected && hasValidQr) Color(0xFF0F1713) else Color(0xFFF3DE8E)
@@ -595,12 +609,31 @@ fun SupportMasjidPopup(
                     }
 
                     // Pay UPI Button matching attached image style (Enlarged)
+                    val payBtnText = if (hasValidQr) {
+                        when (language) {
+                            "ur" -> "UPI (GPay, PhonePe, Paytm) کے ذریعے ₹$selectedAmount ادا کریں"
+                            "hi" -> "UPI (GPay, PhonePe, Paytm) द्वारा ₹$selectedAmount भुगतान करें"
+                            else -> "Pay ₹$selectedAmount via UPI (GPay, PhonePe, Paytm)"
+                        }
+                    } else {
+                        when (language) {
+                            "ur" -> "کیو آر کوڈ دستیاب نہیں ہے"
+                            "hi" -> "क्यूआर कोड उपलब्ध नहीं है"
+                            else -> "QR Code Not Available"
+                        }
+                    }
+
                     Button(
                         onClick = {
                             if (hasValidQr) {
                                 showUpiAppChooser = true
                             } else {
-                                Toast.makeText(context, "QR code not available for this masjid", Toast.LENGTH_SHORT).show()
+                                val notAvailMsg = when (language) {
+                                    "ur" -> "اس مسجد کے لیے کیو آر کوڈ دستیاب نہیں ہے"
+                                    "hi" -> "इस मस्जिद के लिए क्यूआर कोड उपलब्ध नहीं है"
+                                    else -> "QR code not available for this masjid"
+                                }
+                                Toast.makeText(context, notAvailMsg, Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -628,7 +661,7 @@ fun SupportMasjidPopup(
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
                             Text(
-                                text = if (hasValidQr) "Pay ₹$selectedAmount via UPI (GPay, PhonePe, Paytm)" else "QR Code Not Available",
+                                text = payBtnText,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (hasValidQr) Color.White else Color.White.copy(alpha = 0.4f),
@@ -663,7 +696,11 @@ fun SupportMasjidPopup(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Enter Contribution Amount",
+                        text = when (language) {
+                            "ur" -> "تعاون کی رقم درج کریں"
+                            "hi" -> "सहयोग राशि दर्ज करें"
+                            else -> "Enter Contribution Amount"
+                        },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF3DE8E)
@@ -671,8 +708,17 @@ fun SupportMasjidPopup(
                     OutlinedTextField(
                         value = customAmountText,
                         onValueChange = { customAmountText = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Amount (₹)", color = Color.White.copy(alpha = 0.7f)) },
-                        placeholder = { Text("e.g. 1000", color = Color.White.copy(alpha = 0.3f)) },
+                        label = {
+                            Text(
+                                text = when (language) {
+                                    "ur" -> "رقم (₹)"
+                                    "hi" -> "राशि (₹)"
+                                    else -> "Amount (₹)"
+                                },
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        },
+                        placeholder = { Text("1000", color = Color.White.copy(alpha = 0.3f)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color(0xFFF3DE8E),
@@ -691,7 +737,14 @@ fun SupportMasjidPopup(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Cancel", color = Color.White)
+                            Text(
+                                text = when (language) {
+                                    "ur" -> "منسوخ"
+                                    "hi" -> "रद्द करें"
+                                    else -> "Cancel"
+                                },
+                                color = Color.White
+                            )
                         }
                         Button(
                             onClick = {
@@ -700,13 +753,26 @@ fun SupportMasjidPopup(
                                     selectedAmount = entered
                                     showOtherDialog = false
                                 } else {
-                                    Toast.makeText(context, "Please enter a valid amount", Toast.LENGTH_SHORT).show()
+                                    val err = when (language) {
+                                        "ur" -> "براہ کرم درست رقم درج کریں"
+                                        "hi" -> "कृपया सही राशि दर्ज करें"
+                                        else -> "Please enter a valid amount"
+                                    }
+                                    Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5B842)),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Set Amount", color = Color(0xFF0F1713), fontWeight = FontWeight.Bold)
+                            Text(
+                                text = when (language) {
+                                    "ur" -> "رقم سیٹ کریں"
+                                    "hi" -> "राशि सेट करें"
+                                    else -> "Set Amount"
+                                },
+                                color = Color(0xFF0F1713),
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -718,6 +784,7 @@ fun SupportMasjidPopup(
     if (showUpiAppChooser) {
         UpiAppChooserDialog(
             amount = selectedAmount,
+            language = language,
             onDismiss = { showUpiAppChooser = false },
             onAppSelected = { pkg ->
                 showUpiAppChooser = false

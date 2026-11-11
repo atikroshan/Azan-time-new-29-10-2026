@@ -149,6 +149,7 @@ import com.example.data.MasjidItem
 import com.example.data.getLocalizedName
 import com.example.data.getLocalizedArea
 import com.example.data.getLocalizedCity
+import com.example.data.getLocalizedFullLocation
 import com.example.data.getStopLabel
 import com.example.data.getMuteLabel
 import androidx.compose.ui.res.painterResource
@@ -894,7 +895,7 @@ fun AzanHomeContent(
             with(density) { 260.dp.toPx() }
         }
 
-        // When slid down: highlighted slot and content section collapse down fully to navigation bar
+        // When slid down: highlighted slot and content section collapse down fully to navigation bar (matching Google Studio AI proportional layout)
         val targetCollapsedTopPx = (screenHeightPx - navGapPx - effectiveCollapsedSheetHeightPx).coerceAtLeast(baseTopPaddingPx)
         val maxPullDownPx = (targetCollapsedTopPx - baseTopPaddingPx).coerceAtLeast(0f)
         val maxPullDownDistance = with(density) { maxPullDownPx.toDp() }
@@ -1085,7 +1086,7 @@ fun AzanHomeContent(
                         .listener(onError = { _, _ -> imageLoadError = true })
                         .build()
 
-                    // Edge-to-edge full width mosque photo
+                    // Edge-to-edge full width mosque photo matching Google Studio AI
                     AsyncImage(
                         model = finalPhotoModel,
                         contentDescription = "Selected Masjid",
@@ -1208,7 +1209,7 @@ fun AzanHomeContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .let { if (isPulledDown) it.wrapContentHeight() else it.fillMaxHeight() }
+                .fillMaxHeight()
                 .padding(
                     top = (baseTopPadding + currentOffsetDp - 18.dp).coerceAtLeast(0.dp),
                     bottom = if (isPulledDown) 0.dp else 10.dp
@@ -1217,10 +1218,10 @@ fun AzanHomeContent(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { if (isPulledDown) it.wrapContentHeight() else it.fillMaxHeight() }
+                    .fillMaxHeight()
                     .padding(top = 18.dp)
                     .nestedScroll(nestedScrollConnection),
-                shape = if (isPulledDown) RoundedCornerShape(22.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+                shape = if (isPulledDown) RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp) else RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
                 color = Color(0xFF06140D),
                 border = null,
                 shadowElevation = 10.dp
@@ -2807,13 +2808,7 @@ fun AzanSlot(
 
                         // Data rows below
                         segments.forEachIndexed { idx, segment ->
-                            val color = when {
-                                segment.first.contains(strings.sunnat) -> Color(0xFF00C853)
-                                segment.first == strings.farz -> Color(0xFFFFD600)
-                                segment.first == strings.nafil -> Color(0xFF00B0FF)
-                                segment.first == strings.witr -> Color(0xFFAA00FF)
-                                else -> MaterialTheme.colorScheme.primary
-                            }
+                            val color = Color(0xFFF3DE8E)
 
                             Row(
                                 modifier = Modifier
@@ -3576,6 +3571,8 @@ fun AdminPanelScreen(
     val strings = LocalAppStrings.current
     val primaryColor = MaterialTheme.colorScheme.primary
     val curMasjid = uiState.selectedMasjid
+    val localizedCurMasjidName = curMasjid.getLocalizedName(uiState.language)
+    val localizedCurMasjidLoc = curMasjid.getLocalizedFullLocation(uiState.language)
     val isFridayToday = uiState.selectedDate.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
     val dhuhrLabel = if (isFridayToday) strings.jumah else strings.dhuhr.uppercase()
 
@@ -3679,16 +3676,26 @@ fun AdminPanelScreen(
                             modifier = Modifier.size(20.dp)
                         )
                     }
+                    val adminPanelTitle = when (uiState.language) {
+                        "hi" -> "एडमिन पैनल"
+                        "ur" -> "ایڈمن پینل"
+                        else -> "ADMIN PANEL"
+                    }
+                    val adminPanelSubtitle = when (uiState.language) {
+                        "hi" -> "नमाज़ अज़ान व जमात समय बदलें"
+                        "ur" -> "نماز اذان اور جماعت کے اوقات تبدیل کریں"
+                        else -> "Edit Namaz Azan & Jammat Timings"
+                    }
                     Column {
                         Text(
-                            text = "ADMIN PANEL",
+                            text = adminPanelTitle,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.secondary,
                             letterSpacing = 1.sp
                         )
                         Text(
-                            text = "Edit Namaz Azan & Jammat Timings",
+                            text = adminPanelSubtitle,
                             fontSize = 11.sp,
                             color = TextMuted
                         )
@@ -3829,7 +3836,7 @@ fun AdminPanelScreen(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = curMasjid.name,
+                                    text = localizedCurMasjidName,
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFFF3DE8E),
@@ -3837,7 +3844,7 @@ fun AdminPanelScreen(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = "${curMasjid.area} • ID: #${curMasjid.id}",
+                                    text = "$localizedCurMasjidLoc • ID: #${curMasjid.id}",
                                     fontSize = 11.5.sp,
                                     color = Color.White.copy(alpha = 0.8f)
                                 )
@@ -3952,16 +3959,26 @@ fun AdminPanelScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
+                            val mediaUploadHeader = when (uiState.language) {
+                                "hi" -> "मस्जिद फ़ोटो व क्यूआर अपलोड"
+                                "ur" -> "مسجد کی تصویر اور QR اپ لوڈ"
+                                else -> "MASJID MEDIA & QR UPLOAD"
+                            }
+                            val mediaUploadSubtitle = when (uiState.language) {
+                                "hi" -> "$localizedCurMasjidName के लिए फ़ोटो व डोनेशन QR बदलें या अपलोड करें"
+                                "ur" -> "$localizedCurMasjidName کے لیے تصویر اور عطیہ QR تبدیل یا اپ لوڈ کریں"
+                                else -> "Upload or replace Photo & Donation QR for $localizedCurMasjidName"
+                            }
                             Column {
                                 Text(
-                                    text = "MASJID MEDIA & QR UPLOAD",
+                                    text = mediaUploadHeader,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFF3DE8E),
                                     letterSpacing = 0.5.sp
                                 )
                                 Text(
-                                    text = "Upload or replace Photo & Donation QR for ${curMasjid.name}",
+                                    text = mediaUploadSubtitle,
                                     fontSize = 11.sp,
                                     color = Color.White.copy(alpha = 0.7f)
                                 )
@@ -3971,9 +3988,28 @@ fun AdminPanelScreen(
                         HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
 
                         // --- 1. UPLOAD MASJID PHOTO ---
+                        val photoSectionTitle = when (uiState.language) {
+                            "hi" -> "मस्जिद फ़ोटो:"
+                            "ur" -> "مسجد کی تصویر:"
+                            else -> "Masjid Photo:"
+                        }
+                        val browsePhotoText = if (selectedPhotoUri != null) {
+                            when (uiState.language) {
+                                "hi" -> "नई फ़ोटो चुनी गई ✓ बदलें"
+                                "ur" -> "نئی تصویر منتخب ہو گئی ✓ تبدیل کریں"
+                                else -> "New Photo Selected ✓ Change"
+                            }
+                        } else {
+                            when (uiState.language) {
+                                "hi" -> "मस्जिद फ़ोटो ब्राउज़ / अपलोड करें"
+                                "ur" -> "مسجد کی تصویر تلاش / اپ لوڈ کریں"
+                                else -> "Browse / Upload Masjid Photo"
+                            }
+                        }
+
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Masjid Photo:",
+                                text = photoSectionTitle,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White.copy(alpha = 0.9f)
@@ -3998,7 +4034,7 @@ fun AdminPanelScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (selectedPhotoUri != null) "New Photo Selected ✓ Change" else "Browse / Upload Masjid Photo",
+                                    text = browsePhotoText,
                                     fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF38BDF8)
@@ -4006,6 +4042,16 @@ fun AdminPanelScreen(
                             }
 
                             if (selectedPhotoUri != null) {
+                                val newPhotoSelectedTitle = when (uiState.language) {
+                                    "hi" -> "नई फ़ोटो चुनी गई"
+                                    "ur" -> "نئی تصویر منتخب ہوئی"
+                                    else -> "New Photo Selected"
+                                }
+                                val readyToUploadText = when (uiState.language) {
+                                    "hi" -> "सेव व अपलोड के लिए तैयार"
+                                    "ur" -> "محفوظ اور اپ لوڈ کے لیے تیار"
+                                    else -> "Ready to save & upload"
+                                }
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -4030,13 +4076,13 @@ fun AdminPanelScreen(
                                     }
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "New Photo Selected",
+                                            text = newPhotoSelectedTitle,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF38BDF8)
                                         )
                                         Text(
-                                            text = "Ready to save & upload",
+                                            text = readyToUploadText,
                                             fontSize = 10.sp,
                                             color = Color.White.copy(alpha = 0.65f)
                                         )
@@ -4058,6 +4104,16 @@ fun AdminPanelScreen(
                                 if (hasActivePhoto) {
                                     val activePhotoModel = remember(curMasjid.id, curMasjid.photoUrl, selectedPhotoUri) {
                                         com.example.data.MasjidLocalCacheManager.getPhotoModel(context, curMasjid.id, curMasjid.photoUrl)
+                                    }
+                                    val currentActivePhotoTitle = when (uiState.language) {
+                                        "hi" -> "वर्तमान सक्रिय फ़ोटो"
+                                        "ur" -> "موجودہ فعال تصویر"
+                                        else -> "Current Active Photo"
+                                    }
+                                    val tapAboveToReplace = when (uiState.language) {
+                                        "hi" -> "बदलने के लिए ऊपर दिए बटन पर टैप करें"
+                                        "ur" -> "تبدیل کرنے کے لیے اوپر والے بٹن پر ٹیپ کریں"
+                                        else -> "Tap above button to replace"
                                     }
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -4082,13 +4138,13 @@ fun AdminPanelScreen(
                                         }
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "Current Active Photo",
+                                                text = currentActivePhotoTitle,
                                                 fontSize = 11.5.sp,
                                                 fontWeight = FontWeight.Medium,
                                                 color = Color(0xFF86EFAC)
                                             )
                                             Text(
-                                                text = "Tap above button to replace",
+                                                text = tapAboveToReplace,
                                                 fontSize = 10.sp,
                                                 color = Color.White.copy(alpha = 0.5f)
                                             )
@@ -4099,9 +4155,28 @@ fun AdminPanelScreen(
                         }
 
                         // --- 2. UPLOAD MASJID QR ---
+                        val qrSectionTitle = when (uiState.language) {
+                            "hi" -> "मस्जिद क्यूआर कोड:"
+                            "ur" -> "مسجد کیو آر کوڈ:"
+                            else -> "Masjid QR Code:"
+                        }
+                        val browseQrText = if (selectedQrUri != null) {
+                            when (uiState.language) {
+                                "hi" -> "नया क्यूआर चुना गया ✓ बदलें"
+                                "ur" -> "نیا QR منتخب ہو گیا ✓ تبدیل کریں"
+                                else -> "New QR Selected ✓ Change"
+                            }
+                        } else {
+                            when (uiState.language) {
+                                "hi" -> "मस्जिद क्यूआर ब्राउज़ / अपलोड करें"
+                                "ur" -> "مسجد کا QR تلاش / اپ لوڈ کریں"
+                                else -> "Browse / Upload Masjid QR"
+                            }
+                        }
+
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Masjid QR Code:",
+                                text = qrSectionTitle,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White.copy(alpha = 0.9f)
@@ -4126,7 +4201,7 @@ fun AdminPanelScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (selectedQrUri != null) "New QR Selected ✓ Change" else "Browse / Upload Masjid QR",
+                                    text = browseQrText,
                                     fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF38BDF8)
@@ -4134,6 +4209,11 @@ fun AdminPanelScreen(
                             }
 
                             if (isProcessingQr) {
+                                val processingQrText = when (uiState.language) {
+                                    "hi" -> "क्यूआर को सीधा और साफ़ किया जा रहा है..."
+                                    "ur" -> "QR کو سیدھا اور معیاری بنایا جا رہا ہے..."
+                                    else -> "Standardizing & Straightening QR..."
+                                }
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -4148,12 +4228,30 @@ fun AdminPanelScreen(
                                         color = Color(0xFF38BDF8)
                                     )
                                     Text(
-                                        text = "Standardizing & Straightening QR...",
+                                        text = processingQrText,
                                         fontSize = 12.sp,
                                         color = Color(0xFF38BDF8)
                                     )
                                 }
                             } else if (standardizedQr != null) {
+                                val stdQrDoneText = if (standardizedQr!!.isCleanRegenerated) {
+                                    when (uiState.language) {
+                                        "hi" -> "✓ साफ़ मानक क्यूआर जनरेट हो गया"
+                                        "ur" -> "✓ معیاری صاف QR تیار ہو گیا"
+                                        else -> "✓ Standard Clean QR Generated"
+                                    }
+                                } else {
+                                    when (uiState.language) {
+                                        "hi" -> "✓ सीधा चौकोर क्यूआर क्रॉप किया गया"
+                                        "ur" -> "✓ سیدھا چوکور QR تیار ہو گیا"
+                                        else -> "✓ Straight Square QR Cropped"
+                                    }
+                                }
+                                val readyQrText = when (uiState.language) {
+                                    "hi" -> "सेव व अपलोड के लिए तैयार"
+                                    "ur" -> "محفوظ اور اپ لوڈ کے لیے تیار"
+                                    else -> "Ready to save & upload"
+                                }
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -4179,7 +4277,7 @@ fun AdminPanelScreen(
                                     }
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = if (standardizedQr!!.isCleanRegenerated) "✓ Standard Clean QR Generated" else "✓ Straight Square QR Cropped",
+                                            text = stdQrDoneText,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF10B981)
@@ -4188,7 +4286,7 @@ fun AdminPanelScreen(
                                             text = if (standardizedQr!!.decodedPayload != null)
                                                 "Payload: ${standardizedQr!!.decodedPayload!!.take(26)}..."
                                             else
-                                                "Ready to save & upload",
+                                                readyQrText,
                                             fontSize = 10.sp,
                                             color = Color.White.copy(alpha = 0.65f),
                                             maxLines = 1
@@ -4215,6 +4313,16 @@ fun AdminPanelScreen(
                                     val activeQrModel = remember(curMasjid.id, curMasjid.qrUrl, selectedQrUri, standardizedQr) {
                                         com.example.data.MasjidLocalCacheManager.getQrModel(context, curMasjid.id, curMasjid.qrUrl)
                                     }
+                                    val currentActiveQrTitle = when (uiState.language) {
+                                        "hi" -> "वर्तमान सक्रिय क्यूआर"
+                                        "ur" -> "موجودہ فعال QR"
+                                        else -> "Current Active QR"
+                                    }
+                                    val tapAboveToReplace = when (uiState.language) {
+                                        "hi" -> "बदलने के लिए ऊपर दिए बटन पर टैप करें"
+                                        "ur" -> "تبدیل کرنے کے لیے اوپر والے بٹن پر ٹیپ کریں"
+                                        else -> "Tap above button to replace"
+                                    }
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -4239,13 +4347,13 @@ fun AdminPanelScreen(
                                         }
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "Current Active QR",
+                                                text = currentActiveQrTitle,
                                                 fontSize = 11.5.sp,
                                                 fontWeight = FontWeight.Medium,
                                                 color = Color(0xFF86EFAC)
                                             )
                                             Text(
-                                                text = "Tap above button to replace",
+                                                text = tapAboveToReplace,
                                                 fontSize = 10.sp,
                                                 color = Color.White.copy(alpha = 0.5f)
                                             )
@@ -4257,6 +4365,16 @@ fun AdminPanelScreen(
 
                         // --- 3. SAVE & UPLOAD BUTTON ---
                         val canUpload = selectedPhotoUri != null || standardizedQr != null || selectedQrUri != null
+                        val saveUploadText = when (uiState.language) {
+                            "hi" -> "मीडिया सेव व अपलोड करें"
+                            "ur" -> "میڈیا محفوظ اور اپ لوڈ کریں"
+                            else -> "Save & Upload Media"
+                        }
+                        val savingUploadText = when (uiState.language) {
+                            "hi" -> "मीडिया सेव व अपलोड हो रहा है..."
+                            "ur" -> "میڈیا محفوظ اور اپ لوڈ ہو رہا ہے..."
+                            else -> "Saving & Uploading Media..."
+                        }
                         Button(
                             onClick = {
                                 if (!canUpload) return@Button
@@ -4341,7 +4459,7 @@ fun AdminPanelScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Saving & Uploading Media...",
+                                    text = savingUploadText,
                                     color = Color.White,
                                     fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Bold
@@ -4355,7 +4473,7 @@ fun AdminPanelScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Save & Upload Media",
+                                    text = saveUploadText,
                                     color = if (canUpload) Color.White else Color.White.copy(alpha = 0.4f),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
@@ -5120,8 +5238,13 @@ fun EditPrayerTimingDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
+                val editPrayerHeading = when (language) {
+                    "hi" -> "${prayer.displayName} समय बदलें"
+                    "ur" -> "${prayer.displayName} وقت تبدیل کریں"
+                    else -> "EDIT ${prayer.displayName.uppercase()}"
+                }
                 Text(
-                    text = "EDIT ${prayer.displayName.uppercase()}",
+                    text = editPrayerHeading,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.secondary,
@@ -5153,6 +5276,22 @@ fun EditPrayerTimingDialog(
                             .padding(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        val azanSectionTitle = when (language) {
+                            "hi" -> "अज़ान का समय"
+                            "ur" -> "اذان کا وقت"
+                            else -> "AZAN TIME"
+                        }
+                        val hrsLabel = when (language) {
+                            "hi" -> "1: घंटा"
+                            "ur" -> "1: گھنٹہ"
+                            else -> "1st: HRS"
+                        }
+                        val minLabel = when (language) {
+                            "hi" -> "2: मिनट"
+                            "ur" -> "2: منٹ"
+                            else -> "2nd: MIN"
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -5168,7 +5307,7 @@ fun EditPrayerTimingDialog(
                                         .background(Color(0xFFF3DE8E), CircleShape)
                                 )
                                 Text(
-                                    text = "AZAN TIME",
+                                    text = azanSectionTitle,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFF3DE8E),
@@ -5223,7 +5362,7 @@ fun EditPrayerTimingDialog(
                                 )
                                 Spacer(modifier = Modifier.height(3.dp))
                                 Text(
-                                    text = "1st: HRS",
+                                    text = hrsLabel,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFF3DE8E)
@@ -5270,7 +5409,7 @@ fun EditPrayerTimingDialog(
                                 )
                                 Spacer(modifier = Modifier.height(3.dp))
                                 Text(
-                                    text = "2nd: MIN",
+                                    text = minLabel,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFF3DE8E)
@@ -5333,6 +5472,22 @@ fun EditPrayerTimingDialog(
                             .padding(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        val jammatSectionTitle = when (language) {
+                            "hi" -> "जमात का समय"
+                            "ur" -> "جماعت کا وقت"
+                            else -> "JAMMAT TIME"
+                        }
+                        val hrsLabel = when (language) {
+                            "hi" -> "1: घंटा"
+                            "ur" -> "1: گھنٹہ"
+                            else -> "1st: HRS"
+                        }
+                        val minLabel = when (language) {
+                            "hi" -> "2: मिनट"
+                            "ur" -> "2: منٹ"
+                            else -> "2nd: MIN"
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -5348,7 +5503,7 @@ fun EditPrayerTimingDialog(
                                         .background(Color(0xFF86EFAC), CircleShape)
                                 )
                                 Text(
-                                    text = "JAMMAT TIME",
+                                    text = jammatSectionTitle,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF86EFAC),
@@ -5403,7 +5558,7 @@ fun EditPrayerTimingDialog(
                                 )
                                 Spacer(modifier = Modifier.height(3.dp))
                                 Text(
-                                    text = "1st: HRS",
+                                    text = hrsLabel,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF86EFAC)
@@ -5450,7 +5605,7 @@ fun EditPrayerTimingDialog(
                                 )
                                 Spacer(modifier = Modifier.height(3.dp))
                                 Text(
-                                    text = "2nd: MIN",
+                                    text = minLabel,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF86EFAC)
@@ -5579,7 +5734,12 @@ fun EditPrayerTimingDialog(
                             contentColor = Color(0xFF0F172A)
                         )
                     ) {
-                        Text("OK / DONE", fontSize = 15.sp, fontWeight = FontWeight.Black)
+                        val okDoneLabel = when (language) {
+                            "hi" -> "ठीक है / पूर्ण"
+                            "ur" -> "ٹھیک ہے / مکمل"
+                            else -> "OK / DONE"
+                        }
+                        Text(okDoneLabel, fontSize = 15.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }

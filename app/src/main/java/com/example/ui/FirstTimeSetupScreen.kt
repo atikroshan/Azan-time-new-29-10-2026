@@ -63,6 +63,7 @@ import com.example.data.MasjidItem
 import com.example.data.getLocalizedArea
 import com.example.data.getLocalizedName
 import com.example.data.getLocalizedCity
+import com.example.data.getLocalizedFullLocation
 import com.example.LanguageCirclesRow
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -484,11 +485,7 @@ fun FirstTimeSetupScreen(
                             }
 
                             // Location
-                            val loc = listOf(
-                                masjidToConfirm.getLocalizedArea(uiState.language),
-                                masjidToConfirm.city,
-                                masjidToConfirm.state
-                            ).filter { it.isNotBlank() }.joinToString(", ")
+                            val loc = masjidToConfirm.getLocalizedFullLocation(uiState.language)
 
                             if (loc.isNotBlank()) {
                                 Row(
@@ -533,8 +530,8 @@ fun FirstTimeSetupScreen(
                                 ) {
                                     Text(
                                         text = when (uiState.language) {
-                                            "ur" -> "منسوخ کریں (Cancel)"
-                                            "hi" -> "रद्द करें (Cancel)"
+                                            "ur" -> "منسوخ کریں"
+                                            "hi" -> "रद्द करें"
                                             else -> "Cancel"
                                         },
                                         fontSize = 13.5.sp,
@@ -646,8 +643,8 @@ fun FirstTimeSetupScreen(
                                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFFF2CA50))) {
                                             append(
                                                 when (uiState.language) {
-                                                    "ur" -> "گیسٹ مسجد (Guest Masjid)"
-                                                    "hi" -> "गेस्ट मस्जिद (Guest Masjid)"
+                                                    "ur" -> "گیسٹ مسجد"
+                                                    "hi" -> "गेस्ट मस्जिद"
                                                     else -> "Guest Masjid"
                                                 }
                                             )
@@ -721,8 +718,8 @@ fun FirstTimeSetupScreen(
                                 ) {
                                     Text(
                                         text = when (uiState.language) {
-                                            "ur" -> "گیسٹ مسجد (Guest Masjid)"
-                                            "hi" -> "गेस्ट मस्जिद (Guest Masjid)"
+                                            "ur" -> "گیسٹ مسجد"
+                                            "hi" -> "गेस्ट मस्जिद"
                                             else -> "Guest Masjid"
                                         },
                                         fontSize = 15.sp,
@@ -998,11 +995,7 @@ private fun SearchResultsList(
                             fontWeight = FontWeight.Medium,
                             color = Color.White
                         )
-                        val itemLoc = listOf(
-                            item.getLocalizedArea(language),
-                            item.city,
-                            item.state
-                        ).filter { it.isNotBlank() }.joinToString(", ")
+                        val itemLoc = item.getLocalizedFullLocation(language)
                         if (itemLoc.isNotBlank()) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,

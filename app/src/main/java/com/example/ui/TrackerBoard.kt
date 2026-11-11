@@ -13,7 +13,10 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -2651,294 +2654,7 @@ fun RamazanScheduleAndDuaBlock(
             }
         }
 
-        // 1-Month Ramazan Point History Calendar & Daily Schedule
-        var isCalendarExpanded by remember { mutableStateOf(false) }
-
-        val dayHeaders = remember(uiState.language) {
-            curStrings.getDayHeadersList()
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1522)),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, Color(0xFF1F293D))
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Calendar Accordion Toggle Header (Same as Record)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { isCalendarExpanded = !isCalendarExpanded }
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.AccountBalance,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-
-                        Column {
-                            Text(
-                                text = curStrings.oneMonthHistory,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = "9 Feb – 10 Mar 2027 • ${if (isCalendarExpanded) curStrings.tapToCollapse else curStrings.tapToExpand}",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = TextMuted
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = { isCalendarExpanded = !isCalendarExpanded },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isCalendarExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                            contentDescription = if (isCalendarExpanded) curStrings.tapToCollapse else curStrings.tapToExpand,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                // Accordion Content (1 Month Ramazan Calendar: 9 Feb 2027 to 10 March 2027)
-                AnimatedVisibility(visible = isCalendarExpanded) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Month Header Title (1 Month Ramazan only)
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "RAMAZAN 2027 (1448 AH)".uppercase(),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFFFFD700),
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = "9 FEB 2027 – 10 MAR 2027",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White.copy(alpha = 0.85f)
-                            )
-                            Text(
-                                text = "1 pt per Roza • 30 Roza Total",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = TextMuted
-                            )
-                        }
-
-                        // Legend indicators
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFF151C2C), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 6.dp, vertical = 5.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Box(modifier = Modifier.size(7.dp).background(Color(0xFF25D366), CircleShape))
-                                Text(curStrings.rozaCompletedLabel + " (1)", fontSize = 8.5.sp, color = Color(0xFF25D366), fontWeight = FontWeight.Bold)
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Box(modifier = Modifier.size(7.dp).background(Color(0xFFE53935), CircleShape))
-                                Text(curStrings.rozaMissedLabel + " (0)", fontSize = 8.5.sp, color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Box(modifier = Modifier.size(7.dp).background(Color(0xFFEAB308), CircleShape))
-                                Text(curStrings.legendToday, fontSize = 8.5.sp, color = Color(0xFFEAB308), fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        // Day headers (Sun to Sat)
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            dayHeaders.forEachIndexed { idx, dayName ->
-                                val isFriday = idx == 5
-                                Text(
-                                    text = dayName,
-                                    modifier = Modifier.weight(1f),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isFriday) Color(0xFF25D366) else TextMuted,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-
-                        HorizontalDivider(color = Color(0xFF1F293D))
-
-                        // Calendar Grid (30 days from 9 Feb 2027 to 10 March 2027)
-                        val startDayOfWeek = ramazanSchedule.first().cal.get(Calendar.DAY_OF_WEEK) // Tuesday = 3
-                        val emptySlots = startDayOfWeek - 1 // 2 empty slots
-                        val totalCells = emptySlots + ramazanSchedule.size // 32
-                        val totalRows = (totalCells + 6) / 7 // 5 rows
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            for (row in 0 until totalRows) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                ) {
-                                    for (col in 0 until 7) {
-                                        val cellIndex = row * 7 + col
-                                        val scheduleIndex = cellIndex - emptySlots
-
-                                        if (cellIndex < emptySlots || scheduleIndex >= ramazanSchedule.size) {
-                                            Spacer(modifier = Modifier.weight(1f).height(46.dp))
-                                        } else {
-                                            val day = ramazanSchedule[scheduleIndex]
-                                            val isDayToday = if (isBeforeRamazan) {
-                                                day.id == 0
-                                            } else {
-                                                day.cal.get(Calendar.YEAR) == todayForRamazan.get(Calendar.YEAR) &&
-                                                day.cal.get(Calendar.DAY_OF_YEAR) == todayForRamazan.get(Calendar.DAY_OF_YEAR)
-                                            }
-                                            val isFutureDay = if (isBeforeRamazan) {
-                                                day.id > 0
-                                            } else {
-                                                day.cal.timeInMillis > todayForRamazan.timeInMillis
-                                            }
-                                            val isDayEnabled = !isFutureDay
-                                            val currentState = rojaStates[day.id] ?: 0
-
-                                            val pointColor = when {
-                                                isFutureDay -> TextMuted.copy(alpha = 0.3f)
-                                                currentState == 1 -> Color(0xFF25D366)
-                                                currentState == 2 -> Color(0xFFE53935)
-                                                else -> Color.White.copy(alpha = 0.4f)
-                                            }
-
-                                            val cellBg = when {
-                                                isDayToday -> Color(0xFFEAB308).copy(alpha = 0.20f)
-                                                currentState == 1 -> Color(0xFF25D366).copy(alpha = 0.18f)
-                                                currentState == 2 -> Color(0xFFE53935).copy(alpha = 0.18f)
-                                                !isFutureDay -> Color(0xFF131A29)
-                                                else -> Color(0xFF090D15).copy(alpha = 0.6f)
-                                            }
-
-                                            val cellBorder = when {
-                                                isDayToday -> Color(0xFFEAB308)
-                                                currentState == 1 -> Color(0xFF25D366).copy(alpha = 0.7f)
-                                                currentState == 2 -> Color(0xFFE53935).copy(alpha = 0.7f)
-                                                !isFutureDay -> Color(0xFF2B3954)
-                                                else -> Color(0xFF161E2D).copy(alpha = 0.4f)
-                                            }
-
-                                            val dayNum = day.cal.get(Calendar.DAY_OF_MONTH)
-                                            val monthNum = day.cal.get(Calendar.MONTH) + 1
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .height(46.dp)
-                                                    .background(cellBg, RoundedCornerShape(8.dp))
-                                                    .border(
-                                                        width = if (isDayToday) 1.5.dp else 1.dp,
-                                                        color = cellBorder,
-                                                        shape = RoundedCornerShape(8.dp)
-                                                    )
-                                                    .clickable {
-                                                        if (!isDayEnabled) {
-                                                            Toast.makeText(context, curStrings.cannotTickBeforeDateToast, Toast.LENGTH_SHORT).show()
-                                                        } else {
-                                                            val nextState = when (currentState) {
-                                                                0 -> 1
-                                                                1 -> 2
-                                                                else -> 0
-                                                            }
-                                                            rojaStates[day.id] = nextState
-                                                            prefs.edit().putInt("roja_state_${day.id}", nextState).apply()
-                                                        }
-                                                    }
-                                                    .padding(horizontal = 2.dp, vertical = 2.dp)
-                                            ) {
-                                                Text(
-                                                    text = "R${day.id + 1}",
-                                                    fontSize = 7.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (day.isFriday) Color(0xFFFFD700) else Color.White.copy(alpha = 0.55f),
-                                                    modifier = Modifier.align(Alignment.TopStart).padding(start = 1.dp)
-                                                )
-
-                                                Column(
-                                                    modifier = Modifier.align(Alignment.Center),
-                                                    horizontalAlignment = Alignment.CenterHorizontally
-                                                ) {
-                                                    Text(
-                                                        text = "$dayNum",
-                                                        fontSize = 12.sp,
-                                                        fontWeight = if (isDayToday) FontWeight.Black else FontWeight.Bold,
-                                                        color = when {
-                                                            isDayToday -> Color(0xFFEAB308)
-                                                            currentState == 1 -> Color(0xFF25D366)
-                                                            currentState == 2 -> Color(0xFFE53935)
-                                                            !isFutureDay -> Color.White
-                                                            else -> Color.White.copy(alpha = 0.35f)
-                                                        }
-                                                    )
-                                                    if (dayNum == 9 && monthNum == 2) {
-                                                        Text("Feb", fontSize = 6.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
-                                                    } else if (dayNum == 1 && monthNum == 3) {
-                                                        Text("Mar", fontSize = 6.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
-                                                    }
-                                                }
-
-                                                Text(
-                                                    text = when {
-                                                        isFutureDay -> "•"
-                                                        currentState == 1 -> "1"
-                                                        currentState == 2 -> "0"
-                                                        else -> "—"
-                                                    },
-                                                    fontSize = 8.5.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    color = pointColor,
-                                                    modifier = Modifier.align(Alignment.BottomStart).padding(start = 1.dp, bottom = 1.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                HorizontalDivider(color = Color(0xFF1F293D), modifier = Modifier.padding(vertical = 2.dp))
+        HorizontalDivider(color = Color(0xFF1F293D), modifier = Modifier.padding(vertical = 4.dp))
 
                 // Ramazan Daily Schedule Title below calendar
                 Text(
@@ -3131,50 +2847,455 @@ fun RamazanScheduleAndDuaBlock(
                                                     Toast.makeText(context, curStrings.cannotTickBeforeDateToast, Toast.LENGTH_SHORT).show()
                                                 }
                                             )
+                                         }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Eid Section (shifted from Home page to above Zakat Calculator)
+                EidInfoRow(
+                    strings = curStrings,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 4.dp)
+                )
+
+                // Zakat Calculator outside accordion below remaining ramazan schedule
+                Button(
+                    onClick = { showZakatPopup = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 4.dp)
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1F293D),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    GoldenPotliIcon()
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = curStrings.zakatCalcBtn,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            if (showZakatPopup) {
+                ZakatCalculatorDialog(strings = curStrings, onDismiss = { showZakatPopup = false })
+            }
+        }
+
+@Composable
+fun RamazanMonthHistoryDialog(
+    uiState: UIState,
+    curStrings: com.example.ui.theme.AppStrings,
+    onTogglePrayer: (Int, Int, String) -> Unit = { _, _, _ -> },
+    onDismiss: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("RamazanTracker", android.content.Context.MODE_PRIVATE) }
+    val ramazanSchedule = remember { getRamazan2027Schedule() }
+    val todayForRamazan = remember {
+        java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Kolkata")).apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+    }
+    val isBeforeRamazan = todayForRamazan.timeInMillis < ramazanSchedule.first().cal.timeInMillis
+
+    val rojaStates = remember {
+        mutableStateMapOf<Int, Int>().apply {
+            ramazanSchedule.forEach { day ->
+                val state = if (prefs.contains("roja_state_${day.id}")) {
+                    prefs.getInt("roja_state_${day.id}", 0)
+                } else if (prefs.getBoolean("roja_done_${day.id}", false)) {
+                    1
+                } else {
+                    0
+                }
+                put(day.id, state)
+            }
+        }
+    }
+    val totalRozaPoints = rojaStates.values.count { it == 1 }
+    val missedRozaCount = rojaStates.values.count { it == 2 }
+
+    val appStrings = when (uiState.language) {
+        "hi" -> com.example.ui.theme.HindiStrings
+        "ur" -> com.example.ui.theme.UrduStrings
+        else -> com.example.ui.theme.EnglishStrings
+    }
+    val dayHeaders = remember(uiState.language) {
+        appStrings.getDayHeadersList()
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1726)),
+            border = BorderStroke(1.5.dp, Color(0xFFFFD700).copy(alpha = 0.70f)),
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .padding(vertical = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header Row: Calendar Icon + Title + Close Icon
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color(0xFFFFD700).copy(alpha = 0.15f), CircleShape)
+                                .border(1.dp, Color(0xFFFFD700), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.DateRange,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "1 مہینے کے پوائنٹس کی ہسٹری"
+                                    "hi" -> "1 महीने का पॉइंट इतिहास"
+                                    else -> "1 Month Point History"
+                                },
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFFD700)
+                            )
+                            Text(
+                                text = "RAMAZAN 2027 (1448 AH)",
+                                fontSize = 10.sp,
+                                color = TextMuted
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Scrollable Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 520.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Total Roza Points Summary Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF141D2E)),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, Color(0xFFFFD700).copy(alpha = 0.35f))
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = appStrings.totalRozaPoints,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "${appStrings.rozaCompletedLabel}: $totalRozaPoints  •  ${appStrings.rozaMissedLabel}: $missedRozaCount",
+                                        fontSize = 10.sp,
+                                        color = TextMuted
+                                    )
+                                }
+                                Text(
+                                    text = "$totalRozaPoints / 30",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFFFFD700)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(Color.White.copy(alpha = 0.1f))
+                            ) {
+                                val progressFraction = (totalRozaPoints / 30f).coerceIn(0f, 1f)
+                                if (progressFraction > 0f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(fraction = progressFraction)
+                                            .fillMaxHeight()
+                                            .background(Brush.horizontalGradient(listOf(Color(0xFFFFD700), Color(0xFF25D366))))
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Month Header Subtitle
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "9 FEB 2027 – 10 MAR 2027",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.90f)
+                        )
+                        Text(
+                            text = "1 pt per Roza • 30 Roza Total",
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextMuted
+                        )
+                    }
+
+                    // Legend indicators
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF151C2C), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 6.dp, vertical = 5.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Box(modifier = Modifier.size(7.dp).background(Color(0xFF25D366), CircleShape))
+                            Text(appStrings.rozaCompletedLabel + " (1)", fontSize = 8.5.sp, color = Color(0xFF25D366), fontWeight = FontWeight.Bold)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Box(modifier = Modifier.size(7.dp).background(Color(0xFFE53935), CircleShape))
+                            Text(appStrings.rozaMissedLabel + " (0)", fontSize = 8.5.sp, color = Color(0xFFE53935), fontWeight = FontWeight.Bold)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Box(modifier = Modifier.size(7.dp).background(Color(0xFFEAB308), CircleShape))
+                            Text(appStrings.legendToday, fontSize = 8.5.sp, color = Color(0xFFEAB308), fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Day headers (Sun to Sat)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        dayHeaders.forEachIndexed { idx, dayName ->
+                            val isFriday = idx == 5
+                            Text(
+                                text = dayName,
+                                modifier = Modifier.weight(1f),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isFriday) Color(0xFF25D366) else TextMuted,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFF1F293D))
+
+                    // Calendar Grid (30 days from 9 Feb 2027 to 10 March 2027)
+                    val startDayOfWeek = ramazanSchedule.first().cal.get(Calendar.DAY_OF_WEEK) // Tuesday = 3
+                    val emptySlots = startDayOfWeek - 1 // 2 empty slots
+                    val totalCells = emptySlots + ramazanSchedule.size // 32
+                    val totalRows = (totalCells + 6) / 7 // 5 rows
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        for (row in 0 until totalRows) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                for (col in 0 until 7) {
+                                    val cellIndex = row * 7 + col
+                                    val scheduleIndex = cellIndex - emptySlots
+
+                                    if (cellIndex < emptySlots || scheduleIndex >= ramazanSchedule.size) {
+                                        Spacer(modifier = Modifier.weight(1f).height(46.dp))
+                                    } else {
+                                        val day = ramazanSchedule[scheduleIndex]
+                                        val isDayToday = if (isBeforeRamazan) {
+                                            day.id == 0
+                                        } else {
+                                            day.cal.get(Calendar.YEAR) == todayForRamazan.get(Calendar.YEAR) &&
+                                            day.cal.get(Calendar.DAY_OF_YEAR) == todayForRamazan.get(Calendar.DAY_OF_YEAR)
+                                        }
+                                        val isFutureDay = if (isBeforeRamazan) {
+                                            day.id > 0
+                                        } else {
+                                            day.cal.timeInMillis > todayForRamazan.timeInMillis
+                                        }
+                                        val isDayEnabled = !isFutureDay
+                                        val currentState = rojaStates[day.id] ?: 0
+
+                                        val pointColor = when {
+                                            isFutureDay -> TextMuted.copy(alpha = 0.3f)
+                                            currentState == 1 -> Color(0xFF25D366)
+                                            currentState == 2 -> Color(0xFFE53935)
+                                            else -> Color.White.copy(alpha = 0.4f)
+                                        }
+
+                                        val cellBg = when {
+                                            isDayToday -> Color(0xFFEAB308).copy(alpha = 0.20f)
+                                            currentState == 1 -> Color(0xFF25D366).copy(alpha = 0.18f)
+                                            currentState == 2 -> Color(0xFFE53935).copy(alpha = 0.18f)
+                                            !isFutureDay -> Color(0xFF131A29)
+                                            else -> Color(0xFF090D15).copy(alpha = 0.6f)
+                                        }
+
+                                        val cellBorder = when {
+                                            isDayToday -> Color(0xFFEAB308)
+                                            currentState == 1 -> Color(0xFF25D366).copy(alpha = 0.7f)
+                                            currentState == 2 -> Color(0xFFE53935).copy(alpha = 0.7f)
+                                            !isFutureDay -> Color(0xFF2B3954)
+                                            else -> Color(0xFF161E2D).copy(alpha = 0.4f)
+                                        }
+
+                                        val dayNum = day.cal.get(Calendar.DAY_OF_MONTH)
+                                        val monthNum = day.cal.get(Calendar.MONTH) + 1
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(46.dp)
+                                                .background(cellBg, RoundedCornerShape(8.dp))
+                                                .border(
+                                                    width = if (isDayToday) 1.5.dp else 1.dp,
+                                                    color = cellBorder,
+                                                    shape = RoundedCornerShape(8.dp)
+                                                )
+                                                .clickable {
+                                                    if (!isDayEnabled) {
+                                                        Toast.makeText(context, appStrings.cannotTickBeforeDateToast, Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        val nextState = when (currentState) {
+                                                            0 -> 1
+                                                            1 -> 2
+                                                            else -> 0
+                                                        }
+                                                        rojaStates[day.id] = nextState
+                                                        prefs.edit().putInt("roja_state_${day.id}", nextState).apply()
+                                                    }
+                                                }
+                                                .padding(horizontal = 2.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "R${day.id + 1}",
+                                                fontSize = 7.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (day.isFriday) Color(0xFFFFD700) else Color.White.copy(alpha = 0.55f),
+                                                modifier = Modifier.align(Alignment.TopStart).padding(start = 1.dp)
+                                            )
+
+                                            Column(
+                                                modifier = Modifier.align(Alignment.Center),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Text(
+                                                    text = "$dayNum",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isDayToday) FontWeight.Black else FontWeight.Bold,
+                                                    color = when {
+                                                        isDayToday -> Color(0xFFEAB308)
+                                                        currentState == 1 -> Color(0xFF25D366)
+                                                        currentState == 2 -> Color(0xFFE53935)
+                                                        !isFutureDay -> Color.White
+                                                        else -> Color.White.copy(alpha = 0.35f)
+                                                    }
+                                                )
+                                                if (dayNum == 9 && monthNum == 2) {
+                                                    Text("Feb", fontSize = 6.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                                                } else if (dayNum == 1 && monthNum == 3) {
+                                                    Text("Mar", fontSize = 6.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+
+                                            Text(
+                                                text = when {
+                                                    isFutureDay -> "•"
+                                                    currentState == 1 -> "1"
+                                                    currentState == 2 -> "0"
+                                                    else -> "—"
+                                                },
+                                                fontSize = 8.5.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = pointColor,
+                                                modifier = Modifier.align(Alignment.BottomStart).padding(start = 1.dp, bottom = 1.dp)
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
-
-                        // Eid Section (shifted from Home page to above Zakat Calculator)
-                        EidInfoRow(
-                            strings = curStrings,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp, bottom = 4.dp)
-                        )
-
-                        // Zakat Calculator outside accordion below remaining ramazan schedule
-                        Button(
-                            onClick = { showZakatPopup = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp, bottom = 4.dp)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF1F293D),
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            GoldenPotliIcon()
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = curStrings.zakatCalcBtn,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
-                                fontSize = 14.sp
-                            )
-                        }
                     }
                 }
-            }
-        }
 
-        if (showZakatPopup) {
-            ZakatCalculatorDialog(strings = curStrings, onDismiss = { showZakatPopup = false })
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Close Button
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth(0.55f)
+                        .height(42.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFD700),
+                        contentColor = Color(0xFF0F1726)
+                    )
+                ) {
+                    Text(
+                        text = when (uiState.language) {
+                            "ur" -> "بند کریں"
+                            "hi" -> "बंद करें"
+                            else -> "Close"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
         }
     }
 }
@@ -3183,6 +3304,7 @@ fun RamazanScheduleAndDuaBlock(
 fun RamazanScreenContent(
     uiState: UIState,
     onLanguageSelect: (String) -> Unit,
+    onTogglePrayer: (Int, Int, String) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val curStrings = when (uiState.language) {
@@ -3190,6 +3312,8 @@ fun RamazanScreenContent(
         "ur" -> com.example.ui.theme.UrduStrings
         else -> com.example.ui.theme.EnglishStrings
     }
+
+    var showMonthHistoryDialog by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(com.example.ui.theme.LocalAppStrings provides curStrings) {
         Surface(
@@ -3210,18 +3334,42 @@ fun RamazanScreenContent(
                         .padding(bottom = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Top Left Language Circles (E, ह, ا)
+                    // Top Bar: Left = Language Circles (E, ह, ا), Right = 1 Month History Calendar Button (matching Admin button)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 24.dp, end = 16.dp),
-                        horizontalArrangement = Arrangement.Start,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         com.example.LanguageCirclesRow(
                             currentLang = uiState.language,
                             onLangSelect = onLanguageSelect
                         )
+
+                        // 1 Month History Calendar Button (styled like Admin login button)
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .background(
+                                    color = Color(0xFFF3DE8E),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .border(
+                                    width = 1.2.dp,
+                                    color = Color(0xFFF3DE8E),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { showMonthHistoryDialog = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.DateRange,
+                                contentDescription = "1 Month Point History",
+                                tint = Color(0xFF040E0A),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
 
                     // Unified Consistent App Header
@@ -3265,6 +3413,15 @@ fun RamazanScreenContent(
                 AiStudioLoadingFooter()
             }
         }
+    }
+
+    if (showMonthHistoryDialog) {
+        RamazanMonthHistoryDialog(
+            uiState = uiState,
+            curStrings = curStrings,
+            onTogglePrayer = onTogglePrayer,
+            onDismiss = { showMonthHistoryDialog = false }
+        )
     }
 }
 

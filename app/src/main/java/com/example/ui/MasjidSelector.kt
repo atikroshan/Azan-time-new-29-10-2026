@@ -31,6 +31,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -55,6 +56,7 @@ import com.example.data.MasjidItem
 import com.example.data.getLocalizedName
 import com.example.data.getLocalizedArea
 import com.example.data.getLocalizedCity
+import com.example.data.getLocalizedFullLocation
 import com.example.data.masjidTranslations
 
 private class MasjidSelectorStrings(val lang: String) {
@@ -85,7 +87,7 @@ private class MasjidSelectorStrings(val lang: String) {
     }
     val searchPlaceholder = when (lang) {
         "ur" -> "مسجد کا نام، علاقہ یا ID تلاش کریں..."
-        "hi" -> "मस्जिद का नाम, इलाका या ID खोजें..."
+        "hi" -> "मस्जिद ढूँढें..."
         else -> "Search by masjid name, area or ID..."
     }
     fun showingCount(count: Int): String = when (lang) {
@@ -134,13 +136,13 @@ private class MasjidSelectorStrings(val lang: String) {
         else -> "Cancel"
     }
     val micPrompt = when (lang) {
-        "ur" -> "مسجد کا نام یا علاقہ بولیں..."
-        "hi" -> "मस्जिद का नाम या इलाका बोलें..."
-        else -> "Speak masjid name, area or ID..."
+        "ur" -> "اب بولیں..."
+        "hi" -> "अब बोलें..."
+        else -> "Speak Now..."
     }
     val micPermissionToast = when (lang) {
-        "ur" -> "آواز سے تلاش کے لیے مائیکروفون کی اجازت ضروری ہے"
-        "hi" -> "आवाज़ से खोजने के लिए माइक की अनुमति आवश्यक है"
+        "ur" -> "مائیک آن کریں (اجازت دیں)"
+        "hi" -> "माइक चालू करें (अनुमति दें)"
         else -> "Microphone permission is needed for voice search"
     }
     val noSpeechSupportToast = when (lang) {
@@ -218,15 +220,7 @@ fun MasjidSelectorDropdown(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    val locArea = selectedMasjid.getLocalizedArea(language).ifBlank { selectedMasjid.area }
-                    val locCity = selectedMasjid.getLocalizedCity(language).ifBlank { selectedMasjid.city }
-                    val addressText = when {
-                        locArea.isNotBlank() && locCity.isNotBlank() && !locArea.contains(locCity, ignoreCase = true) ->
-                            "$locArea, $locCity"
-                        locArea.isNotBlank() -> locArea
-                        locCity.isNotBlank() -> locCity
-                        else -> ""
-                    }
+                    val addressText = selectedMasjid.getLocalizedFullLocation(language)
 
                     if (addressText.isNotBlank()) {
                         Spacer(modifier = Modifier.height(2.dp))
@@ -662,7 +656,7 @@ fun MasjidSelectionDialog(
                                                 modifier = Modifier.size(13.dp)
                                             )
                                             Text(
-                                                text = "${strings.areaLabel}: ${masjid.getLocalizedArea(language)}, ${masjid.getLocalizedCity(language)}",
+                                                text = "${strings.areaLabel}: ${masjid.getLocalizedFullLocation(language)}",
                                                 fontSize = 12.sp,
                                                 color = Color.White.copy(alpha = 0.85f),
                                                 maxLines = 1,
@@ -776,16 +770,20 @@ fun MasjidSelectionDialog(
                         var photoLoadError by remember(targetMasjid.id) { mutableStateOf(false) }
 
                         if (photoData != null && !photoLoadError) {
+                            val photoModel = ImageRequest.Builder(context)
+                                .data(photoData)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .crossfade(true)
+                                .listener(onError = { _, _ -> photoLoadError = true })
+                                .build()
+
+                            // Edge-to-edge full width mosque photo
                             AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(photoData)
-                                    .diskCachePolicy(CachePolicy.ENABLED)
-                                    .memoryCachePolicy(CachePolicy.ENABLED)
-                                    .crossfade(true)
-                                    .listener(onError = { _, _ -> photoLoadError = true })
-                                    .build(),
+                                model = photoModel,
                                 contentDescription = targetMasjid.getLocalizedName(language),
                                 contentScale = ContentScale.Crop,
+                                alignment = Alignment.Center,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
@@ -895,11 +893,7 @@ fun MasjidSelectionDialog(
                         }
 
                         // Location
-                        val loc = listOf(
-                            targetMasjid.getLocalizedArea(language),
-                            targetMasjid.city,
-                            targetMasjid.state
-                        ).filter { it.isNotBlank() }.joinToString(", ")
+                        val loc = targetMasjid.getLocalizedFullLocation(language)
 
                         if (loc.isNotBlank()) {
                             Row(
@@ -943,7 +937,7 @@ fun MasjidSelectionDialog(
                                     .height(48.dp)
                             ) {
                                 Text(
-                                    text = "Cancel",
+                                    text = strings.cancelBtn,
                                     fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold
                                 )

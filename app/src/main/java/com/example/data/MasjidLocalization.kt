@@ -1386,10 +1386,18 @@ val masjidTranslations: Map<String, MasjidTranslation> = mapOf(
 // Common phrases dictionary (Urdu to Hindi)
 private val commonPhrases = listOf(
     "guest masjid" to ("گیسٹ مسجد" to "गेस्ट मस्जिद"),
+    "solapur city, solapur, maharashtra" to ("سولاپور شہر، سولاپور، مہاراشٹر" to "सोलापुर शहर, सोलापुर, महाराष्ट्र"),
+    "solapur city" to ("سولاپور شہر" to "सोलापुर शहर"),
+    "swagat nagar, kumtha naka, solapur, solapur, maharashtra" to ("سواگت نگر، کمتھا ناکہ، سولاپور، مہاراشٹر" to "स्वागत नगर, कुमठा नाका, सोलापुर, महाराष्ट्र"),
+    "swagat nagar, kumtha naka, solapur, maharashtra" to ("سواگت نگر، کمتھا ناکہ، سولاپور، مہاراشٹر" to "स्वागत नगर, कुमठा नाका, सोलापुर, महाराष्ट्र"),
+    "swagat nagar, kumtha naka, solapur" to ("سواگت نگر، کمتھا ناکہ، سولاپور" to "स्वागत नगर, कुमठा नाका, सोलापुर"),
+    "swagat nagar, kumtha naka" to ("سواگت نگر، کمتھا ناکہ" to "स्वागत नगर, कुमठा नाका"),
+    "kumtha naka" to ("کمتھا ناکہ" to "कुमठा नाका"),
+    "swagat nagar" to ("سواگت نگر" to "स्वागत नगर"),
+    "solapur, maharashtra" to ("سولاپور، مہاراشٹر" to "सोलापुर, महाराष्ट्र"),
+    "muslim peth" to ("مسلم پیٹھ" to "मुस्लिम पेठ"),
     "railway station ground" to ("ریلوے اسٹیشن گراؤنڈ" to "रेलवे स्टेशन ग्राउंड"),
     "railway station" to ("ریلوے اسٹیشن" to "रेलवे स्टेशन"),
-    "solapur city" to ("سولاپور شہر" to "सोलापुर शहर"),
-    "swagat nagar" to ("سواگت نگر" to "स्वागत नगर"),
     "tai chowk" to ("تائی چوک" to "ताई चौक"),
     "bhayya chowk" to ("بھیا چوک" to "भय्या चौक"),
     "bhaiyya chowk" to ("بھیا چوک" to "भय्या चौक"),
@@ -1493,7 +1501,22 @@ private val commonWords = mapOf(
     "new" to ("نیا" to "नया"),
     "gate" to ("گیٹ" to "गेट"),
     "y" to ("وائی" to "वाई"),
-    "h" to ("ایچ" to "एच")
+    "h" to ("ایچ" to "एच"),
+    "maharashtra" to ("مہاراشٹر" to "महाराष्ट्र"),
+    "kumtha" to ("کمتھا" to "कुमठा"),
+    "naka" to ("ناکہ" to "नाका"),
+    "peth" to ("پیٹھ" to "पेठ"),
+    "karnataka" to ("کرناٹک" to "कर्नाटक"),
+    "delhi" to ("دہلی" to "दिल्ली"),
+    "mumbai" to ("ممبئی" to "मुंबई"),
+    "telangana" to ("تلنگانہ" to "तेलंगाना"),
+    "hyderabad" to ("حیدرآباد" to "हैदराबाद"),
+    "gujarat" to ("گجرات" to "गुजरात"),
+    "bihar" to ("بہار" to "बिहार"),
+    "india" to ("بھارت" to "भारत"),
+    "markaz" to ("مرکز" to "मरकज़"),
+    "uttar" to ("اتر" to "उत्तर"),
+    "pradesh" to ("پردیش" to "प्रदेश")
 )
 
 fun translateDynamicText(rawText: String, lang: String): String {
@@ -1526,6 +1549,9 @@ fun translateDynamicText(rawText: String, lang: String): String {
             val rep = if (lang == "ur") trans.first else trans.second
             result = result.replace(Regex("(?i)\\b$clean\\b"), rep)
         }
+    }
+    if (lang == "ur") {
+        result = result.replace(", ", "، ").replace(",", "، ")
     }
     return result
 }
@@ -1573,6 +1599,56 @@ fun MasjidItem.getLocalizedCity(lang: String): String {
     }
     if (!specific.isNullOrBlank()) return specific
     return translateDynamicText(this.city, lang)
+}
+
+fun MasjidItem.getLocalizedFullLocation(lang: String): String {
+    if (lang != "ur" && lang != "hi") {
+        val city = this.city.ifBlank { "Solapur" }
+        val addr = this.address
+        return if (addr.isNotBlank()) {
+            if (!addr.contains(city, ignoreCase = true)) "$addr, $city" else addr
+        } else {
+            "${this.area.ifBlank { city }}, $city, ${this.state.ifBlank { "Maharashtra" }}"
+        }
+    }
+
+    if (this.id.equals("guest", ignoreCase = true) || this.name.contains("guest", ignoreCase = true)) {
+        return when (lang) {
+            "ur" -> "سولاپور شہر، سولاپور، مہاراشٹر"
+            "hi" -> "सोलापुर शहर, सोलापुर, महाराष्ट्र"
+            else -> "Solapur City, Solapur, Maharashtra"
+        }
+    }
+
+    val tr = findMasjidTranslation(this.id)
+    val locArea = when (lang) {
+        "ur" -> tr?.areaUr?.ifBlank { null } ?: translateDynamicText(this.area.ifBlank { this.address }, lang)
+        "hi" -> tr?.areaHi?.ifBlank { null } ?: translateDynamicText(this.area.ifBlank { this.address }, lang)
+        else -> this.area
+    }.trim()
+
+    val locCity = when (lang) {
+        "ur" -> tr?.cityUr?.ifBlank { null } ?: translateDynamicText(this.city.ifBlank { "Solapur" }, lang)
+        "hi" -> tr?.cityHi?.ifBlank { null } ?: translateDynamicText(this.city.ifBlank { "Solapur" }, lang)
+        else -> this.city.ifBlank { "Solapur" }
+    }.trim()
+
+    val locState = when (lang) {
+        "ur" -> "مہاراشٹر"
+        "hi" -> "महाराष्ट्र"
+        else -> this.state.ifBlank { "Maharashtra" }
+    }.trim()
+
+    val separator = if (lang == "ur") "، " else ", "
+    val parts = mutableListOf<String>()
+    if (locArea.isNotBlank()) parts.add(locArea)
+    if (locCity.isNotBlank() && !parts.any { it.contains(locCity, ignoreCase = true) }) {
+        parts.add(locCity)
+    }
+    if (locState.isNotBlank() && !parts.any { it.contains(locState, ignoreCase = true) }) {
+        parts.add(locState)
+    }
+    return parts.joinToString(separator)
 }
 
 fun getStopLabel(lang: String): String = when (lang) {

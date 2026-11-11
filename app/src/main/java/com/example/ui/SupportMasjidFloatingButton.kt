@@ -313,7 +313,12 @@ fun SupportMasjidPopup(
     fun launchUpiForApp(packageName: String?, amount: Int) {
         val upiUri = com.example.data.MasjidPaymentHelper.buildMasjidUpiUri(selectedMasjid, amount)
         if (upiUri == null) {
-            Toast.makeText(context, "QR code not available for this masjid", Toast.LENGTH_SHORT).show()
+            val qrMsg = when (language) {
+                "ur" -> "اس مسجد کا QR کوڈ نہیں ہے"
+                "hi" -> "इस मस्जिद का QR कोड नहीं है"
+                else -> "QR code not available for this masjid"
+            }
+            Toast.makeText(context, qrMsg, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -509,8 +514,21 @@ fun SupportMasjidPopup(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        val qrText = if (hasValidQr) {
+                            when (language) {
+                                "ur" -> "کسی بھی UPI ایپ سے اسکین کریں (GPay, PhonePe, Paytm)"
+                                "hi" -> "किसी भी UPI ऐप से स्कैन करें (GPay, PhonePe, Paytm)"
+                                else -> "Scan QR using any UPI app (GPay, PhonePe, Paytm)"
+                            }
+                        } else {
+                            when (language) {
+                                "ur" -> "اس مسجد کا QR کوڈ نہیں ہے"
+                                "hi" -> "इस मस्जिद का QR कोड नहीं है"
+                                else -> "QR code not available for this masjid"
+                            }
+                        }
                         Text(
-                            text = if (hasValidQr) "Scan QR using any UPI app (GPay, PhonePe, Paytm)" else "QR code not available for this masjid",
+                            text = qrText,
                             fontSize = 11.sp,
                             color = if (hasValidQr) Color.White.copy(alpha = 0.85f) else Color(0xFFEF4444).copy(alpha = 0.9f),
                             textAlign = TextAlign.Center

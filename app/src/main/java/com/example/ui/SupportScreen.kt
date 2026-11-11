@@ -82,6 +82,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -106,6 +108,8 @@ import com.example.R
 import com.example.appBackground
 import com.example.data.GoogleSheetMasjidSync
 import com.example.data.MasjidItem
+import com.example.data.getLocalizedName
+import com.example.data.getLocalizedFullLocation
 import com.example.islamicStarBackground
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -233,6 +237,44 @@ fun SupportScreen(
                 }
             }
         }
+    }
+}
+
+private val MosqueArchShape = object : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density
+    ): Outline {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(0f, h)
+            lineTo(0f, h * 0.35f)
+            cubicTo(
+                0f, h * 0.25f,
+                w * 0.08f, h * 0.18f,
+                w * 0.22f, h * 0.15f
+            )
+            cubicTo(
+                w * 0.35f, h * 0.12f,
+                w * 0.42f, h * 0.06f,
+                w * 0.5f, 0f
+            )
+            cubicTo(
+                w * 0.58f, h * 0.06f,
+                w * 0.65f, h * 0.12f,
+                w * 0.78f, h * 0.15f
+            )
+            cubicTo(
+                w * 0.92f, h * 0.18f,
+                w, h * 0.25f,
+                w, h * 0.35f
+            )
+            lineTo(w, h)
+            close()
+        }
+        return Outline.Generic(path)
     }
 }
 
@@ -366,8 +408,8 @@ fun SupportBackScreen(
 
                 Triple(
                     when (uiState.language) {
-                        "ur" -> "موجودہ مسجد"
-                        "hi" -> "वर्तमान मस्जिद"
+                        "ur" -> "اپنی مسجد"
+                        "hi" -> "अपनी मस्जिद"
                         else -> "CURRENT MASJID"
                     },
                     "",
@@ -425,7 +467,7 @@ fun SupportBackScreen(
                     pageSpacing = 12.dp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(350.dp)
+                        .height(400.dp)
                 ) { page ->
                     val realIndex = page % 3
                     val isSelected = (pagerState.currentPage == page)
@@ -517,7 +559,7 @@ fun SupportBackScreen(
                             .alpha(cardAlpha)
                             .blur(radiusX = horizontalMotionBlur, radiusY = verticalMotionBlur)
                             .clickable { handleCardClick() },
-                        shape = RoundedCornerShape(24.dp),
+                        shape = MosqueArchShape,
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) Color.Transparent else Color(0xFF0D281C)
                         ),
@@ -540,6 +582,7 @@ fun SupportBackScreen(
                                         )
                                     }
                                 )
+                                .islamicStarBackground(Color(0xFFF3DE8E).copy(alpha = 0.05f))
                                 .padding(horizontal = 12.dp, vertical = 12.dp)
                         ) {
                             Column(
@@ -598,14 +641,8 @@ fun SupportBackScreen(
                                             Spacer(modifier = Modifier.height(16.dp))
 
                                             Text(
-                                                text = if (uiState.selectedMasjid.id.equals("guest", ignoreCase = true) || uiState.selectedMasjid.name.isBlank()) {
-                                                    when (uiState.language) {
-                                                        "ur" -> "گیسٹ مسجد"
-                                                        "hi" -> "गेस्ट मस्जिद"
-                                                        else -> "GUEST MASJID"
-                                                    }
-                                                } else {
-                                                    uiState.selectedMasjid.name.uppercase(Locale.ROOT)
+                                                text = uiState.selectedMasjid.getLocalizedName(uiState.language).let { name ->
+                                                    if (uiState.language == "en") name.uppercase(Locale.ROOT) else name
                                                 },
                                                 fontSize = if (isSelected) 17.sp else 12.sp,
                                                 fontWeight = FontWeight.Bold,
@@ -638,15 +675,7 @@ fun SupportBackScreen(
                                                             .padding(top = 2.dp, end = 4.dp)
                                                     )
                                                     Text(
-                                                        text = run {
-                                                            val city = uiState.selectedMasjid.city.ifBlank { "Solapur" }
-                                                            val addr = uiState.selectedMasjid.address
-                                                            if (addr.isNotBlank()) {
-                                                                if (!addr.contains(city, ignoreCase = true)) "$addr, $city" else addr
-                                                            } else {
-                                                                if (uiState.selectedMasjid.city.isNotBlank()) uiState.selectedMasjid.city else "Solapur City, Maharashtra"
-                                                            }
-                                                        },
+                                                        text = uiState.selectedMasjid.getLocalizedFullLocation(uiState.language),
                                                         fontSize = if (isSelected) 13.sp else 10.5.sp,
                                                         fontWeight = FontWeight.Medium,
                                                         color = Color.White,
@@ -812,17 +841,47 @@ fun SupportBackScreen(
                         )
 
                         val annotatedText = buildAnnotatedString {
-                            append("Please wait ")
-                            withStyle(
-                                style = SpanStyle(
-                                    color = Color(0xFFFBBF24),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
-                            ) {
-                                append("(5 Min)")
+                            when (uiState.language) {
+                                "ur" -> {
+                                    append("براہ کرم ")
+                                    withStyle(
+                                        style = SpanStyle(
+                                            color = Color(0xFFFBBF24),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp
+                                        )
+                                    ) {
+                                        append("(5 منٹ)")
+                                    }
+                                    append(" انتظار فرمائیں\nآپ کی مسجد لائیو ہو جائے گی۔")
+                                }
+                                "hi" -> {
+                                    append("कृपया ")
+                                    withStyle(
+                                        style = SpanStyle(
+                                            color = Color(0xFFFBBF24),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp
+                                        )
+                                    ) {
+                                        append("(5 मिनट)")
+                                    }
+                                    append(" प्रतीक्षा करें\nआपकी मस्जिद लाइव हो जाएगी।")
+                                }
+                                else -> {
+                                    append("Please wait ")
+                                    withStyle(
+                                        style = SpanStyle(
+                                            color = Color(0xFFFBBF24),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp
+                                        )
+                                    ) {
+                                        append("(5 Min)")
+                                    }
+                                    append("\nYour Masjid will be live.")
+                                }
                             }
-                            append("\nYour Masjid will be live.")
                         }
                         Text(
                             text = annotatedText,
@@ -847,7 +906,11 @@ fun SupportBackScreen(
                                 .height(46.dp)
                         ) {
                             Text(
-                                text = "OK",
+                                text = when (uiState.language) {
+                                    "ur" -> "ٹھیک ہے"
+                                    "hi" -> "ठीक है"
+                                    else -> "OK"
+                                },
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = Color.White
@@ -1142,7 +1205,11 @@ fun SupportFrontScreen(
                                 .height(38.dp)
                         ) {
                             Text(
-                                text = "Other",
+                                text = when (uiState.language) {
+                                    "ur" -> "دیگر"
+                                    "hi" -> "अन्य"
+                                    else -> "Other"
+                                },
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1169,7 +1236,11 @@ fun SupportFrontScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
-                                text = "Scan QR Code",
+                                text = when (uiState.language) {
+                                    "ur" -> "کیو آر کوڈ اسکین کریں"
+                                    "hi" -> "QR कोड स्कैन करें"
+                                    else -> "Scan QR Code"
+                                },
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = primaryGold
@@ -1288,7 +1359,11 @@ fun SupportFrontScreen(
                                 }
                             }
                             Text(
-                                text = "Rate us on Play Store",
+                                text = when (uiState.language) {
+                                    "ur" -> "پلے اسٹور پر ریٹنگ دیں"
+                                    "hi" -> "प्ले स्टोर पर रेटिंग दें"
+                                    else -> "Rate us on Play Store"
+                                },
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color.White.copy(alpha = 0.7f)
@@ -1303,7 +1378,11 @@ fun SupportFrontScreen(
                             .padding(horizontal = 12.dp, vertical = 5.dp)
                     ) {
                         Text(
-                            text = "Rate Us 5★",
+                            text = when (uiState.language) {
+                                "ur" -> "5★ ریٹنگ دیں"
+                                "hi" -> "5★ रेटिंग दें"
+                                else -> "Rate Us 5★"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color(0xFF040E0A)
@@ -1336,7 +1415,7 @@ fun SupportFrontScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "v3.1.71",
+                        text = "v${BuildConfig.VERSION_NAME}",
                         fontSize = 13.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = primaryGold
@@ -1380,7 +1459,11 @@ fun SupportFrontScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Enter Contribution Amount",
+                        text = when (uiState.language) {
+                            "ur" -> "تعاون کی رقم درج کریں"
+                            "hi" -> "सहयोग राशि दर्ज करें"
+                            else -> "Enter Contribution Amount"
+                        },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = primaryGold
@@ -1388,8 +1471,17 @@ fun SupportFrontScreen(
                     OutlinedTextField(
                         value = customAmountText,
                         onValueChange = { customAmountText = it.filter { ch -> ch.isDigit() } },
-                        label = { Text("Amount (₹)", color = Color.White.copy(alpha = 0.7f)) },
-                        placeholder = { Text("e.g. 1000", color = Color.White.copy(alpha = 0.3f)) },
+                        label = {
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "رقم (₹)"
+                                    "hi" -> "राशि (₹)"
+                                    else -> "Amount (₹)"
+                                },
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        },
+                        placeholder = { Text("1000", color = Color.White.copy(alpha = 0.3f)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = primaryGold,
@@ -1408,7 +1500,14 @@ fun SupportFrontScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Cancel", color = Color.White)
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "منسوخ"
+                                    "hi" -> "रद्द करें"
+                                    else -> "Cancel"
+                                },
+                                color = Color.White
+                            )
                         }
                         Button(
                             onClick = {
@@ -1418,13 +1517,26 @@ fun SupportFrontScreen(
                                     showOtherAmountDialog = false
                                     showUpiAppChooserDialog = true
                                 } else {
-                                    Toast.makeText(context, "Please enter a valid amount", Toast.LENGTH_SHORT).show()
+                                    val err = when (uiState.language) {
+                                        "ur" -> "براہ کرم درست رقم درج کریں"
+                                        "hi" -> "कृपया सही राशि दर्ज करें"
+                                        else -> "Please enter a valid amount"
+                                    }
+                                    Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5B842)),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Proceed", color = Color(0xFF0F1713), fontWeight = FontWeight.Bold)
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "آگے بڑھیں"
+                                    "hi" -> "आगे बढ़ें"
+                                    else -> "Proceed"
+                                },
+                                color = Color(0xFF0F1713),
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -1456,7 +1568,11 @@ fun SupportFrontScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Scan QR to Support App",
+                            text = when (uiState.language) {
+                                "ur" -> "ایپ سپورٹ کے لیے کیو آر اسکین کریں"
+                                "hi" -> "ऐप सपोर्ट के लिए क्यूआर स्कैन करें"
+                                else -> "Scan QR to Support App"
+                            },
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = primaryGold
@@ -1492,7 +1608,11 @@ fun SupportFrontScreen(
                     }
 
                     Text(
-                        text = "Scan using any UPI App (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl",
+                        text = when (uiState.language) {
+                            "ur" -> "کسی بھی UPI ایپ سے اسکین کریں (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl"
+                            "hi" -> "किसी भी UPI ऐप से स्कैन करें (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl"
+                            else -> "Scan using any UPI App (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl"
+                        },
                         fontSize = 11.5.sp,
                         color = Color.White.copy(alpha = 0.85f),
                         textAlign = TextAlign.Center
@@ -1522,7 +1642,11 @@ fun SupportFrontScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Rate Azan Time",
+                            text = when (uiState.language) {
+                                "ur" -> "اذان ٹائم کی درجہ بندی کریں"
+                                "hi" -> "अज़ान टाइम को रेटिंग दें"
+                                else -> "Rate Azan Time"
+                            },
                             fontSize = 19.sp,
                             fontWeight = FontWeight.Bold,
                             color = primaryGold,
@@ -1545,7 +1669,11 @@ fun SupportFrontScreen(
                     }
 
                     Text(
-                        text = "Rate your experience. Submitting will save your rating and redirect to Google Play Store to review.",
+                        text = when (uiState.language) {
+                            "ur" -> "اپنے تجربے کی درجہ بندی کریں۔ جمع کرنے پر آپ کی ریٹنگ محفوظ ہوگی اور پلے اسٹور پر ریویو کے لیے بھیجا جائے گا۔"
+                            "hi" -> "अपने अनुभव को रेट करें। सबमिट करने पर आपकी रेटिंग सुरक्षित होगी और प्ले स्टोर पर रिव्यू के लिए भेजा जाएगा।"
+                            else -> "Rate your experience. Submitting will save your rating and redirect to Google Play Store to review."
+                        },
                         fontSize = 11.5.sp,
                         color = Color.White.copy(alpha = 0.72f),
                         textAlign = TextAlign.Center
@@ -1561,7 +1689,11 @@ fun SupportFrontScreen(
                     )
 
                     Text(
-                        text = String.format(Locale.US, "%.1f / 5.0 Stars", tempRating),
+                        text = when (uiState.language) {
+                            "ur" -> "${String.format(Locale.US, "%.1f", tempRating)} / 5.0 ستارے"
+                            "hi" -> "${String.format(Locale.US, "%.1f", tempRating)} / 5.0 सितारे"
+                            else -> String.format(Locale.US, "%.1f / 5.0 Stars", tempRating)
+                        },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = primaryGold
@@ -1603,9 +1735,14 @@ fun SupportFrontScreen(
                                     }
                                 }
                             }
+                            val jazakToast = when (uiState.language) {
+                                "ur" -> "⭐⭐⭐⭐⭐ جزاک اللہ خیراً! پلے اسٹور کھولا جا رہا ہے..."
+                                "hi" -> "⭐⭐⭐⭐⭐ जज़ाकअल्लाह खैर! प्ले स्टोर खुल रहा है..."
+                                else -> "⭐⭐⭐⭐⭐ JazakAllah Khair! Opening Play Store..."
+                            }
                             Toast.makeText(
                                 context,
-                                "⭐⭐⭐⭐⭐ JazakAllah Khair! Opening Play Store...",
+                                jazakToast,
                                 Toast.LENGTH_SHORT
                             ).show()
                         },
@@ -1624,7 +1761,15 @@ fun SupportFrontScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Saving...", color = Color(0xFF0F1713), fontWeight = FontWeight.Bold)
+                            Text(
+                                text = when (uiState.language) {
+                                    "ur" -> "محفوظ ہو رہا ہے..."
+                                    "hi" -> "सेव हो रहा है..."
+                                    else -> "Saving..."
+                                },
+                                color = Color(0xFF0F1713),
+                                fontWeight = FontWeight.Bold
+                            )
                         } else {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1638,7 +1783,11 @@ fun SupportFrontScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Submit & Rate on Play Store",
+                                    text = when (uiState.language) {
+                                        "ur" -> "پلے اسٹور پر جمع اور ریٹ کریں"
+                                        "hi" -> "प्ले स्टोर पर सबमिट और रेट करें"
+                                        else -> "Submit & Rate on Play Store"
+                                    },
                                     color = Color(0xFF0F1713),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.5.sp,
@@ -1657,6 +1806,7 @@ fun SupportFrontScreen(
     if (showUpiAppChooserDialog) {
         UpiAppChooserDialog(
             amount = selectedContributionAmount,
+            language = uiState.language,
             onDismiss = { showUpiAppChooserDialog = false },
             onAppSelected = { pkg ->
                 showUpiAppChooserDialog = false
@@ -1938,13 +2088,29 @@ fun AddMasjidAutoDialog(
     val performFormSubmit: () -> Unit = {
         dismissKeyboard()
         if (masjidName.isBlank()) {
-            errorMessage = "Please enter Masjid Name"
+            errorMessage = when (language) {
+                "ur" -> "براہ کرم مسجد کا نام درج کریں"
+                "hi" -> "कृपया मस्जिद का नाम दर्ज करें"
+                else -> "Please enter Masjid Name"
+            }
         } else if (location.isBlank()) {
-            errorMessage = "Please enter Location"
+            errorMessage = when (language) {
+                "ur" -> "براہ کرم مقام درج کریں"
+                "hi" -> "कृपया स्थान दर्ज करें"
+                else -> "Please enter Location"
+            }
         } else if (adminName.isBlank()) {
-            errorMessage = "Please enter Admin Name"
+            errorMessage = when (language) {
+                "ur" -> "براہ کرم ایڈمن کا نام درج کریں"
+                "hi" -> "कृपया एडमिन का नाम दर्ज करें"
+                else -> "Please enter Admin Name"
+            }
         } else if (adminContact.isBlank()) {
-            errorMessage = "Please enter Admin Contact Number"
+            errorMessage = when (language) {
+                "ur" -> "براہ کرم ایڈمن رابطہ نمبر درج کریں"
+                "hi" -> "कृपया एडमिन संपर्क नंबर दर्ज करें"
+                else -> "Please enter Admin Contact Number"
+            }
         } else if (!isSending) {
             isSending = true
             val cleanMasjidName = masjidName.trim()
@@ -2083,7 +2249,11 @@ fun AddMasjidAutoDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Add New Masjid",
+                        text = when (language) {
+                            "ur" -> "نئی مسجد شامل کریں"
+                            "hi" -> "नई मस्जिद जोड़ें"
+                            else -> "Add New Masjid"
+                        },
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF3DE8E)
@@ -2110,7 +2280,11 @@ fun AddMasjidAutoDialog(
 
                 // Responsible person notice in bold white text
                 Text(
-                    text = "The responsible person (Moulana / Mutawalli / Bangi sahab / Trust Member) should submit the form.",
+                    text = when (language) {
+                        "ur" -> "ذمہ دار شخص (مولانا / متولی / بنگی صاحب / ٹرسٹ ممبر) کو یہ فارم جمع کرنا چاہیے۔"
+                        "hi" -> "जिम्मेदार व्यक्ति (मौलाना / मुतवल्ली / बंगी साहब / ट्रस्ट मेंबर) को ही यह फॉर्म भरना चाहिए।"
+                        else -> "The responsible person (Moulana / Mutawalli / Bangi sahab / Trust Member) should submit the form."
+                    },
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -2131,9 +2305,25 @@ fun AddMasjidAutoDialog(
                     },
                     enabled = true,
                     readOnly = false,
-                    label = { Text("Name of Masjid *") },
+                    label = {
+                        Text(
+                            text = when (language) {
+                                "ur" -> "مسجد کا نام *"
+                                "hi" -> "मस्जिद का नाम *"
+                                else -> "Name of Masjid *"
+                            }
+                        )
+                    },
                     placeholder = { 
-                        Text("e.g. Markaz Masjid, Jama Masjid", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
+                        Text(
+                            text = when (language) {
+                                "ur" -> "مثلاً مرکز مسجد، جامع مسجد"
+                                "hi" -> "उदा. मरकज़ मस्जिद, जामा मस्जिद"
+                                else -> "e.g. Markaz Masjid, Jama Masjid"
+                            },
+                            color = Color.White.copy(alpha = 0.4f),
+                            fontSize = 13.5.sp
+                        ) 
                     },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -2169,9 +2359,25 @@ fun AddMasjidAutoDialog(
                     },
                     enabled = true,
                     readOnly = false,
-                    label = { Text("Location / City / Area *") },
+                    label = {
+                        Text(
+                            text = when (language) {
+                                "ur" -> "مقام / شہر / علاقہ *"
+                                "hi" -> "स्थान / शहर / इलाका *"
+                                else -> "Location / City / Area *"
+                            }
+                        )
+                    },
                     placeholder = { 
-                        Text("e.g. Solapur, Muslim Peth", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
+                        Text(
+                            text = when (language) {
+                                "ur" -> "مثلاً سولاپور، مسلم پیٹھ"
+                                "hi" -> "उदा. सोलापुर, मुस्लिम पेठ"
+                                else -> "e.g. Solapur, Muslim Peth"
+                            },
+                            color = Color.White.copy(alpha = 0.4f),
+                            fontSize = 13.5.sp
+                        ) 
                     },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
@@ -2211,9 +2417,17 @@ fun AddMasjidAutoDialog(
                     },
                     enabled = true,
                     readOnly = false,
-                    label = { Text("Admin Contact Number *") },
+                    label = {
+                        Text(
+                            text = when (language) {
+                                "ur" -> "ایڈمن کا رابطہ نمبر *"
+                                "hi" -> "एडमिन संपर्क नंबर *"
+                                else -> "Admin Contact Number *"
+                            }
+                        )
+                    },
                     placeholder = { 
-                        Text("e.g. 9876543210", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
+                        Text("9876543210", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Phone,
@@ -2268,7 +2482,15 @@ fun AddMasjidAutoDialog(
                 OutlinedTextField(
                     value = "admin",
                     onValueChange = { },
-                    label = { Text("Admin ID - admin") },
+                    label = {
+                        Text(
+                            text = when (language) {
+                                "ur" -> "ایڈمن آئی ڈی - admin"
+                                "hi" -> "एडमिन आईडी - admin"
+                                else -> "Admin ID - admin"
+                            }
+                        )
+                    },
                     readOnly = true,
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -2287,7 +2509,11 @@ fun AddMasjidAutoDialog(
                 // Field 5: Photo Browser Button
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Masjid Photo (Optional):",
+                        text = when (language) {
+                            "ur" -> "مسجد کی تصویر (اختیاری):"
+                            "hi" -> "मस्जिद की फोटो (वैकल्पिक):"
+                            else -> "Masjid Photo (Optional):"
+                        },
                         fontSize = 12.sp,
                         color = Color.White.copy(alpha = 0.75f)
                     )
@@ -2311,7 +2537,19 @@ fun AddMasjidAutoDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (selectedPhotoUri != null) "Photo Selected ✓ Change" else "Browse / Upload Masjid Photo",
+                            text = if (selectedPhotoUri != null) {
+                                when (language) {
+                                    "ur" -> "تصویر منتخب ✓ تبدیل کریں"
+                                    "hi" -> "फोटो चुनी गई ✓ बदलें"
+                                    else -> "Photo Selected ✓ Change"
+                                }
+                            } else {
+                                when (language) {
+                                    "ur" -> "مسجد کی تصویر اپلوڈ کریں"
+                                    "hi" -> "मस्जिद फोटो ब्राउज़ / अपलोड करें"
+                                    else -> "Browse / Upload Masjid Photo"
+                                }
+                            },
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF38BDF8)
@@ -2343,13 +2581,21 @@ fun AddMasjidAutoDialog(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Masjid Photo Selected",
+                                    text = when (language) {
+                                        "ur" -> "مسجد کی تصویر منتخب ہے"
+                                        "hi" -> "मस्जिद फोटो चुनी गई"
+                                        else -> "Masjid Photo Selected"
+                                    },
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF38BDF8)
                                 )
                                 Text(
-                                    text = "Saved to Google Drive",
+                                    text = when (language) {
+                                        "ur" -> "گوگل ڈرائیو میں محفوظ ہوگی"
+                                        "hi" -> "गूगल ड्राइव में सेव होगी"
+                                        else -> "Saved to Google Drive"
+                                    },
                                     fontSize = 10.sp,
                                     color = Color.White.copy(alpha = 0.65f)
                                 )
@@ -2372,7 +2618,11 @@ fun AddMasjidAutoDialog(
                 // Field 6: QR Code Browser Button (replaces old Azan Time logo & punchline)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Masjid QR (Optional):",
+                        text = when (language) {
+                            "ur" -> "مسجد کا کیو آر (اختیاری):"
+                            "hi" -> "मस्जिद का क्यूआर (वैकल्पिक):"
+                            else -> "Masjid QR (Optional):"
+                        },
                         fontSize = 12.sp,
                         color = Color.White.copy(alpha = 0.75f)
                     )
@@ -2396,7 +2646,19 @@ fun AddMasjidAutoDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (selectedQrUri != null) "QR Selected ✓ Change" else "Browse / Upload Masjid QR",
+                            text = if (selectedQrUri != null) {
+                                when (language) {
+                                    "ur" -> "کیو آر منتخب ✓ تبدیل کریں"
+                                    "hi" -> "क्यूआर चुना गया ✓ बदलें"
+                                    else -> "QR Selected ✓ Change"
+                                }
+                            } else {
+                                when (language) {
+                                    "ur" -> "مسجد کا کیو آر اپلوڈ کریں"
+                                    "hi" -> "मस्जिद क्यूआर ब्राउज़ / अपलोड करें"
+                                    else -> "Browse / Upload Masjid QR"
+                                }
+                            },
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF38BDF8)
@@ -2418,7 +2680,11 @@ fun AddMasjidAutoDialog(
                                 color = Color(0xFF38BDF8)
                             )
                             Text(
-                                text = "Standardizing & Straightening QR...",
+                                text = when (language) {
+                                    "ur" -> "کیو آر کو سیدھا اور صاف کیا جا رہا ہے..."
+                                    "hi" -> "क्यूआर को सीधा और साफ़ किया जा रहा है..."
+                                    else -> "Standardizing & Straightening QR..."
+                                },
                                 fontSize = 12.sp,
                                 color = Color(0xFF38BDF8)
                             )
@@ -2449,7 +2715,19 @@ fun AddMasjidAutoDialog(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = if (standardizedQr!!.isCleanRegenerated) "✓ Standard Clean QR Generated" else "✓ Straight Square QR Cropped",
+                                    text = if (standardizedQr!!.isCleanRegenerated) {
+                                        when (language) {
+                                            "ur" -> "✓ معیاری صاف کیو آر تیار ہے"
+                                            "hi" -> "✓ मानक साफ़ क्यूआर तैयार है"
+                                            else -> "✓ Standard Clean QR Generated"
+                                        }
+                                    } else {
+                                        when (language) {
+                                            "ur" -> "✓ سیدھا چوکور کیو آر کراپ ہو گیا"
+                                            "hi" -> "✓ सीधा चौकोर क्यूआर क्रॉप हुआ"
+                                            else -> "✓ Straight Square QR Cropped"
+                                        }
+                                    },
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF10B981)
@@ -2512,7 +2790,11 @@ fun AddMasjidAutoDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Uploading...",
+                            text = when (language) {
+                                "ur" -> "اپلوڈ ہو رہا ہے..."
+                                "hi" -> "अपलोड हो रहा है..."
+                                else -> "Uploading..."
+                            },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -2526,7 +2808,11 @@ fun AddMasjidAutoDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Send Request",
+                            text = when (language) {
+                                "ur" -> "درخواست بھیجیں"
+                                "hi" -> "दरखास्त भेजें"
+                                else -> "Send Request"
+                            },
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -2640,6 +2926,7 @@ fun InteractiveHalfStarRatingBar(
 @Composable
 fun UpiAppChooserDialog(
     amount: Int,
+    language: String = "en",
     onDismiss: () -> Unit,
     onAppSelected: (String?) -> Unit
 ) {
@@ -2667,13 +2954,21 @@ fun UpiAppChooserDialog(
                 ) {
                     Column {
                         Text(
-                            text = "Pay via UPI",
+                            text = when (language) {
+                                "ur" -> "UPI کے ذریعے ادائیگی"
+                                "hi" -> "UPI द्वारा भुगतान"
+                                else -> "Pay via UPI"
+                            },
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFF3DE8E)
                         )
                         Text(
-                            text = "Amount: ₹$amount",
+                            text = when (language) {
+                                "ur" -> "رقم: ₹$amount"
+                                "hi" -> "राशि: ₹$amount"
+                                else -> "Amount: ₹$amount"
+                            },
                             fontSize = 14.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color(0xFF34D399)
@@ -2691,7 +2986,11 @@ fun UpiAppChooserDialog(
                 HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
 
                 Text(
-                    text = "Select your payment app:",
+                    text = when (language) {
+                        "ur" -> "اپنی ادائیگی ایپ منتخب کریں:"
+                        "hi" -> "अपना पेमेंट ऐप चुनें:"
+                        else -> "Select your payment app:"
+                    },
                     fontSize = 12.sp,
                     color = Color.White.copy(alpha = 0.75f),
                     modifier = Modifier.align(Alignment.Start)
@@ -2723,7 +3022,11 @@ fun UpiAppChooserDialog(
 
                 // 4. Other UPI App (System Chooser)
                 UpiAppOptionItem(
-                    name = "Other UPI App",
+                    name = when (language) {
+                        "ur" -> "دیگر UPI ایپ"
+                        "hi" -> "अन्य UPI ऐप"
+                        else -> "Other UPI App"
+                    },
                     subtitle = "BHIM, Cred, Amazon Pay, etc.",
                     iconRes = R.drawable.ic_upi,
                     onClick = { onAppSelected(null) }

@@ -481,7 +481,12 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                         ramazanTapCount++
                         if (!effectiveRamazanActive && ramazanTapCount >= 5) {
                             forcedRamazanActive = true
-                            android.widget.Toast.makeText(context, "Ramazan section activated!", android.widget.Toast.LENGTH_SHORT).show()
+                            val activatedMsg = when (uiState.language) {
+                                "ur" -> "رمضان سیکشن فعال ہو گیا!"
+                                "hi" -> "रमज़ान सेक्शन सक्रिय हो गया!"
+                                else -> "Ramazan section activated!"
+                            }
+                            android.widget.Toast.makeText(context, activatedMsg, android.widget.Toast.LENGTH_SHORT).show()
                         }
                         if (effectiveRamazanActive) {
                             triggerTabSwitch("ramazan")
@@ -543,7 +548,10 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                         "ramazan" -> {
                             com.example.ui.RamazanScreenContent(
                                 uiState = uiState,
-                                onLanguageSelect = { viewModel.setLanguage(it) }
+                                onLanguageSelect = { viewModel.setLanguage(it) },
+                                onTogglePrayer = { month, day, prayerName ->
+                                    viewModel.togglePrayerForDate(month, day, prayerName)
+                                }
                             )
                         }
                         else -> {
@@ -693,6 +701,7 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
         AdminLoginDialog(
             selectedMasjid = uiState.selectedMasjid,
             allMasajid = uiState.allMasajid,
+            language = uiState.language,
             onDismiss = { showAdminLoginDialog = false },
             onLoginSuccess = {
                 showAdminLoginDialog = false
@@ -1076,17 +1085,7 @@ fun AzanHomeContent(
                         .listener(onError = { _, _ -> imageLoadError = true })
                         .build()
 
-                    // Subtle ambient background fill for wide/square letterboxed margins
-                    AsyncImage(
-                        model = finalPhotoModel,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .alpha(0.18f)
-                    )
-
-                    // Crisp, 100% full original mosque photo (unclipped)
+                    // Edge-to-edge full width mosque photo
                     AsyncImage(
                         model = finalPhotoModel,
                         contentDescription = "Selected Masjid",
@@ -1188,7 +1187,12 @@ fun AzanHomeContent(
                                     if (hasQrCode) {
                                         showSupportPopup = true
                                     } else {
-                                        android.widget.Toast.makeText(context, "QR code not available for this masjid", android.widget.Toast.LENGTH_SHORT).show()
+                                        val noQrMsg = when (uiState.language) {
+                                            "ur" -> "اس مسجد کا QR کوڈ نہیں ہے"
+                                            "hi" -> "इस मस्जिद का QR कोड नहीं है"
+                                            else -> "QR code not available for this masjid"
+                                        }
+                                        android.widget.Toast.makeText(context, noQrMsg, android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             )
@@ -3344,6 +3348,7 @@ data class AdminPrayerItem(
 fun AdminLoginDialog(
     selectedMasjid: com.example.data.MasjidItem? = null,
     allMasajid: List<com.example.data.MasjidItem> = emptyList(),
+    language: String = "en",
     onDismiss: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
@@ -3382,15 +3387,25 @@ fun AdminLoginDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "ADMIN LOGIN",
+                    text = when (language) {
+                        "ur" -> "ایڈمن لاگ ان"
+                        "hi" -> "एडमिन लॉगिन"
+                        else -> "ADMIN LOGIN"
+                    },
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Black,
                     color = Color(0xFFF3DE8E),
                     letterSpacing = 1.2.sp
                 )
 
+                val localizedMasjidName = selectedMasjid?.getLocalizedName(language)
+                val subText = when (language) {
+                    "ur" -> if (localizedMasjidName != null) "$localizedMasjidName کے لیے ID اور پاس ورڈ درج کریں" else "نماز کے اوقات میں ترمیم کے لیے ID اور پاس ورڈ درج کریں"
+                    "hi" -> if (localizedMasjidName != null) "$localizedMasjidName के लिए ID और पासवर्ड दर्ज करें" else "नमाज़ के समय में बदलाव के लिए ID और पासवर्ड दर्ज करें"
+                    else -> if (selectedMasjid != null) "Enter ID & Password for ${selectedMasjid.name}" else "Enter ID & Password to edit prayer timings"
+                }
                 Text(
-                    text = if (selectedMasjid != null) "Enter ID & Password for ${selectedMasjid.name}" else "Enter ID & Password to edit prayer timings",
+                    text = subText,
                     fontSize = 11.5.sp,
                     color = Color.White.copy(alpha = 0.75f),
                     textAlign = TextAlign.Center
@@ -3398,11 +3413,16 @@ fun AdminLoginDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
+                val adminIdLabel = when (language) {
+                    "ur" -> "ایڈمن آئی ڈی - admin"
+                    "hi" -> "एडमिन आईडी - admin"
+                    else -> "Admin ID - admin"
+                }
                 OutlinedTextField(
                     value = "admin",
                     onValueChange = { },
                     readOnly = true,
-                    label = { Text("Admin ID - admin") },
+                    label = { Text(adminIdLabel) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White.copy(alpha = 0.8f),
@@ -3417,14 +3437,24 @@ fun AdminLoginDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val passLabel = when (language) {
+                    "ur" -> "پاس ورڈ"
+                    "hi" -> "पासवर्ड"
+                    else -> "Password"
+                }
+                val passPlaceholder = when (language) {
+                    "ur" -> "پاس ورڈ درج کریں"
+                    "hi" -> "पासवर्ड दर्ज करें"
+                    else -> "Enter Password"
+                }
                 OutlinedTextField(
                     value = password,
                     onValueChange = {
                         password = it
                         isError = false
                     },
-                    label = { Text("Password") },
-                    placeholder = { Text("Enter Password") },
+                    label = { Text(passLabel) },
+                    placeholder = { Text(passPlaceholder) },
                     singleLine = true,
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -3450,8 +3480,13 @@ fun AdminLoginDialog(
 
                 if (isError) {
                     Spacer(modifier = Modifier.height(8.dp))
+                    val errText = when (language) {
+                        "ur" -> if (localizedMasjidName != null) "$localizedMasjidName کے لیے غلط آئی ڈی یا پاس ورڈ" else "غلط آئی ڈی یا پاس ورڈ"
+                        "hi" -> if (localizedMasjidName != null) "$localizedMasjidName के लिए गलत आईडी या पासवर्ड" else "गलत आईडी या पासवर्ड"
+                        else -> if (selectedMasjid != null) "Incorrect ID or Password for ${selectedMasjid.name}" else "Incorrect ID or Password"
+                    }
                     Text(
-                        text = if (selectedMasjid != null) "Incorrect ID or Password for ${selectedMasjid.name}" else "Incorrect ID or Password",
+                        text = errText,
                         color = Color(0xFFEF4444),
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
@@ -3474,7 +3509,15 @@ fun AdminLoginDialog(
                         border = BorderStroke(1.2.dp, Color(0xFFE5B842).copy(alpha = 0.5f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF3DE8E))
                     ) {
-                        Text("Cancel", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+                        Text(
+                            text = when (language) {
+                                "ur" -> "منسوخ"
+                                "hi" -> "रद्द करें"
+                                else -> "Cancel"
+                            },
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.5.sp
+                        )
                     }
 
                     Button(
@@ -3505,7 +3548,15 @@ fun AdminLoginDialog(
                             contentColor = Color(0xFF0F1713)
                         )
                     ) {
-                        Text("Login", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(
+                            text = when (language) {
+                                "ur" -> "لاگ ان"
+                                "hi" -> "लॉगिन"
+                                else -> "Login"
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }
@@ -4375,7 +4426,12 @@ fun AdminPanelScreen(
                 onDismiss = { showAddMasjidDialog = false },
                 onSave = { id, name, address, photoUrl ->
                     viewModel.saveOrUpdateMasjid(id, name, address, photoUrl)
-                    android.widget.Toast.makeText(context, "$name added successfully!", android.widget.Toast.LENGTH_SHORT).show()
+                    val addedMsg = when (uiState.language) {
+                        "ur" -> "مسجد شامل ہوگئی ($name)"
+                        "hi" -> "मस्जिद जुड़ गई ($name)"
+                        else -> "$name added successfully!"
+                    }
+                    android.widget.Toast.makeText(context, addedMsg, android.widget.Toast.LENGTH_SHORT).show()
                     showAddMasjidDialog = false
                 }
             )

@@ -102,7 +102,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.graphics.nativeCanvas
 import coil.compose.AsyncImage
 import com.example.BuildConfig
 import com.example.LanguageCirclesRow
@@ -716,36 +715,14 @@ fun SupportBackScreen(
                                     }
                                 )
                                 .cardIslamicStarOverlay(alpha = 0.055f)
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            // Cinematic Floating Urdu Characters behind card content
-                            Canvas(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-                                val urduChars = listOf("ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش")
-                                val paint = android.graphics.Paint().apply {
-                                    color = android.graphics.Color.argb((0.08f * 255).toInt(), 0xF3, 0xDE, 0x8E)
-                                    textSize = 32.sp.toPx()
-                                    isAntiAlias = true
-                                    textAlign = android.graphics.Paint.Align.CENTER
-                                }
-
-                                // Simplification: Draw few static-positioned letters for demonstration; 
-                                // full dynamic animation requires a separate state-management system to avoid performance degradation.
-                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.2f, size.height * 0.2f, paint)
-                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.8f, size.height * 0.4f, paint)
-                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.4f, size.height * 0.7f, paint)
-                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.7f, size.height * 0.8f, paint)
-                            }
-
-                            Box(
+                            Column(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    .fillMaxWidth()
+                                    .align(Alignment.TopCenter),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .align(Alignment.TopCenter),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
                                 Spacer(modifier = Modifier.height(26.dp))
 
                                 Box(
@@ -964,7 +941,6 @@ fun SupportBackScreen(
                                     }
                                 }
                             }
-                        }
 
                             if (isSelected) {
                                 val activeLangBrush = Brush.verticalGradient(

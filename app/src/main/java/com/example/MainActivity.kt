@@ -254,16 +254,6 @@ class MainActivity : ComponentActivity() {
                         if (showSplash) {
                             SplashScreen(onFinished = { showSplash = false })
                         } else if (viewModel != null) {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-                                    contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-                                ) { }
-                                LaunchedEffect(Unit) {
-                                    if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                }
-                            }
                             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                             val strings = when (uiState.language) {
                                 "hi" -> HindiStrings
@@ -273,11 +263,42 @@ class MainActivity : ComponentActivity() {
                             
                             CompositionLocalProvider(LocalAppStrings provides strings) {
                                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                                    AzanScreen(
-                                        viewModel = viewModel,
-                                        uiState = uiState,
-                                        modifier = Modifier.padding(innerPadding)
-                                    )
+                                    when {
+                                        !uiState.isInitialLanguageChosen -> {
+                                            InitialLanguageScreen(
+                                                onLanguageSelect = { lang -> 
+                                                    viewModel.setLanguage(lang)
+                                                    viewModel.setInitialLanguageChosen(true)
+                                                }
+                                            )
+                                        }
+                                        !uiState.isSetupCompleted -> {
+                                            FirstTimeSetupScreen(
+                                                uiState = uiState,
+                                                onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
+                                                onFinishSetup = { masjidId -> viewModel.completeSetup(masjidId) },
+                                                onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
+                                            )
+                                        }
+                                        else -> {
+                                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                                val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                                                    contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+                                                ) { }
+                                                LaunchedEffect(Unit) {
+                                                    if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                                        permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                                    }
+                                                }
+                                            }
+                                            
+                                            AzanScreen(
+                                                viewModel = viewModel,
+                                                uiState = uiState,
+                                                modifier = Modifier.padding(innerPadding)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

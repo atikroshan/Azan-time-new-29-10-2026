@@ -16,7 +16,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,10 +25,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.*
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -48,13 +44,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -65,6 +54,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -75,6 +65,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontFamily
@@ -92,6 +83,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.SpanStyle
@@ -114,6 +106,7 @@ import com.example.data.displayId
 import com.example.data.getLocalizedName
 import com.example.data.getLocalizedFullLocation
 import com.example.islamicStarBackground
+import com.example.ui.theme.LocalAppStrings
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -125,14 +118,12 @@ fun SupportScreen(
     onMasjidSubmitted: () -> Unit = {},
     onChangeMasjid: () -> Unit = {},
     onSelectMasjid: (MasjidItem) -> Unit = {},
-    onOpenSupportFrontScreen: () -> Unit = {},
     onOpenAdminLogin: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showFrontScreen by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // SupportBackScreen rendered in background with conditional blur
         SupportBackScreen(
             uiState = uiState,
             onBack = onBack,
@@ -147,7 +138,6 @@ fun SupportScreen(
                 .blur(if (showFrontScreen) 8.dp else 0.dp)
         )
 
-        // Dimmed backdrop overlay when front screen is open
         androidx.compose.animation.AnimatedVisibility(
             visible = showFrontScreen,
             enter = fadeIn(animationSpec = tween(300)),
@@ -161,7 +151,6 @@ fun SupportScreen(
             )
         }
 
-        // SupportFrontScreen sliding up as dual overlay sheet (Half Height)
         androidx.compose.animation.AnimatedVisibility(
             visible = showFrontScreen,
             enter = slideInVertically(
@@ -174,7 +163,7 @@ fun SupportScreen(
             ) + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            val sheetOffsetY = remember { androidx.compose.animation.core.Animatable(0f) }
+            val sheetOffsetY = remember { Animatable(0f) }
             val coroutineScope = rememberCoroutineScope()
             Surface(
                 modifier = Modifier
@@ -208,7 +197,6 @@ fun SupportScreen(
                 shadowElevation = 16.dp
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Top Drag Indicator Bar (Fully working: tap or drag to close)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -251,90 +239,32 @@ private val MinarDomeShape = object : Shape {
     ): Outline {
         val w = size.width
         val h = size.height
-        // SVG crown height ratio to width: 1.28479 / 2.89862 = 0.44324f
         val cH = (w * 0.44324f).coerceAtMost(h * 0.42f)
         val path = Path().apply {
-            // Start at bottom-left corner
             moveTo(0f, h)
-            // Left vertical side up to crown shoulder
             lineTo(0f, cH)
-
-            // Crown path reconstructed from minar.svg:
-            // Left shoulder flare to intermediate step
             cubicTo(-0.0004f * w, 0.9866f * cH, -0.0031f * w, 0.8497f * cH, 0.0900f * w, 0.8238f * cH)
             lineTo(0.0914f * w, 0.8234f * cH)
             lineTo(0.0913f * w, 0.8209f * cH)
-
-            // Step inward to base of onion dome
             cubicTo(0.0913f * w, 0.8204f * cH, 0.0907f * w, 0.7791f * cH, 0.1074f * w, 0.7483f * cH)
             cubicTo(0.1196f * w, 0.7256f * cH, 0.1380f * w, 0.7141f * cH, 0.1620f * w, 0.7141f * cH)
             lineTo(0.1643f * w, 0.7141f * cH)
             lineTo(0.1635f * w, 0.7102f * cH)
-
-            // Main bulbous onion dome curve up to tip
             cubicTo(0.1632f * w, 0.7088f * cH, 0.1330f * w, 0.5653f * cH, 0.1722f * w, 0.4134f * cH)
             cubicTo(0.2038f * w, 0.2909f * cH, 0.2705f * w, 0.1970f * cH, 0.3705f * w, 0.1343f * cH)
             cubicTo(0.3713f * w, 0.1337f * cH, 0.4469f * w, 0.0816f * cH, 0.4876f * w, 0.0091f * cH)
-
-            // Pinnacle point at top center
             cubicTo(0.4944f * w, -0.0030f * cH, 0.5055f * w, -0.0030f * cH, 0.5123f * w, 0.0091f * cH)
-
-            // Symmetric right half down from pinnacle to base of dome
             cubicTo(0.5531f * w, 0.0816f * cH, 0.6287f * w, 0.1337f * cH, 0.6295f * w, 0.1343f * cH)
             cubicTo(0.7295f * w, 0.1970f * cH, 0.7962f * w, 0.2909f * cH, 0.8277f * w, 0.4134f * cH)
             cubicTo(0.8669f * w, 0.5653f * cH, 0.8368f * w, 0.7088f * cH, 0.8365f * w, 0.7102f * cH)
             lineTo(0.8357f * w, 0.7141f * cH)
             lineTo(0.8380f * w, 0.7141f * cH)
-
-            // Step outward to intermediate right step
             cubicTo(0.8620f * w, 0.7141f * cH, 0.8804f * w, 0.7256f * cH, 0.8926f * w, 0.7483f * cH)
             cubicTo(0.9092f * w, 0.7791f * cH, 0.9086f * w, 0.8204f * cH, 0.9086f * w, 0.8209f * cH)
             lineTo(0.9086f * w, 0.8234f * cH)
             lineTo(0.9100f * w, 0.8238f * cH)
-
-            // Flare to right shoulder
             cubicTo(1.0031f * w, 0.8497f * cH, 1.0004f * w, 0.9866f * cH, w, cH)
-
-            // Right vertical side down to bottom
             lineTo(w, h)
-            close()
-        }
-        return Outline.Generic(path)
-    }
-}
-
-private val DoubleVerticalRectangleArchShape = object : Shape {
-    override fun createOutline(
-        size: androidx.compose.ui.geometry.Size,
-        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
-        density: androidx.compose.ui.unit.Density
-    ): Outline {
-        val w = size.width
-        val h = size.height
-        val corner = with(density) { 10.dp.toPx() }
-        val step = with(density) { 7.dp.toPx() } // slight offset between the two vertically stacked rectangular tiers
-        val midH = h * 0.48f // vertical proportion separating the two tiers
-
-        val path = Path().apply {
-            // Upper Tier (slightly narrower / stepped in)
-            moveTo(step, corner)
-            cubicTo(step, 0f, step, 0f, step + corner, 0f)
-            lineTo(w - step - corner, 0f)
-            cubicTo(w - step, 0f, w - step, 0f, w - step, corner)
-            lineTo(w - step, midH - step)
-
-            // Step out to Lower Tier
-            lineTo(w - corner, midH)
-            cubicTo(w, midH, w, midH, w, midH + corner)
-            lineTo(w, h - corner)
-            cubicTo(w, h, w, h, w - corner, h)
-            lineTo(corner, h)
-            cubicTo(0f, h, 0f, h, 0f, h - corner)
-            lineTo(0f, midH + corner)
-            cubicTo(0f, midH, 0f, midH, corner, midH)
-
-            // Step in to Upper Tier
-            lineTo(step, midH - step)
             close()
         }
         return Outline.Generic(path)
@@ -346,7 +276,6 @@ private fun Modifier.cardIslamicStarOverlay(alpha: Float = 0.055f): Modifier = t
     val patternColor = Color(0xFFF3DE8E).copy(alpha = alpha)
     val r = 12.dp.toPx()
     val rIn = r * 0.52f
-
     var y = 0f
     while (y < size.height + step) {
         var x = 0f
@@ -360,12 +289,7 @@ private fun Modifier.cardIslamicStarOverlay(alpha: Float = 0.055f): Modifier = t
                 if (i == 0) starPath.moveTo(px, py) else starPath.lineTo(px, py)
             }
             starPath.close()
-
-            drawPath(
-                path = starPath,
-                color = patternColor,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
-            )
+            drawPath(path = starPath, color = patternColor, style = Stroke(width = 1.dp.toPx()))
             x += step
         }
         y += step
@@ -384,617 +308,195 @@ fun SupportBackScreen(
     onOpenAdminLogin: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var showAddMasjidDialog by remember { mutableStateOf(false) }
     var showThanksDialog by remember { mutableStateOf(false) }
-    var showMasjidSelectorDialog by remember { mutableStateOf(false) }
+    var showAddMasjidDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val appStrings = LocalAppStrings.current
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF040E0A),
-                        Color(0xFF06140D),
-                        Color(0xFF040C08),
-                        Color(0xFF020704)
-                    )
-                )
-            )
+            .background(Brush.verticalGradient(colors = listOf(Color(0xFF040E0A), Color(0xFF06140D), Color(0xFF040C08), Color(0xFF020704))))
     ) {
         val screenHeight = maxHeight
         val isCompact = screenHeight < 680.dp
         val isUltraCompact = screenHeight < 580.dp
-
-        val itemSpacing = when {
-            screenHeight >= 720.dp -> 8.dp
-            isCompact -> 5.dp
-            else -> 6.dp
-        }
-        val slotVerticalPadding = when {
-            screenHeight >= 720.dp -> 10.dp
-            isCompact -> 6.dp
-            else -> 8.dp
-        }
-        val logoSize = when {
-            screenHeight >= 720.dp -> 82.dp
-            isUltraCompact -> 56.dp
-            isCompact -> 62.dp
-            else -> 72.dp
-        }
-        val wordmarkHeight = when {
-            screenHeight >= 720.dp -> 34.dp
-            isUltraCompact -> 22.dp
-            isCompact -> 26.dp
-            else -> 30.dp
-        }
+        val itemSpacing = if (isCompact) 5.dp else 8.dp
+        val logoSize = if (isUltraCompact) 46.dp else if (isCompact) 52.dp else 64.dp
+        val wordmarkHeight = if (isUltraCompact) 18.dp else if (isCompact) 22.dp else 26.dp
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 6.dp, bottom = 0.dp),
+            modifier = Modifier.fillMaxSize().padding(top = 6.dp, bottom = 0.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Top Bar: Language Buttons at top left + Admin Circle Button at top right
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 24.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                LanguageCirclesRow(
-                    currentLang = uiState.language,
-                    onLangSelect = onLangSelect
-                )
-
-                Box(
-                    modifier = Modifier
-                        .padding(end = 24.dp)
-                        .size(38.dp)
-                        .background(
-                            color = Color(0xFFF3DE8E),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .border(
-                            width = 1.2.dp,
-                            color = Color(0xFFF3DE8E),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .clickable { onOpenAdminLogin() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = "Admin Login",
-                        tint = Color(0xFF040E0A),
-                        modifier = Modifier.size(22.dp)
-                    )
+                LanguageCirclesRow(currentLang = uiState.language, onLangSelect = onLangSelect)
+                Box(modifier = Modifier.size(38.dp).background(color = Color(0xFFF3DE8E), shape = RoundedCornerShape(10.dp)).clickable { onOpenAdminLogin() }, contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Filled.Person, contentDescription = "Admin Login", tint = Color(0xFF040E0A), modifier = Modifier.size(22.dp))
                 }
             }
 
-            // 2. Center: Logo & AZAN TIME Wordmark with Punchline
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 AzanLogoCard(size = logoSize)
-                Spacer(modifier = Modifier.height(itemSpacing + 4.dp))
-                AzanTimeWordmark(
-                    height = wordmarkHeight,
-                    topPadding = 4.dp,
-                    bottomPadding = 4.dp
-                )
+                Spacer(modifier = Modifier.height(itemSpacing))
+                AzanTimeWordmark(height = wordmarkHeight, topPadding = 2.dp, bottomPadding = 2.dp)
             }
 
-            // 3. Continuous Auto-Sliding Horizontal Carousel (Narrow width, 350dp tall height, active card prominent, side cards recessed)
-            val pagerState = rememberPagerState(initialPage = 5001, pageCount = { 10000 })
-            val coroutineScope = rememberCoroutineScope()
+            Spacer(modifier = Modifier.height(28.dp))
 
-
-
+            val pagerState = rememberPagerState(initialPage = 300, pageCount = { 1000 })
             val settingCards = listOf(
-
-                Triple(
-                    when (uiState.language) {
-                        "ur" -> "اپنی مسجد"
-                        "hi" -> "अपनी मस्जिद"
-                        else -> "CURRENT MASJID"
-                    },
-                    "",
-                    Icons.Outlined.Mosque
-                ),
-                Triple(
-                    when (uiState.language) {
-                        "ur" -> "نئی مسجد کے لیے\nدرخواست"
-                        "hi" -> "नई मस्जिद जोड़ने की\nगुजारिश"
-                        else -> "ADD NEW MASJID"
-                    },
-                    when (uiState.language) {
-                        "ur" -> "تفصیلات جمع کروائیں"
-                        "hi" -> "विवरण जमा करें"
-                        else -> "Submit Details"
-                    },
-                    Icons.Outlined.AddLocationAlt
-                ),
-                Triple(
-                    when (uiState.language) {
-                        "ur" -> "ہماری حمایت کریں"
-                        "hi" -> "हमारा समर्थन करें"
-                        else -> "SUPPORT US"
-                    },
-                    when (uiState.language) {
-                        "ur" -> "فیڈبک کے ساتھ ایپ کو سپورٹ کریں، 5 اسٹار ریٹنگ دیں"
-                        "hi" -> "फीडबैक के साथ ऐप को सपोर्ट करें, 5 स्टार रेटिंग दें"
-                        else -> "Support Our App\nYour Feedback\n5 Star Rating"
-                    },
-                    Icons.Outlined.HeadsetMic
-                )
+                Triple(when (uiState.language) { "ur" -> "اپنی مسجد"; "hi" -> "अपनी मस्जिद"; else -> "CURRENT MASJID" }, "", Icons.Outlined.Mosque),
+                Triple(when (uiState.language) { "ur" -> "نئی مسجد"; "hi" -> "नई मस्जिद"; else -> "ADD NEW MASJID" }, "", Icons.Outlined.AddLocationAlt),
+                Triple(when (uiState.language) { "ur" -> "ہماری حمایت کریں"; "hi" -> "ہمارا समर्थन करें"; else -> "SUPPORT US" }, when (uiState.language) { "ur" -> "فیڈبک کے ساتھ ایپ کو سپورٹ کریں، 5 اسٹار ریٹنگ دیں"; "hi" -> "फीडबैक کے ساتھ ایپ کو سپورٹ کریں, 5 स्टार रेटिंग दें"; else -> "Support our app with feedback and 5-star rating" }, Icons.Outlined.HeadsetMic)
             )
+            val actionTexts = listOf(when (uiState.language) { "ur" -> "تبدیل"; "hi" -> "बदलें"; else -> "CHANGE" }, when (uiState.language) { "ur" -> "درخواست"; "hi" -> "जोड़ें"; else -> "ADD" }, when (uiState.language) { "ur" -> "کھولیں"; "hi" -> "खोलें"; else -> "OPEN" })
+            val actions = listOf({ onChangeMasjid() }, { showAddMasjidDialog = true }, { onOpenFrontScreen() })
 
-            val actions = listOf(
-                { onChangeMasjid() },
-                { showAddMasjidDialog = true },
-                { onOpenFrontScreen() }
-            )
-
-            val actionTexts = listOf(
-                when (uiState.language) { "ur" -> "تبدیل"; "hi" -> "बदलें"; else -> "CHANGE" },
-                when (uiState.language) { "ur" -> "درخواست"; "hi" -> "जोड़ें"; else -> "ADD" },
-                when (uiState.language) { "ur" -> "کھولیں"; "hi" -> "खोलें"; else -> "OPEN" }
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(top = 2.dp, bottom = 0.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                HorizontalPager(
-                    state = pagerState,
-                    contentPadding = PaddingValues(horizontal = 84.dp),
-                    pageSpacing = 12.dp,
+            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                // Bottom edge transparency fade (covers only the bottom 24dp so cards blend smoothly without dimming the button)
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                ) { page ->
-                    val realIndex = page % 3
-                    val isSelected = (pagerState.currentPage == page)
-                    val (title, subtitle, icon) = settingCards[realIndex]
+                        .fillMaxSize()
+                        .drawWithContent {
+                            drawContent()
+                            val fadeHeight = 24.dp.toPx()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color(0xFF040E0A).copy(alpha = 0.72f),
+                                        Color(0xFF040E0A)
+                                    ),
+                                    startY = (size.height - fadeHeight).coerceAtLeast(0f),
+                                    endY = size.height
+                                )
+                            )
+                        }
+                ) {
+                    HorizontalPager(state = pagerState, contentPadding = PaddingValues(horizontal = 70.dp), pageSpacing = 12.dp, modifier = Modifier.fillMaxWidth().fillMaxHeight()) { page ->
+                        val realIndex = page % 3
+                        val (title, subtitle, icon) = settingCards[realIndex]
+                        val cardAnimOffsetY = remember { Animatable(0f) }
 
-                    val scaleY = animateFloatAsState(
-                        targetValue = if (isSelected) 1.0f else 0.80f,
-                        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                        label = "cardScaleY"
-                    ).value
-
-                    val scaleX = animateFloatAsState(
-                        targetValue = if (isSelected) 1.0f else 0.90f,
-                        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                        label = "cardScaleX"
-                    ).value
-
-                    val cardAlpha = animateFloatAsState(
-                        targetValue = if (isSelected) 1.0f else 0.82f,
-                        animationSpec = tween(250),
-                        label = "cardAlpha"
-                    ).value
-
-                    var isPlunging by remember { mutableStateOf(false) }
-                    val cardAnimOffsetY = remember { Animatable(0f) }
-                    val cardBounceScaleX = remember { Animatable(1f) }
-                    val cardBounceScaleY = remember { Animatable(1f) }
-
-                    val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                    val absOffset = kotlin.math.abs(pageOffset).coerceIn(0f, 1f)
-                    val horizontalMotionBlur = (absOffset * 18f).dp
-                    val verticalMotionBlur = if (cardAnimOffsetY.value > 0f) {
-                        ((cardAnimOffsetY.value / 2400f) * 26f).coerceIn(0f, 26f).dp
-                    } else if (cardAnimOffsetY.value < 0f) {
-                        (kotlin.math.abs(cardAnimOffsetY.value) / 50f * 6f).dp
-                    } else {
-                        0.dp
-                    }
-
-                    fun handleCardClick() {
-                        if (isSelected) {
-                            if (isPlunging) return
-                            coroutineScope.launch {
-                                isPlunging = true
-
-                                // 1. Cinematic anticipation: slight upward bounce recoil & squish
-                                launch {
-                                    cardBounceScaleX.animateTo(1.05f, tween(130, easing = FastOutSlowInEasing))
+                        val distance = kotlin.math.abs(pagerState.currentPage - page + pagerState.currentPageOffsetFraction)
+                        val isSelected = (distance < 0.1f)
+                        
+                        fun handleCardClick() {
+                            if (isSelected) {
+                                coroutineScope.launch {
+                                    cardAnimOffsetY.animateTo(-40f, tween(130))
+                                    cardAnimOffsetY.animateTo(2500f, tween(350))
+                                    actions[realIndex]()
+                                    delay(600L)
+                                    cardAnimOffsetY.snapTo(0f)
                                 }
-                                launch {
-                                    cardBounceScaleY.animateTo(0.92f, tween(130, easing = FastOutSlowInEasing))
-                                }
-                                cardAnimOffsetY.animateTo(-50f, tween(130, easing = FastOutSlowInEasing))
-
-                                // 2. High-speed plunge downward past bottom navigation bar with motion stretch
-                                launch {
-                                    cardBounceScaleX.animateTo(0.92f, tween(380, easing = FastOutLinearInEasing))
-                                }
-                                launch {
-                                    cardBounceScaleY.animateTo(1.18f, tween(380, easing = FastOutLinearInEasing))
-                                }
-                                cardAnimOffsetY.animateTo(2400f, tween(380, easing = FastOutLinearInEasing))
-
-                                // 3. Open action dialog/screen once card has completely dropped out of sight
-                                actions[realIndex]()
-
-                                // 4. Keep offscreen during transition, then reset cleanly for when dialog closes
-                                delay(500L)
-                                cardAnimOffsetY.snapTo(0f)
-                                cardBounceScaleX.snapTo(1f)
-                                cardBounceScaleY.snapTo(1f)
-                                isPlunging = false
-                            }
-                        } else {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(page)
+                            } else {
+                                coroutineScope.launch { pagerState.animateScrollToPage(page) }
                             }
                         }
-                    }
 
-                    val cardBorderBrush = if (isSelected) {
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color(0xFFE5B842),
-                                0.78f to Color(0xFFE5B842),
-                                0.90f to Color(0xFFE5B842).copy(alpha = 0.35f),
-                                0.97f to Color.Transparent,
-                                1.0f to Color.Transparent
-                            )
-                        )
-                    } else {
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color(0xFFE5B842).copy(alpha = 0.45f),
-                                0.78f to Color(0xFFE5B842).copy(alpha = 0.45f),
-                                0.90f to Color(0xFFE5B842).copy(alpha = 0.15f),
-                                0.97f to Color.Transparent,
-                                1.0f to Color.Transparent
-                            )
-                        )
-                    }
-
-                    Card(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                this.scaleX = (scaleX * (1f - absOffset * 0.08f)) * cardBounceScaleX.value
-                                this.scaleY = (scaleY * (1f - absOffset * 0.08f)) * cardBounceScaleY.value
-                                this.translationY = cardAnimOffsetY.value
-                            }
-                            .alpha(cardAlpha)
-                            .blur(radiusX = horizontalMotionBlur, radiusY = verticalMotionBlur)
-                            .clip(MinarDomeShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { handleCardClick() },
-                        shape = MinarDomeShape,
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) Color.Transparent else Color(0xFF0D281C)
-                        ),
-                        border = BorderStroke(
-                            width = if (isSelected) 2.dp else 1.2.dp,
-                            brush = cardBorderBrush
-                        )
-                    ) {
-                        Box(
+                        Card(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .graphicsLayer { 
+                                    scaleX = 1f - 0.12f * distance.coerceIn(0f, 1f)
+                                    scaleY = 1f - 0.15f * distance.coerceIn(0f, 1f)
+                                    translationY = cardAnimOffsetY.value + (distance * 35.dp.toPx()).coerceIn(0f, 35.dp.toPx())
+                                }
+                                .blur(if (distance < 0.05f) 0.dp else (distance * 6f).dp)
+                                .alpha(1f - 0.25f * distance.coerceIn(0f, 1f))
                                 .clip(MinarDomeShape)
-                                .background(
-                                    if (isSelected) {
-                                        Brush.verticalGradient(
-                                            colorStops = arrayOf(
-                                                0.0f to Color(0xFF1B4E38),
-                                                0.65f to Color(0xFF0F3524),
-                                                0.85f to Color(0xFF071D13),
-                                                0.95f to Color(0xFF05150E).copy(alpha = 0.85f),
-                                                1.0f to Color.Transparent
-                                            )
-                                        )
-                                    } else {
-                                        Brush.verticalGradient(
-                                            colorStops = arrayOf(
-                                                0.0f to Color(0xFF103324),
-                                                0.65f to Color(0xFF0B2519),
-                                                0.85f to Color(0xFF091E15),
-                                                0.95f to Color(0xFF06140D).copy(alpha = 0.85f),
-                                                1.0f to Color.Transparent
-                                            )
-                                        )
-                                    }
-                                )
-                                .cardIslamicStarOverlay(alpha = 0.055f)
+                                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { handleCardClick() },
+                            shape = MinarDomeShape,
+                            colors = CardDefaults.cardColors(containerColor = if (isSelected) Color.Transparent else Color(0xFF0D281C)),
+                            border = BorderStroke(width = if (isSelected) 2.dp else 1.2.dp, color = Color(0xFFE5B842).copy(alpha = if(isSelected) 1f else 0.4f))
                         ) {
-                            // Cinematic Floating Urdu Characters behind card content
-                            Canvas(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-                                val urduChars = listOf("ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش")
-                                val paint = android.graphics.Paint().apply {
-                                    color = android.graphics.Color.argb((0.08f * 255).toInt(), 0xF3, 0xDE, 0x8E)
-                                    textSize = 32.sp.toPx()
-                                    isAntiAlias = true
-                                    textAlign = android.graphics.Paint.Align.CENTER
-                                }
-
-                                // Simplification: Draw few static-positioned letters for demonstration; 
-                                // full dynamic animation requires a separate state-management system to avoid performance degradation.
-                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.2f, size.height * 0.2f, paint)
-                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.8f, size.height * 0.4f, paint)
-                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.4f, size.height * 0.7f, paint)
-                                drawContext.canvas.nativeCanvas.drawText(urduChars.random(), size.width * 0.7f, size.height * 0.8f, paint)
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .align(Alignment.TopCenter),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                Spacer(modifier = Modifier.height(26.dp))
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(if (isSelected) 54.dp else 42.dp)
-                                        .background(
-                                            Color(0xFFF8F9FA),
-                                            CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = title,
-                                        tint = Color.Black,
-                                        modifier = Modifier.size(if (isSelected) 26.dp else 20.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                // Badge for Header (All Titles)
-                                        Surface(
-                                            color = Color(0xFFF3DE8E).copy(alpha = 0.15f),
-                                            shape = RoundedCornerShape(8.dp),
-                                            border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.3f))
-                                        ) {
-                                            Text(
-                                                text = title.replace("\n", " "),
-                                                fontSize = if (isSelected) 14.sp else 11.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFFF3DE8E),
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
-                                                textAlign = TextAlign.Center
-                                            )
-                                        }
-
-                                        if (realIndex == 0) {
-                                            Spacer(modifier = Modifier.height(10.dp))
-
-                                            val context = androidx.compose.ui.platform.LocalContext.current
-                                            val photoData = remember(uiState.selectedMasjid.id, uiState.selectedMasjid.photoUrl) {
-                                                com.example.data.MasjidLocalCacheManager.getPhotoModel(
-                                                    context,
-                                                    uiState.selectedMasjid.id,
-                                                    uiState.selectedMasjid.photoUrl
-                                                )
-                                            }
-
-                                            // Top Photo / Logo Container matching image.png
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 8.dp)
-                                                    .height(if (isSelected) 175.dp else 135.dp)
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .background(Color(0xFF071B12)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                if (photoData != null) {
-                                                    coil.compose.AsyncImage(
-                                                        model = photoData,
-                                                        contentDescription = uiState.selectedMasjid.getLocalizedName(uiState.language),
-                                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                                        alignment = Alignment.Center,
-                                                        modifier = Modifier.fillMaxSize()
+                            Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF1B4E38), Color(0xFF071D13)))).cardIslamicStarOverlay(alpha = 0.04f)) {
+                                Column(modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Spacer(modifier = Modifier.height(28.dp))
+                                    Box(modifier = Modifier.size(if (isSelected) 40.dp else 32.dp).background(Color(0xFFF8F9FA), CircleShape), contentAlignment = Alignment.Center) { 
+                                        Icon(imageVector = icon, contentDescription = title, tint = Color.Black, modifier = Modifier.size(if (isSelected) 21.dp else 17.dp)) 
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Surface(color = Color(0xFFF3DE8E).copy(alpha = 0.15f), shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.3f))) { 
+                                        Text(text = title, fontSize = if (isSelected) 12.sp else 10.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFF3DE8E), modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) 
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Card(modifier = Modifier.fillMaxWidth().weight(1f, fill = false), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF020704)), border = BorderStroke(1.2.dp, Color(0xFFE5B842).copy(alpha = 0.35f))) {
+                                        Column(modifier = Modifier.fillMaxWidth()) {
+                                            when (realIndex) {
+                                                0 -> {
+                                                    // Card 0: Change Masjid (Blank container matching Add New Masjid layout, ready for custom animation)
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .height(if (isSelected) 370.dp else 240.dp)
+                                                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                                                            .background(Color(0xFF0C1424))
                                                     )
-                                                } else {
-                                                    Column(
-                                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                                        verticalArrangement = Arrangement.Center,
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                                    ) {
-                                                        AzanLogoCard(size = if (isSelected) 68.dp else 50.dp, animateShimmer = false)
-                                                        AzanTimeWordmark(
-                                                            height = if (isSelected) 34.dp else 24.dp,
-                                                            topPadding = 8.dp,
-                                                            bottomPadding = 0.dp
-                                                        )
+                                                }
+                                                1 -> {
+                                                    // Card 1: Add New Masjid (Animated Form Filling & Upward Scrolling Preview)
+                                                    AnimatedAddMasjidFormPreview(isSelected = isSelected)
+                                                }
+                                                2 -> {
+                                                    // Card 2: Support Us
+                                                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                                        Icon(imageVector = Icons.Outlined.HeadsetMic, contentDescription = null, tint = Color(0xFFF3DE8E), modifier = Modifier.size(36.dp))
+                                                        Spacer(modifier = Modifier.height(10.dp))
+                                                        Text(text = subtitle, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, lineHeight = 14.sp)
+                                                        Spacer(modifier = Modifier.height(8.dp))
+                                                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { repeat(5) { Icon(imageVector = Icons.Filled.Star, contentDescription = null, tint = Color(0xFFF3DE8E), modifier = Modifier.size(15.dp)) } }
                                                     }
                                                 }
-
-                                                // Top-Right ID Badge Overlay inside photo box (matching image.png)
-                                                Surface(
-                                                    color = Color(0xFF1E293B).copy(alpha = 0.85f),
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    border = BorderStroke(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.5f)),
-                                                    modifier = Modifier
-                                                        .align(Alignment.TopEnd)
-                                                        .padding(top = 8.dp, end = 8.dp)
-                                                ) {
-                                                    val idStr = uiState.selectedMasjid.displayId
-                                                    Text(
-                                                        text = if (idStr.equals("Guest", ignoreCase = true)) "Guest" else "#$idStr",
-                                                        fontSize = if (isSelected) 11.sp else 9.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color(0xFFF3DE8E),
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
                                             }
-
-                                            Spacer(modifier = Modifier.height(10.dp))
-
-                                            // Masjid Name (Takes full width, up to 3 lines for long names)
+                                        }
+                                    }
+                                    if (isSelected) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        val instr = when (realIndex) { 
+                                            0 -> appStrings.changeMasjidInstruction
+                                            1 -> "Note: Please use the Add button exclusively to submit the form for the responsible person (Moulana / Mutawalli / Bangi Sahab / All the Trust Member)."
+                                            else -> "" 
+                                        }
+                                        if (instr.isNotEmpty()) { 
                                             Text(
-                                                text = uiState.selectedMasjid.getLocalizedName(uiState.language).let { name ->
-                                                    if (uiState.language == "en") name.uppercase(Locale.ROOT) else name
-                                                },
-                                                fontSize = if (isSelected) 15.sp else 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color.White,
-                                                maxLines = 3,
-                                                overflow = TextOverflow.Ellipsis,
-                                                textAlign = TextAlign.Start,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 12.dp)
-                                            )
-
-                                            Spacer(modifier = Modifier.height(6.dp))
-
-                                            // Subtle Divider Line between Name and Address (matching image.png)
-                                            HorizontalDivider(
-                                                modifier = Modifier.padding(horizontal = 12.dp),
-                                                thickness = 0.8.dp,
-                                                color = Color(0xFFF3DE8E).copy(alpha = 0.20f)
-                                            )
-
-                                            Spacer(modifier = Modifier.height(6.dp))
-
-                                            // Row: Blue Location Pin + Location Text (matching image.png)
-                                            Row(
-                                                verticalAlignment = Alignment.Top,
-                                                horizontalArrangement = Arrangement.Start,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 12.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.LocationOn,
-                                                    contentDescription = "Location",
-                                                    tint = Color(0xFF3B82F6),
-                                                    modifier = Modifier
-                                                        .size(15.dp)
-                                                        .padding(top = 2.dp, end = 4.dp)
-                                                )
-                                                Text(
-                                                    text = uiState.selectedMasjid.getLocalizedFullLocation(uiState.language),
-                                                    fontSize = if (isSelected) 11.5.sp else 9.5.sp,
-                                                    fontWeight = FontWeight.Medium,
-                                                    color = Color.White.copy(alpha = 0.85f),
-                                                    textAlign = TextAlign.Start,
-                                                    maxLines = 3,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    lineHeight = 15.sp,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                            }
-                                        } else if (realIndex == 1) {
-                                            Spacer(modifier = Modifier.height(16.dp))
-                                            Text(
-                                                text = subtitle,
-                                                fontSize = if (isSelected) 13.sp else 10.5.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = Color.White,
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 5,
-                                                overflow = TextOverflow.Ellipsis,
-                                                lineHeight = 16.sp,
+                                                text = instr, 
+                                                fontSize = 10.sp, 
+                                                color = Color.White, 
+                                                textAlign = TextAlign.Center, 
+                                                lineHeight = 13.sp, 
                                                 modifier = Modifier.padding(horizontal = 14.dp)
                                             )
-                                        } else {
-                                            // realIndex == 2: Support Us
-                                            Spacer(modifier = Modifier.height(16.dp))
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.Center
-                                            ) {
-                                                val s1 = when (uiState.language) { "ur" -> "ہماری ایپ کو سپورٹ کریں"; "hi" -> "हमारे ऐप को सपोर्ट करें"; else -> "Support Our App" }
-                                                val s2 = when (uiState.language) { "ur" -> "آپ کی رائے"; "hi" -> "आपकी प्रतिक्रिया"; else -> "Your Feedback" }
-                                                val s3 = when (uiState.language) { "ur" -> "ریٹنگ"; "hi" -> "रेटिंग"; else -> "Rating" }
-
-                                                Text(text = s1, fontSize = if (isSelected) 13.sp else 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White)
-                                                Text(text = s2, fontSize = if (isSelected) 13.sp else 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White)
-                                                
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center
-                                                ) {
-                                                    Text(text = "5 ", fontSize = if (isSelected) 13.sp else 10.5.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFF3DE8E))
-                                                    Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                                                        repeat(5) {
-                                                            Icon(
-                                                                imageVector = Icons.Filled.Star,
-                                                                contentDescription = null,
-                                                                tint = Color(0xFFF3DE8E),
-                                                                modifier = Modifier.size(if (isSelected) 14.dp else 11.dp)
-                                                            )
-                                                        }
-                                                    }
-                                                    Text(text = " $s3", fontSize = if (isSelected) 13.sp else 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White)
-                                                }
-                                            }
+                                            Spacer(modifier = Modifier.height(12.dp)) 
                                         }
+                                        val activeLangBrush = Brush.verticalGradient(listOf(Color(0xFFF3DE8E), Color(0xFFD49B37)))
+                                        Box(
+                                            modifier = Modifier
+                                                .testTag("setting_action_button_$realIndex")
+                                                .width(130.dp)
+                                                .height(29.dp)
+                                                .clip(RoundedCornerShape(9.dp))
+                                                .background(brush = activeLangBrush)
+                                                .clickable { actions[realIndex]() },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = actionTexts[realIndex], 
+                                                fontSize = 12.sp, 
+                                                fontWeight = FontWeight.Black,
+                                                color = Color(0xFF040E0A)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(26.dp))
                                     }
-                                }
-                            }
-                        }
-
-                            if (isSelected) {
-                                val activeLangBrush = Brush.verticalGradient(
-                                    listOf(Color(0xFFF3DE8E), Color(0xFFD49B37))
-                                )
-                                Button(
-                                    onClick = { handleCardClick() },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.Transparent,
-                                        contentColor = Color(0xFF0C101B)
-                                    ),
-                                    shape = RoundedCornerShape(14.dp),
-                                    contentPadding = PaddingValues(0.dp),
-                                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = 28.dp)
-                                        .width(135.dp)
-                                        .height(38.dp)
-                                        .background(
-                                            brush = activeLangBrush,
-                                            shape = RoundedCornerShape(14.dp)
-                                        )
-                                ) {
-                                    Text(
-                                        text = actionTexts[realIndex],
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color(0xFF0C101B)
-                                    )
                                 }
                             }
                         }
@@ -1004,7 +506,6 @@ fun SupportBackScreen(
         }
     }
 
-    // Add Masjid Form Dialog
     if (showAddMasjidDialog) {
         AddMasjidAutoDialog(
             language = uiState.language,
@@ -1016,1433 +517,292 @@ fun SupportBackScreen(
         )
     }
 
-    // Thanks Popup
     if (showThanksDialog) {
-        Dialog(
-            onDismissRequest = {
-                showThanksDialog = false
-                onMasjidSubmitted()
-            },
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(0.90f),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(68.dp)
-                                .background(Color(0xFF10B981).copy(alpha = 0.2f), CircleShape)
-                                .border(2.dp, Color(0xFF10B981), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ThumbUp,
-                                contentDescription = "Thanks",
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(34.dp)
-                            )
-                        }
-
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "درخواست موصول ہوگئی!"
-                                "hi" -> "अनुरोध प्राप्त हुआ!"
-                                else -> "Request Received!"
-                            },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 19.sp,
-                            color = Color(0xFF34D399),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        val annotatedText = buildAnnotatedString {
-                            when (uiState.language) {
-                                "ur" -> {
-                                    append("براہ کرم ")
-                                    withStyle(
-                                        style = SpanStyle(
-                                            color = Color(0xFFFBBF24),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp
-                                        )
-                                    ) {
-                                        append("(5 منٹ)")
-                                    }
-                                    append(" انتظار فرمائیں\nآپ کی مسجد لائیو ہو جائے گی۔")
-                                }
-                                "hi" -> {
-                                    append("कृपया ")
-                                    withStyle(
-                                        style = SpanStyle(
-                                            color = Color(0xFFFBBF24),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp
-                                        )
-                                    ) {
-                                        append("(5 मिनट)")
-                                    }
-                                    append(" प्रतीक्षा करें\nआपकी मस्जिद लाइव हो जाएगी।")
-                                }
-                                else -> {
-                                    append("Please wait ")
-                                    withStyle(
-                                        style = SpanStyle(
-                                            color = Color(0xFFFBBF24),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp
-                                        )
-                                    ) {
-                                        append("(5 Min)")
-                                    }
-                                    append("\nYour Masjid will be live.")
-                                }
-                            }
-                        }
-                        Text(
-                            text = annotatedText,
-                            fontSize = 14.5.sp,
-                            color = Color.White.copy(alpha = 0.95f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                            lineHeight = 22.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Button(
-                            onClick = {
-                                showThanksDialog = false
-                                onMasjidSubmitted()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(46.dp)
-                        ) {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "ٹھیک ہے"
-                                    "hi" -> "ठीक है"
-                                    else -> "OK"
-                                },
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = Color.White
-                            )
-                        }
+        Dialog(onDismissRequest = { showThanksDialog = false; onMasjidSubmitted() }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                Card(modifier = Modifier.fillMaxWidth(0.90f), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Box(modifier = Modifier.size(68.dp).background(Color(0xFF10B981).copy(alpha = 0.2f), CircleShape).border(2.dp, Color(0xFF10B981), CircleShape), contentAlignment = Alignment.Center) { Icon(imageVector = Icons.Default.ThumbUp, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(34.dp)) }
+                        Text(text = when (uiState.language) { "ur" -> "درخواست موصول ہوگئی!"; "hi" -> "अनुरोध प्राप्त हुआ!"; else -> "Request Received!" }, fontWeight = FontWeight.Bold, fontSize = 19.sp, color = Color(0xFF34D399), textAlign = TextAlign.Center)
+                        val annotatedText = buildAnnotatedString { when (uiState.language) { "ur" -> { append("براہ کرم "); withStyle(style = SpanStyle(color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold, fontSize = 15.sp)) { append("(5 منٹ)") }; append(" انتظار فرمائیں\nآپ کی مسجد لائیو ہو جائے گی۔") }; "hi" -> { append("कृपया "); withStyle(style = SpanStyle(color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold, fontSize = 15.sp)) { append("(5 मिनट)") }; append(" प्रतीक्षा करें\nआपकी मस्जिद लाइव हो जाएगी।") }; else -> { append("Please wait "); withStyle(style = SpanStyle(color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold, fontSize = 15.sp)) { append("(5 Min)") }; append("\nYour Masjid will be live.") } } }
+                        Text(text = annotatedText, fontSize = 14.5.sp, color = Color.White.copy(alpha = 0.95f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(), lineHeight = 22.sp)
+                        Button(onClick = { showThanksDialog = false; onMasjidSubmitted() }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth().height(46.dp)) { Text(text = when (uiState.language) { "ur" -> "ٹھیک ہے"; "hi" -> "ठीक है"; else -> "OK" }, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White) }
                     }
                 }
-
-                ColorfulConfettiOverlay(
-                    modifier = Modifier.fillMaxSize()
-                )
+                ColorfulConfettiOverlay(modifier = Modifier.fillMaxSize())
             }
         }
     }
 }
 
 @Composable
-fun SupportFrontScreen(
-    uiState: UIState,
-    onClose: () -> Unit,
-    onLangSelect: (String) -> Unit = {},
-    onMasjidSubmitted: () -> Unit = {},
-    onChangeMasjid: () -> Unit = {},
-    onSelectMasjid: (MasjidItem) -> Unit = {},
-    modifier: Modifier = Modifier
-) {
+fun SupportFrontScreen(uiState: UIState, onClose: () -> Unit, onLangSelect: (String) -> Unit = {}, onMasjidSubmitted: () -> Unit = {}, onChangeMasjid: () -> Unit = {}, onSelectMasjid: (MasjidItem) -> Unit = {}, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val primaryGold = Color(0xFFF3DE8E)
     val whatsappTarget = "919960171516"
-
     var showRateUsDialog by remember { mutableStateOf(false) }
     var showOtherAmountDialog by remember { mutableStateOf(false) }
     var showUpiAppChooserDialog by remember { mutableStateOf(false) }
     var showQrDialog by remember { mutableStateOf(false) }
     var selectedContributionAmount by remember { mutableIntStateOf(250) }
-
     val prefs = remember { context.getSharedPreferences("azan_user_rating", Context.MODE_PRIVATE) }
-    val initialRating = remember(prefs) {
-        try {
-            prefs.getFloat("saved_stars", 0f).toDouble()
-        } catch (e1: Throwable) {
-            try {
-                prefs.getInt("saved_stars", 0).toDouble()
-            } catch (e2: Throwable) {
-                try {
-                    prefs.getString("saved_stars", "0")?.toDoubleOrNull() ?: 0.0
-                } catch (e3: Throwable) {
-                    0.0
-                }
-            }
-        }
-    }
+    val initialRating = remember(prefs) { try { prefs.getFloat("saved_stars", 0f).toDouble() } catch (e: Throwable) { 0.0 } }
     var userRating by remember { mutableDoubleStateOf(initialRating) }
     var averageRating by remember { mutableDoubleStateOf(0.0) }
     var totalReviews by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
-        try {
-            val (avg, count) = GoogleSheetMasjidSync.fetchRatingStats()
-            if (count > 0 && avg > 0.0) {
-                averageRating = avg
-                totalReviews = count
-            }
-        } catch (t: Throwable) {
-            // Never crash
-        }
-    }
+    LaunchedEffect(Unit) { try { val (avg, count) = GoogleSheetMasjidSync.fetchRatingStats(); if (count > 0 && avg > 0.0) { averageRating = avg; totalReviews = count } } catch (t: Throwable) {} }
 
     fun openWhatsApp() {
         try {
-            val message = when (uiState.language) {
-                "ur" -> "السلام علیکم! اذان ایپ کے بارے میں فیڈ بیک / مدد درکار ہے۔"
-                "hi" -> "अस्सلام-ओ-अलैकुम! अज़ान ऐप के बारे में सहायता / सुझाव।"
-                else -> "Assalam-o-Alaikum! I need support / have feedback regarding Azan App."
-            }
-            val uri = Uri.parse("https://wa.me/$whatsappTarget?text=${Uri.encode(message)}")
-            val intent = Intent(Intent.ACTION_VIEW, uri)
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            try {
-                val dial = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+$whatsappTarget"))
-                context.startActivity(dial)
-            } catch (e2: Exception) {
-                Toast.makeText(context, "Could not open WhatsApp", Toast.LENGTH_SHORT).show()
-            }
-        }
+            val message = when (uiState.language) { "ur" -> "السلام علیکم! اذان ایپ کے بارے میں فیڈ بیک / مدد درکار ہے۔"; "hi" -> "अस्सलाम-ओ-अलैकुम! अज़ान ऐप के बारे में सहायता / सुझाव।"; else -> "Assalam-o-Alaikum! I need support / have feedback regarding Azan App." }
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$whatsappTarget?text=${Uri.encode(message)}")))
+        } catch (e: Exception) { try { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:+$whatsappTarget"))) } catch (e2: Exception) { Toast.makeText(context, "Could not open WhatsApp", Toast.LENGTH_SHORT).show() } }
     }
 
     fun launchUpiForApp(packageName: String?, amount: Int) {
         val amStr = if (amount > 0) "&am=$amount" else ""
-        val targetVpa = "9960171516@ybl"
-        val targetName = Uri.encode("Azan Time App Support")
-        val uri: Uri = Uri.parse("upi://pay?pa=$targetVpa&pn=$targetName${amStr}&cu=INR")
-
+        val uri = Uri.parse("upi://pay?pa=9960171516@ybl&pn=${Uri.encode("Azan Time App Support")}${amStr}&cu=INR")
         val intent = Intent(Intent.ACTION_VIEW, uri)
-        if (!packageName.isNullOrBlank()) {
-            intent.setPackage(packageName)
-        }
-        try {
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            try {
-                val fallbackIntent = Intent(Intent.ACTION_VIEW, uri)
-                context.startActivity(Intent.createChooser(fallbackIntent, "Pay with UPI"))
-            } catch (e2: Exception) {
-                Toast.makeText(context, "No UPI app found. Please scan the QR code.", Toast.LENGTH_LONG).show()
-            }
-        }
+        if (!packageName.isNullOrBlank()) intent.setPackage(packageName)
+        try { context.startActivity(intent) } catch (e: Exception) { try { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW, uri), "Pay with UPI")) } catch (e2: Exception) { Toast.makeText(context, "No UPI app found", Toast.LENGTH_LONG).show() } }
     }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF040E0A),
-                        Color(0xFF06140D),
-                        Color(0xFF040C08),
-                        Color(0xFF020704)
-                    )
-                )
-            )
-    ) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(Color(0xFF040E0A), Color(0xFF06140D), Color(0xFF040C08), Color(0xFF020704))))) {
         val screenHeight = maxHeight
         val isCompact = screenHeight < 680.dp
-        val isUltraCompact = screenHeight < 580.dp
+        val itemSpacing = if (isCompact) 4.dp else 6.dp
+        val logoSize = if (isCompact) 70.dp else 80.dp
+        val wordmarkHeight = if (isCompact) 36.dp else 42.dp
 
-        val itemSpacing = when {
-            screenHeight >= 720.dp -> 8.dp
-            isCompact -> 4.dp
-            else -> 6.dp
-        }
-        val slotVerticalPadding = when {
-            screenHeight >= 720.dp -> 8.dp
-            isCompact -> 4.dp
-            else -> 6.dp
-        }
-        val logoSize = when {
-            screenHeight >= 720.dp -> 86.dp
-            isUltraCompact -> 60.dp
-            isCompact -> 70.dp
-            else -> 80.dp
-        }
-        val wordmarkHeight = when {
-            screenHeight >= 720.dp -> 46.dp
-            isUltraCompact -> 30.dp
-            isCompact -> 36.dp
-            else -> 42.dp
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(itemSpacing),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 1. Top Bar: Language Circles on Left + Close Button (X) on Right
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp, bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                LanguageCirclesRow(
-                    currentLang = uiState.language,
-                    onLangSelect = onLangSelect
-                )
-
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(Color(0x26FFFFFF), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = primaryGold
-                    )
+        Column(modifier = Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(itemSpacing), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                LanguageCirclesRow(currentLang = uiState.language, onLangSelect = onLangSelect)
+                IconButton(onClick = onClose, modifier = Modifier.size(32.dp).background(Color(0x26FFFFFF), CircleShape)) { Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = primaryGold) }
+            }
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                AzanLogoCard(size = logoSize); Spacer(modifier = Modifier.height(14.dp)); AzanTimeWordmark(height = wordmarkHeight, topPadding = 6.dp, bottomPadding = 6.dp)
+            }
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))) {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(imageVector = Icons.Outlined.Favorite, contentDescription = null, tint = primaryGold, modifier = Modifier.size(20.dp)); Text(text = when (uiState.language) { "ur" -> "ایپ میں تعاون کریں"; "hi" -> "ऐप को सपोर्ट करें"; else -> "Support the App" }, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = primaryGold) }
+                        Text(text = "UPI Pay / QR", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF34D399))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(100, 250, 500).forEach { amt -> Button(onClick = { selectedContributionAmount = amt; showUpiAppChooserDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Color.White), border = BorderStroke(1.dp, Color(0xFF424242)), shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f).height(38.dp)) { Text(text = "₹$amt", fontSize = 13.sp, fontWeight = FontWeight.Bold) } }
+                        Button(onClick = { showOtherAmountDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = primaryGold), border = BorderStroke(1.dp, Color(0xFF424242)), shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f).height(38.dp)) { Text(text = when (uiState.language) { "ur" -> "دیگر"; "hi" -> "अन्य"; else -> "Other" }, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    }
+                    Button(onClick = { showQrDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0x1A34D399)), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth().height(40.dp)) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) { Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null, tint = primaryGold, modifier = Modifier.size(18.dp)); Text(text = when (uiState.language) { "ur" -> "کیو آر کوڈ اسکین کریں"; "hi" -> "QR کوڈ स्कैन करें"; else -> "Scan QR Code" }, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = primaryGold) } }
                 }
             }
-
-            // 2. Center: Logo & AZAN TIME Wordmark
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp, bottom = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                AzanLogoCard(size = logoSize)
-                Spacer(modifier = Modifier.height(14.dp))
-                AzanTimeWordmark(
-                    height = wordmarkHeight,
-                    topPadding = 6.dp,
-                    bottomPadding = 6.dp
-                )
-            }
-
-            // Slot 1: App Support UPI Card (₹100, ₹250, ₹500, Other, Scan QR)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Favorite,
-                                contentDescription = "Support App",
-                                tint = Color(0xFFF3DE8E),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "ایپ میں تعاون کریں"
-                                    "hi" -> "ऐप को सपोर्ट करें"
-                                    else -> "Support the App"
-                                },
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF3DE8E)
-                            )
-                        }
-                        Text(
-                            text = "UPI Pay / QR",
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF34D399)
-                        )
-                    }
-
-                    // Preset Amount Buttons (₹100, ₹250, ₹500, Other)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        val amounts = listOf(100, 250, 500)
-                        amounts.forEach { amt ->
-                            Button(
-                                onClick = {
-                                    selectedContributionAmount = amt
-                                    showUpiAppChooserDialog = true
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.Transparent,
-                                    contentColor = Color.White
-                                ),
-                                border = BorderStroke(1.dp, Color(0xFF424242)),
-                                shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(38.dp)
-                            ) {
-                                Text(
-                                    text = "₹$amt",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Button(
-                            onClick = { showOtherAmountDialog = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Transparent,
-                                contentColor = primaryGold
-                            ),
-                            border = BorderStroke(1.dp, Color(0xFF424242)),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(38.dp)
-                        ) {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "دیگر"
-                                    "hi" -> "अन्य"
-                                    else -> "Other"
-                                },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    // Scan QR Button
-                    Button(
-                        onClick = { showQrDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0x1A34D399)),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(40.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = "Scan QR",
-                                tint = primaryGold,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "کیو آر کوڈ اسکین کریں"
-                                    "hi" -> "QR कोड स्कैन करें"
-                                    else -> "Scan QR Code"
-                                },
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = primaryGold
-                            )
-                        }
-                    }
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))) {
+                Row(modifier = Modifier.fillMaxWidth().clickable { openWhatsApp() }.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Image(painter = painterResource(id = R.drawable.ic_whatsapp_outlined), contentDescription = null, modifier = Modifier.size(28.dp)); Column { Text(text = when (uiState.language) { "ur" -> "سپورٹ اور فیڈبیک"; "hi" -> "सपोर्ट और सुझाव"; else -> "Support & Feedback" }, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White); Text(text = when (uiState.language) { "ur" -> "فوری واٹس ایپ"; "hi" -> "इंस्टेंट व्हाट्सएप"; else -> "Instant WhatsApp" }, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF4ADE80)) } }
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
                 }
             }
-
-            // Slot 2: Support & Feedback (Full Width)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { openWhatsApp() }
-                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_whatsapp_outlined),
-                            contentDescription = "WhatsApp",
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Column {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "سپورٹ اور فیڈبیک"
-                                    "hi" -> "सपोर्ट और सुझाव"
-                                    else -> "Support & Feedback"
-                                },
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "فوری واٹس ایپ"
-                                    "hi" -> "इंस्टेंट व्हाट्सएप"
-                                    else -> "Instant WhatsApp"
-                                },
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF4ADE80),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            // Slot 3: Rate Us (Full Width)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showRateUsDialog = true }
-                        .padding(horizontal = 14.dp, vertical = slotVerticalPadding),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))) {
+                Row(modifier = Modifier.fillMaxWidth().clickable { showRateUsDialog = true }.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(Color(0x26F3DE8E), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = primaryGold,
-                                modifier = Modifier.size(16.dp)
-                            )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { 
+                        Box(modifier = Modifier.size(28.dp).background(Color(0x26F3DE8E), CircleShape), contentAlignment = Alignment.Center) { 
+                            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = primaryGold, modifier = Modifier.size(16.dp)) 
                         }
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = String.format(Locale.US, "%.1f", appRatingDisplay),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = primaryGold
-                                )
-                                Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                                    for (i in 1..5) {
-                                        val fillRatio = when {
-                                            appRatingDisplay >= i -> 1f
-                                            appRatingDisplay >= i - 0.5 -> 0.5f
-                                            else -> 0f
-                                        }
-                                        StarIconDisplay(fillRatio = fillRatio, size = 10.dp)
-                                    }
-                                }
+                        Column { 
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { 
+                                Text(text = String.format(Locale.US, "%.1f", appRatingDisplay), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = primaryGold)
+                                Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) { for (i in 1..5) { StarIconDisplay(fillRatio = if(appRatingDisplay >= i) 1f else if(appRatingDisplay >= i-0.5) 0.5f else 0f, starSize = 10.dp) } } 
                             }
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "پلے اسٹور پر ریٹنگ دیں"
-                                    "hi" -> "प्ले स्टोर पर रेटिंग दें"
-                                    else -> "Rate us on Play Store"
-                                },
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                        }
+                            Text(text = when (uiState.language) { "ur" -> "پلے اسٹور پر ریٹنگ دیں"; "hi" -> "प्ले स्टोर पर रेटिंग दें"; else -> "Rate us on Play Store" }, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.7f)) 
+                        } 
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(primaryGold)
-                            .padding(horizontal = 12.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "5★ ریٹنگ دیں"
-                                "hi" -> "5★ रेटिंग दें"
-                                else -> "Rate Us 5★"
-                            },
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF040E0A)
-                        )
-                    }
+                    Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(primaryGold).padding(horizontal = 12.dp, vertical = 5.dp)) { Text(text = when (uiState.language) { "ur" -> "5★ ریٹنگ دیں"; "hi" -> "5★ रेटिंग दें"; else -> "Rate Us 5★" }, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF040E0A)) }
                 }
             }
-
             Spacer(modifier = Modifier.weight(1f))
-
-            // Footer
-            AiStudioLoadingFooter(
-                modifier = Modifier.padding(top = 0.dp, bottom = 2.dp)
-            )
+            com.example.ui.AiStudioLoadingFooter(modifier = Modifier.padding(top = 0.dp, bottom = 2.dp))
         }
     }
 
-    // Custom Amount Dialog
     if (showOtherAmountDialog) {
-        val amountFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
-        val amountKeyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
         var customAmountText by remember { mutableStateOf("") }
-        Dialog(
-            onDismissRequest = {
-                amountFocusManager.clearFocus()
-                amountKeyboardController?.hide()
-                showOtherAmountDialog = false
-            },
-            properties = androidx.compose.ui.window.DialogProperties(decorFitsSystemWindows = false)
-        ) {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E17)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 24.dp)
-                    .imePadding()
-            ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = when (uiState.language) {
-                            "ur" -> "تعاون کی رقم درج کریں"
-                            "hi" -> "सहयोग राशि दर्ज करें"
-                            else -> "Enter Contribution Amount"
-                        },
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = primaryGold
-                    )
-                    OutlinedTextField(
-                        value = customAmountText,
-                        onValueChange = { customAmountText = it.filter { ch -> ch.isDigit() } },
-                        label = {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "رقم (₹)"
-                                    "hi" -> "राशि (₹)"
-                                    else -> "Amount (₹)"
-                                },
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                        },
-                        placeholder = { Text("1000", color = Color.White.copy(alpha = 0.3f)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = primaryGold,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { showOtherAmountDialog = false },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "منسوخ"
-                                    "hi" -> "रद्द करें"
-                                    else -> "Cancel"
-                                },
-                                color = Color.White
-                            )
-                        }
-                        Button(
-                            onClick = {
-                                val entered = customAmountText.toIntOrNull()
-                                if (entered != null && entered > 0) {
-                                    selectedContributionAmount = entered
-                                    showOtherAmountDialog = false
-                                    showUpiAppChooserDialog = true
-                                } else {
-                                    val err = when (uiState.language) {
-                                        "ur" -> "براہ کرم درست رقم درج کریں"
-                                        "hi" -> "कृपया सही राशि दर्ज करें"
-                                        else -> "Please enter a valid amount"
-                                    }
-                                    Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5B842)),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "آگے بڑھیں"
-                                    "hi" -> "आगे बढ़ें"
-                                    else -> "Proceed"
-                                },
-                                color = Color(0xFF0F1713),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+        Dialog(onDismissRequest = { showOtherAmountDialog = false }, properties = androidx.compose.ui.window.DialogProperties(decorFitsSystemWindows = false)) {
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E17)), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp).imePadding()) {
+                Column(modifier = Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(text = when (uiState.language) { "ur" -> "تعاون کی رقم درج کریں"; "hi" -> "सहयोग राशि दर्ज करें"; else -> "Enter Contribution Amount" }, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = primaryGold)
+                    OutlinedTextField(value = customAmountText, onValueChange = { customAmountText = it.filter { ch -> ch.isDigit() } }, label = { Text(text = when (uiState.language) { "ur" -> "رقم (₹)"; "hi" -> "राशि (₹)"; else -> "Amount (₹)" }, color = Color.White.copy(alpha = 0.7f)) }, placeholder = { Text("1000", color = Color.White.copy(alpha = 0.3f)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = primaryGold, unfocusedBorderColor = Color.White.copy(alpha = 0.3f), focusedTextColor = Color.White, unfocusedTextColor = Color.White), modifier = Modifier.fillMaxWidth())
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { showOtherAmountDialog = false }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)), modifier = Modifier.weight(1f)) { Text(text = when (uiState.language) { "ur" -> "منسوخ"; "hi" -> "रद्द करें"; else -> "Cancel" }, color = Color.White) }
+                        Button(onClick = { val entered = customAmountText.toIntOrNull(); if (entered != null && entered > 0) { selectedContributionAmount = entered; showOtherAmountDialog = false; showUpiAppChooserDialog = true } else { Toast.makeText(context, "Invalid amount", Toast.LENGTH_SHORT).show() } }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5B842)), modifier = Modifier.weight(1f)) { Text(text = when (uiState.language) { "ur" -> "آگے بڑھیں"; "hi" -> "आगे बढ़ें"; else -> "Proceed" }, color = Color(0xFF0F1713), fontWeight = FontWeight.Bold) }
                     }
                 }
             }
         }
     }
-
-    if (showQrDialog) {
-        val dialogQrModel = R.drawable.qr_support_donate
-
-        Dialog(onDismissRequest = { showQrDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1B15)),
-                modifier = Modifier
-                    .fillMaxWidth(0.95f)
-                    .padding(12.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "ایپ سپورٹ کے لیے کیو آر اسکین کریں"
-                                "hi" -> "ऐप सपोर्ट के लिए क्यूआर स्कैन करें"
-                                else -> "Scan QR to Support App"
-                            },
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = primaryGold
-                        )
-                        IconButton(
-                            onClick = { showQrDialog = false },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(Color(0xFF1E293B), CircleShape)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = primaryGold,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+    if (showQrDialog) { 
+        Dialog(onDismissRequest = { showQrDialog = false }) { 
+            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1B15)), modifier = Modifier.fillMaxWidth(0.95f).padding(12.dp)) { 
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) { 
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { 
+                        Text(text = when (uiState.language) { "ur" -> "ایپ سپورٹ کے لیے کیو آر اسکین کریں"; "hi" -> "ऐप सपोर्ट के लिए क्यूआर स्कैन करें"; else -> "Scan QR to Support App" }, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = primaryGold); IconButton(onClick = { showQrDialog = false }, modifier = Modifier.size(36.dp).background(Color(0xFF1E293B), CircleShape)) { Icon(imageVector = Icons.Default.Close, contentDescription = null, tint = primaryGold, modifier = Modifier.size(18.dp)) } 
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .size(220.dp)
-                            .background(Color.White, RoundedCornerShape(14.dp))
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        coil.compose.AsyncImage(
-                            model = dialogQrModel,
-                            contentDescription = "App Support Donation QR Code",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit
-                        )
+                    Box(modifier = Modifier.size(220.dp).background(Color.White, RoundedCornerShape(14.dp)).padding(8.dp), contentAlignment = Alignment.Center) { 
+                        AsyncImage(model = R.drawable.qr_support_donate, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit) 
                     }
-
-                    Text(
-                        text = when (uiState.language) {
-                            "ur" -> "کسی بھی UPI ایپ سے اسکین کریں (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl"
-                            "hi" -> "किसी भी UPI ऐप से स्कैन करें (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl"
-                            else -> "Scan using any UPI App (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl"
-                        },
-                        fontSize = 11.5.sp,
-                        color = Color.White.copy(alpha = 0.85f),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
+                    Text(text = when (uiState.language) { "ur" -> "کسی بھی UPI ایپ سے اسکین کریں (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl"; "hi" -> "किसी भी UPI ऐप से स्कैन करें (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl"; else -> "Scan using any UPI App (GPay, PhonePe, Paytm)\nUPI ID: 9960171516@ybl" }, fontSize = 11.5.sp, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center) 
+                } 
+            } 
+        } 
     }
-
-    // Rate Us Dialog
     if (showRateUsDialog) {
         var tempRating by remember { mutableDoubleStateOf(if (userRating > 0.0) userRating else 5.0) }
         var isSubmitting by remember { mutableStateOf(false) }
-
-        Dialog(onDismissRequest = { showRateUsDialog = false }) {
-            Card(
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E17)),
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = when (uiState.language) {
-                                "ur" -> "اذان ٹائم کی درجہ بندی کریں"
-                                "hi" -> "अज़ान टाइम को रेटिंग दें"
-                                else -> "Rate Azan Time"
-                            },
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = primaryGold,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                        IconButton(
-                            onClick = { showRateUsDialog = false },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(Color(0xFF1E293B), CircleShape)
-                                .align(Alignment.CenterEnd)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = primaryGold,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+        Dialog(onDismissRequest = { showRateUsDialog = false }) { 
+            Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E17)), modifier = Modifier.fillMaxWidth().padding(16.dp)) { 
+                Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) { 
+                    Box(modifier = Modifier.fillMaxWidth()) { 
+                        Text(text = when (uiState.language) { "ur" -> "اذان ٹائم کی درجہ بندی کریں"; "hi" -> "अज़ान टाइम को रेटिंग दें"; else -> "Rate Azan Time" }, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = primaryGold, modifier = Modifier.align(Alignment.Center))
+                        IconButton(onClick = { showRateUsDialog = false }, modifier = Modifier.size(36.dp).background(Color(0xFF1E293B), CircleShape).align(Alignment.CenterEnd)) { Icon(imageVector = Icons.Default.Close, contentDescription = null, tint = primaryGold, modifier = Modifier.size(18.dp)) } 
                     }
-
-                    Text(
-                        text = when (uiState.language) {
-                            "ur" -> "اپنے تجربے کی درجہ بندی کریں۔ جمع کرنے پر آپ کی ریٹنگ محفوظ ہوگی اور پلے اسٹور پر ریویو کے لیے بھیجا جائے گا۔"
-                            "hi" -> "अपने अनुभव को रेट करें। सबमिट करने पर आपकी रेटिंग सुरक्षित होगी और प्ले स्टोर पर रिव्यू के लिए भेजा जाएगा।"
-                            else -> "Rate your experience. Submitting will save your rating and redirect to Google Play Store to review."
-                        },
-                        fontSize = 11.5.sp,
-                        color = Color.White.copy(alpha = 0.72f),
-                        textAlign = TextAlign.Center
-                    )
-
-                    InteractiveHalfStarRatingBar(
-                        rating = tempRating,
-                        onRatingSelected = { selected ->
-                            tempRating = selected
-                        },
-                        starSize = 36.dp,
-                        spacing = 8.dp
-                    )
-
-                    Text(
-                        text = when (uiState.language) {
-                            "ur" -> "${String.format(Locale.US, "%.1f", tempRating)} / 5.0 ستارے"
-                            "hi" -> "${String.format(Locale.US, "%.1f", tempRating)} / 5.0 सितारे"
-                            else -> String.format(Locale.US, "%.1f / 5.0 Stars", tempRating)
-                        },
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = primaryGold
-                    )
-
-                    Button(
-                        onClick = {
-                            isSubmitting = true
-                            userRating = tempRating
-                            try {
-                                prefs.edit().putFloat("saved_stars", tempRating.toFloat()).apply()
-                            } catch (e: Throwable) {
-                                // Ignore
-                            }
-                            coroutineScope.launch {
-                                try {
-                                    GoogleSheetMasjidSync.submitRating(tempRating)
-                                } catch (t: Throwable) {
-                                    // Ignore
-                                }
-                                isSubmitting = false
-                                showRateUsDialog = false
-
-                                try {
-                                    val pkgName = context.packageName
-                                    val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkgName")).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                    }
-                                    context.startActivity(marketIntent)
-                                } catch (e: Exception) {
-                                    try {
-                                        val pkgName = context.packageName
-                                        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$pkgName")).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(webIntent)
-                                    } catch (e2: Exception) {
-                                        // Ignore
-                                    }
-                                }
-                            }
-                            val jazakToast = when (uiState.language) {
-                                "ur" -> "⭐⭐⭐⭐⭐ جزاک اللہ خیراً! پلے اسٹور کھولا جا رہا ہے..."
-                                "hi" -> "⭐⭐⭐⭐⭐ जज़ाकअल्लाह खैर! प्ले स्टोर खुल रहा है..."
-                                else -> "⭐⭐⭐⭐⭐ JazakAllah Khair! Opening Play Store..."
-                            }
-                            Toast.makeText(
-                                context,
-                                jazakToast,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        },
-                        enabled = !isSubmitting,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5B842)),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 52.dp)
-                    ) {
-                        if (isSubmitting) {
-                            CircularProgressIndicator(
-                                color = Color(0xFF0F1713),
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = when (uiState.language) {
-                                    "ur" -> "محفوظ ہو رہا ہے..."
-                                    "hi" -> "सेव हो रहा है..."
-                                    else -> "Saving..."
-                                },
-                                color = Color(0xFF0F1713),
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = Color(0xFF0F1713),
-                                    modifier = Modifier.size(17.dp)
-                                )
+                    Text(text = when (uiState.language) { "ur" -> "اپنے تجربے کی درجہ بندی کریں۔ جمع کرنے پر آپ کی ریٹنگ محفوظ ہوگی اور پلے اسٹور پر ریویو کے لیے بھیجا جائے گا۔"; "hi" -> "अपने अनुभव को रेट करें। सबमिट करने पर आपकी रेटिंग सुरक्षित होगी और प्ले स्टोर पर रिव्यू के लिए भेजा जाएगा।"; else -> "Rate your experience. Submitting will save your rating and redirect to Google Play Store to review." }, fontSize = 11.5.sp, color = Color.White.copy(alpha = 0.72f), textAlign = TextAlign.Center)
+                    InteractiveHalfStarRatingBar(rating = tempRating, onRatingSelected = { tempRating = it }, starSize = 36.dp, spacing = 8.dp)
+                    Text(text = String.format(Locale.US, "%.1f / 5.0 Stars", tempRating), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = primaryGold)
+                    Button(onClick = { 
+                        isSubmitting = true
+                        userRating = tempRating
+                        try { prefs.edit().putFloat("saved_stars", tempRating.toFloat()).apply() } catch (e: Throwable) {}
+                        coroutineScope.launch { 
+                            try { GoogleSheetMasjidSync.submitRating(tempRating) } catch (t: Throwable) {}
+                            isSubmitting = false
+                            showRateUsDialog = false
+                            try { 
+                                val pkgName = context.packageName
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkgName")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP) }) 
+                            } catch (e: Exception) { 
+                                try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }) } catch (e2: Exception) {} 
+                            } 
+                        }
+                        Toast.makeText(context, "JazakAllah Khair!", Toast.LENGTH_SHORT).show() 
+                    }, enabled = !isSubmitting, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5B842)), shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { 
+                        if (isSubmitting) { 
+                            CircularProgressIndicator(color = Color(0xFF0F1713), strokeWidth = 2.dp, modifier = Modifier.size(20.dp)) 
+                        } else { 
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) { 
+                                Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFF0F1713), modifier = Modifier.size(17.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = when (uiState.language) {
-                                        "ur" -> "پلے اسٹور پر جمع اور ریٹ کریں"
-                                        "hi" -> "प्ले स्टोर पर सबमिट और रेट करें"
-                                        else -> "Submit & Rate on Play Store"
-                                    },
-                                    color = Color(0xFF0F1713),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.5.sp,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 2,
-                                    lineHeight = 16.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+                                Text(text = when (uiState.language) { "ur" -> "پلے اسٹور پر جمع اور ریٹ کریں"; "hi" -> "प्ले स्टोर पर सबमिट और रेट करें"; else -> "Submit & Rate on Play Store" }, color = Color(0xFF0F1713), fontWeight = FontWeight.Bold, fontSize = 12.5.sp, textAlign = TextAlign.Center) 
+                            } 
+                        } 
+                    } 
+                } 
+            } 
         }
     }
-
-    if (showUpiAppChooserDialog) {
-        UpiAppChooserDialog(
-            amount = selectedContributionAmount,
-            language = uiState.language,
-            onDismiss = { showUpiAppChooserDialog = false },
-            onAppSelected = { pkg ->
-                showUpiAppChooserDialog = false
-                launchUpiForApp(pkg, selectedContributionAmount)
-            }
-        )
+    if (showUpiAppChooserDialog) { 
+        UpiAppChooserDialog(amount = selectedContributionAmount, language = uiState.language, onDismiss = { showUpiAppChooserDialog = false }, onAppSelected = { pkg -> 
+            showUpiAppChooserDialog = false
+            launchUpiForApp(pkg, selectedContributionAmount) 
+        }) 
     }
 }
+
+// Top-level helpers and classes
 
 fun prepareStraightMasjidPhotoBase64(context: Context, uri: Uri, maxDim: Int = 1080): String? {
     return try {
-        // 1. Read EXIF Orientation
         var orientation = ExifInterface.ORIENTATION_NORMAL
-        try {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                val exif = ExifInterface(stream)
-                orientation = exif.getAttributeInt(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL
-                )
-            }
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
-
-        // 2. Decode raw bitmap
-        val originalBitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream)
-        } ?: return null
-
-        // 3. Build rotation matrix to preserve natural upright / straight angle (do not flip to landscape)
+        try { context.contentResolver.openInputStream(uri)?.use { stream -> orientation = ExifInterface(stream).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) } } catch (e: Throwable) {}
+        val originalBitmap = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return null
         val matrix = Matrix()
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
-            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
-            ExifInterface.ORIENTATION_TRANSPOSE -> {
-                matrix.postRotate(90f)
-                matrix.postScale(-1f, 1f)
-            }
-            ExifInterface.ORIENTATION_TRANSVERSE -> {
-                matrix.postRotate(270f)
-                matrix.postScale(-1f, 1f)
-            }
-        }
-
-        val correctlyOrientedBitmap = if (!matrix.isIdentity) {
-            Bitmap.createBitmap(
-                originalBitmap,
-                0,
-                0,
-                originalBitmap.width,
-                originalBitmap.height,
-                matrix,
-                true
-            )
-        } else {
-            originalBitmap
-        }
-
-        // 4. Scale down while strictly preserving aspect ratio
-        val w = correctlyOrientedBitmap.width
-        val h = correctlyOrientedBitmap.height
-        val scale = (maxDim.toFloat() / maxOf(w, h)).coerceAtMost(1f)
-        val finalBitmap = if (scale < 1f) {
-            Bitmap.createScaledBitmap(
-                correctlyOrientedBitmap,
-                (w * scale).toInt(),
-                (h * scale).toInt(),
-                true
-            )
-        } else {
-            correctlyOrientedBitmap
-        }
-
-        val baos = ByteArrayOutputStream()
-        finalBitmap.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+        when (orientation) { ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f); ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f); ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f) }
+        val orientedBitmap = if (!matrix.isIdentity) Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true) else originalBitmap
+        val scale = (maxDim.toFloat() / maxOf(orientedBitmap.width, orientedBitmap.height)).coerceAtMost(1f)
+        val finalBitmap = if (scale < 1f) Bitmap.createScaledBitmap(orientedBitmap, (orientedBitmap.width * scale).toInt(), (orientedBitmap.height * scale).toInt(), true) else orientedBitmap
+        val baos = ByteArrayOutputStream(); finalBitmap.compress(Bitmap.CompressFormat.JPEG, 85, baos)
         Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-    } catch (e: Throwable) {
-        e.printStackTrace()
-        null
-    }
+    } catch (e: Throwable) { null }
 }
 
-data class StandardizedQrResult(
-    val bitmap: Bitmap,
-    val base64: String,
-    val localFilePath: String,
-    val isCleanRegenerated: Boolean,
-    val decodedPayload: String?
-)
+data class StandardizedQrResult(val bitmap: Bitmap, val base64: String, val localFilePath: String, val isCleanRegenerated: Boolean, val decodedPayload: String?)
 
-suspend fun prepareStandardizedMasjidQr(
-    context: Context,
-    uri: Uri
-): StandardizedQrResult? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+suspend fun prepareStandardizedMasjidQr(context: Context, uri: Uri): StandardizedQrResult? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
     try {
-        // 1. Read EXIF Orientation
-        var orientation = ExifInterface.ORIENTATION_NORMAL
-        try {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                val exif = ExifInterface(stream)
-                orientation = exif.getAttributeInt(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL
-                )
-            }
-        } catch (_: Throwable) {}
-
-        // 2. Decode raw bitmap
-        val originalBitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream)
-        } ?: return@withContext null
-
-        // 3. Straighten rotation
-        val matrix = Matrix()
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
-            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
-        }
-
-        val orientedBitmap = if (!matrix.isIdentity) {
-            Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
-        } else {
-            originalBitmap
-        }
-
-        // 4. Decode QR code content via ZXing QRCodeReader
+        val originalBitmap = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } ?: return@withContext null
         var decodedContent: String? = null
         try {
-            val width = orientedBitmap.width
-            val height = orientedBitmap.height
-            val pixels = IntArray(width * height)
-            orientedBitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-            val source = com.google.zxing.RGBLuminanceSource(width, height, pixels)
-            val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
-            val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
-            decodedContent = result.text?.trim()
-        } catch (_: Throwable) {
-            // If full-frame decode failed, try center square crop
-            try {
-                val side = minOf(orientedBitmap.width, orientedBitmap.height)
-                val x = (orientedBitmap.width - side) / 2
-                val y = (orientedBitmap.height - side) / 2
-                val square = Bitmap.createBitmap(orientedBitmap, x, y, side, side)
-                val pixels = IntArray(side * side)
-                square.getPixels(pixels, 0, side, 0, 0, side, side)
-                val source = com.google.zxing.RGBLuminanceSource(side, side, pixels)
-                val binaryBitmap = com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(source))
-                val result = com.google.zxing.qrcode.QRCodeReader().decode(binaryBitmap)
-                decodedContent = result.text?.trim()
-            } catch (_: Throwable) {}
-        }
-
+            val pixels = IntArray(originalBitmap.width * originalBitmap.height)
+            originalBitmap.getPixels(pixels, 0, originalBitmap.width, 0, 0, originalBitmap.width, originalBitmap.height)
+            decodedContent = com.google.zxing.qrcode.QRCodeReader().decode(com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(com.google.zxing.RGBLuminanceSource(originalBitmap.width, originalBitmap.height, pixels)))).text
+        } catch (e: Exception) {}
         val finalBitmap: Bitmap
-        val isRegenerated: Boolean
-
+        val isReg: Boolean
         if (!decodedContent.isNullOrBlank()) {
-            // Re-generate pixel-perfect standard crisp black & white QR code
-            val size = 600
-            val hints = mapOf(
-                com.google.zxing.EncodeHintType.MARGIN to 1,
-                com.google.zxing.EncodeHintType.ERROR_CORRECTION to com.google.zxing.qrcode.decoder.ErrorCorrectionLevel.M
-            )
-            val bitMatrix = com.google.zxing.qrcode.QRCodeWriter().encode(
-                decodedContent,
-                com.google.zxing.BarcodeFormat.QR_CODE,
-                size,
-                size,
-                hints
-            )
-            finalBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-            for (px in 0 until size) {
-                for (py in 0 until size) {
-                    finalBitmap.setPixel(
-                        px,
-                        py,
-                        if (bitMatrix.get(px, py)) android.graphics.Color.BLACK else android.graphics.Color.WHITE
-                    )
-                }
-            }
-            isRegenerated = true
+            val bitMatrix = com.google.zxing.qrcode.QRCodeWriter().encode(decodedContent, com.google.zxing.BarcodeFormat.QR_CODE, 600, 600, mapOf(com.google.zxing.EncodeHintType.MARGIN to 1))
+            finalBitmap = Bitmap.createBitmap(600, 600, Bitmap.Config.ARGB_8888)
+            for (x in 0 until 600) for (y in 0 until 600) finalBitmap.setPixel(x, y, if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+            isReg = true
         } else {
-            // Fallback: Crop straight center square and scale to 600x600
-            val side = minOf(orientedBitmap.width, orientedBitmap.height)
-            val x = (orientedBitmap.width - side) / 2
-            val y = (orientedBitmap.height - side) / 2
-            val cropped = Bitmap.createBitmap(orientedBitmap, x, y, side, side)
-            finalBitmap = Bitmap.createScaledBitmap(cropped, 600, 600, true)
-            isRegenerated = false
+            val side = minOf(originalBitmap.width, originalBitmap.height)
+            finalBitmap = Bitmap.createScaledBitmap(Bitmap.createBitmap(originalBitmap, (originalBitmap.width - side) / 2, (originalBitmap.height - side) / 2, side, side), 600, 600, true)
+            isReg = false
         }
-
-        // Save straight/clean bitmap to app internal storage
         val destFile = java.io.File(context.filesDir, "custom_masjid_qr.jpg")
-        destFile.outputStream().use { out ->
-            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 92, out)
-        }
-
-        // Generate base64 string
-        val baos = ByteArrayOutputStream()
-        finalBitmap.compress(Bitmap.CompressFormat.JPEG, 92, baos)
-        val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-
-        StandardizedQrResult(
-            bitmap = finalBitmap,
-            base64 = base64,
-            localFilePath = destFile.absolutePath,
-            isCleanRegenerated = isRegenerated,
-            decodedPayload = decodedContent
-        )
-    } catch (e: Throwable) {
-        e.printStackTrace()
-        null
-    }
-}
-
-private suspend fun saveCustomQrToInternalStorage(context: Context, qrUri: Uri): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-    try {
-        val destFile = java.io.File(context.filesDir, "custom_masjid_qr.jpg")
-        context.contentResolver.openInputStream(qrUri)?.use { input ->
-            destFile.outputStream().use { output ->
-                input.copyTo(output)
-            }
-        }
-        destFile.absolutePath
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
+        destFile.outputStream().use { finalBitmap.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+        val baos = ByteArrayOutputStream(); finalBitmap.compress(Bitmap.CompressFormat.JPEG, 92, baos)
+        StandardizedQrResult(finalBitmap, Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP), destFile.absolutePath, isReg, decodedContent)
+    } catch (e: Throwable) { null }
 }
 
 private fun toTitleCaseWords(input: String): String {
     if (input.isEmpty()) return input
-    val chars = input.toCharArray()
-    var capitalizeNext = true
-    for (i in chars.indices) {
-        val c = chars[i]
-        if (c.isWhitespace() || c == ',' || c == '-' || c == '/' || c == '(' || c == '.') {
-            capitalizeNext = true
-        } else if (capitalizeNext && c.isLetter()) {
-            chars[i] = c.uppercaseChar()
-            capitalizeNext = false
-        }
-    }
+    val chars = input.toCharArray(); var cap = true
+    for (i in chars.indices) { val c = chars[i]; if (c.isWhitespace() || c == ',' || c == '.' || c == '/') cap = true else if (cap && c.isLetter()) { chars[i] = c.uppercaseChar(); cap = false } else cap = false }
     return String(chars)
 }
 
 @Composable
-fun AddMasjidAutoDialog(
-    language: String,
-    onDismiss: () -> Unit,
-    onSubmitted: () -> Unit
-) {
+fun AddMasjidAutoDialog(language: String, onDismiss: () -> Unit, onSubmitted: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val prefs = remember { com.example.data.PreferencesRepository(context) }
-    val savedAppsScriptUrl by prefs.appsScriptUrlFlow.collectAsState(initial = com.example.data.GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL)
     var masjidName by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    var adminName by remember { mutableStateOf("admin") }
     var adminContact by remember { mutableStateOf("") }
-    val masjidNameFocusRequester = remember { FocusRequester() }
-    val locationFocusRequester = remember { FocusRequester() }
-    val contactFocusRequester = remember { FocusRequester() }
+    var adminId by remember { mutableStateOf("admin") }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedQrUri by remember { mutableStateOf<Uri?>(null) }
-    var standardizedQr by remember { mutableStateOf<StandardizedQrResult?>(null) }
-    var isProcessingQr by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
     var isSending by remember { mutableStateOf(false) }
 
-    var dismissKeyboard by remember { mutableStateOf<() -> Unit>({}) }
-
-    val performFormSubmit: () -> Unit = {
-        dismissKeyboard()
-        if (masjidName.isBlank()) {
-            errorMessage = when (language) {
-                "ur" -> "براہ کرم مسجد کا نام درج کریں"
-                "hi" -> "कृपया मस्जिद का नाम दर्ज करें"
-                else -> "Please enter Masjid Name"
-            }
-        } else if (location.isBlank()) {
-            errorMessage = when (language) {
-                "ur" -> "براہ کرم مقام درج کریں"
-                "hi" -> "कृपया स्थान दर्ज करें"
-                else -> "Please enter Location"
-            }
-        } else if (adminName.isBlank()) {
-            errorMessage = when (language) {
-                "ur" -> "براہ کرم ایڈمن کا نام درج کریں"
-                "hi" -> "कृपया एडमिन का नाम दर्ज करें"
-                else -> "Please enter Admin Name"
-            }
-        } else if (adminContact.isBlank()) {
-            errorMessage = when (language) {
-                "ur" -> "براہ کرم ایڈمن رابطہ نمبر درج کریں"
-                "hi" -> "कृपया एडमिन संपर्क नंबर दर्ज करें"
-                else -> "Please enter Admin Contact Number"
-            }
-        } else if (!isSending) {
-            isSending = true
-            val cleanMasjidName = masjidName.trim()
-            val targetUrl = savedAppsScriptUrl.trim()
-            val photoUri = selectedPhotoUri
-            val qrUri = selectedQrUri
-
-            coroutineScope.launch {
-                var photoBase64: String? = null
-                if (photoUri != null) {
-                    try {
-                        photoBase64 = prepareStraightMasjidPhotoBase64(context, photoUri)
-                    } catch (e: Throwable) {
-                        // Proceed without photo if encoding fails
-                    }
-                }
-
-                var qrBase64: String? = standardizedQr?.base64
-                if (qrBase64 == null && qrUri != null) {
-                    try {
-                        val res = prepareStandardizedMasjidQr(context, qrUri)
-                        qrBase64 = res?.base64 ?: prepareStraightMasjidPhotoBase64(context, qrUri)
-                        if (res != null) {
-                            prefs.setCustomMasjidQrPath(res.localFilePath)
-                        }
-                    } catch (e: Throwable) {
-                        // Proceed without QR if encoding fails
-                    }
-                }
-
-                try {
-                    com.example.data.GoogleSheetMasjidSync.submitMasjidRequestAuto(
-                        name = cleanMasjidName,
-                        location = location.trim(),
-                        adminName = adminName.trim(),
-                        contact = adminContact.trim(),
-                        photoBase64 = photoBase64,
-                        photoName = "$cleanMasjidName.jpg",
-                        qrBase64 = qrBase64,
-                        qrName = "${cleanMasjidName}_QR.jpg",
-                        webAppUrl = targetUrl
-                    )
-                } catch (e: Exception) {
-                    // Handled gracefully in background
-                }
-                isSending = false
-                onSubmitted()
-            }
-        }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) selectedPhotoUri = uri
     }
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        selectedPhotoUri = uri
-    }
-
-    val qrPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        selectedQrUri = uri
-        if (uri != null) {
-            isProcessingQr = true
-            coroutineScope.launch {
-                val res = prepareStandardizedMasjidQr(context, uri)
-                standardizedQr = res
-                isProcessingQr = false
-                if (res != null) {
-                    prefs.setCustomMasjidQrPath(res.localFilePath)
-                }
-            }
-        } else {
-            standardizedQr = null
-            coroutineScope.launch {
-                prefs.setCustomMasjidQrPath(null)
-            }
-        }
+    val qrPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) selectedQrUri = uri
     }
 
     Dialog(
-        onDismissRequest = {
-            dismissKeyboard()
-            onDismiss()
-        },
+        onDismissRequest = { if (!isSending) onDismiss() },
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        val dialogView = androidx.compose.ui.platform.LocalView.current
-        val dialogFocusManager = androidx.compose.ui.platform.LocalFocusManager.current
-        val dialogKeyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-
-        LaunchedEffect(dialogView, dialogFocusManager, dialogKeyboardController) {
-            dismissKeyboard = {
-                dialogFocusManager.clearFocus(force = true)
-                dialogKeyboardController?.hide()
-                try {
-                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
-                    imm?.hideSoftInputFromWindow(dialogView.windowToken, 0)
-                    imm?.hideSoftInputFromWindow(dialogView.applicationWindowToken, 0)
-                    (context as? Activity)?.currentFocus?.let { focused ->
-                        imm?.hideSoftInputFromWindow(focused.windowToken, 0)
-                    }
-                } catch (e: Exception) {
-                    // Ignore
-                }
-            }
-        }
-
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 20.dp)
+                .fillMaxWidth(0.92f)
                 .imePadding()
-                .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null
-                ) { dismissKeyboard() },
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-            border = BorderStroke(1.5.dp, Color(0xFFF3DE8E).copy(alpha = 0.5f))
+                .padding(vertical = 16.dp),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF060E1C)),
+            border = BorderStroke(1.2.dp, Color(0xFFF3DE8E).copy(alpha = 0.45f))
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(18.dp)
-                    .verticalScroll(rememberScrollState())
-                    .clickable(
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        indication = null
-                    ) { dismissKeyboard() },
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Header
+                // Header with Title and Circular Close Button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -2454,566 +814,268 @@ fun AddMasjidAutoDialog(
                             "hi" -> "नई मस्जिद जोड़ें"
                             else -> "Add New Masjid"
                         },
-                        fontSize = 17.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF3DE8E)
                     )
-                    Box(
+                    IconButton(
+                        onClick = { if (!isSending) onDismiss() },
                         modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF1E293B), CircleShape)
-                            .border(1.dp, Color(0xFFF3DE8E), CircleShape)
-                            .clickable { onDismiss() },
-                        contentAlignment = Alignment.Center
+                            .size(34.dp)
+                            .background(Color(0xFF101A2E), CircleShape)
+                            .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.5f), CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
                             tint = Color(0xFFF3DE8E),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                // Instruction Banner
+                Surface(
+                    color = Color(0xFF0F1B2D),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = when (language) {
+                            "ur" -> "براہ کرم ذمہ دار شخص (مولانا / متولی / بنگی صاحب / ٹرسٹ ممبر) یہ فارم جمع کروائیں۔"
+                            "hi" -> "जिम्मेदार व्यक्ति (मौलाना / मुतवल्ली / बंगी साहब / ट्रस्ट मेंबर) को ही फॉर्म जमा करना चाहिए।"
+                            else -> "The responsible person (Moulana / Mutawalli / Bangi sahab / Trust Member) should submit the form."
+                        },
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        lineHeight = 15.sp,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
 
-                // Responsible person notice in bold white text
-                Text(
-                    text = when (language) {
-                        "ur" -> "ذمہ دار شخص (مولانا / متولی / بنگی صاحب / ٹرسٹ ممبر) کو یہ فارم جمع کرنا چاہیے۔"
-                        "hi" -> "जिम्मेदार व्यक्ति (मौलाना / मुतवल्ली / बंगी साहब / ट्रस्ट मेंबर) को ही यह फॉर्म भरना चाहिए।"
-                        else -> "The responsible person (Moulana / Mutawalli / Bangi sahab / Trust Member) should submit the form."
-                    },
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    lineHeight = 17.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
-                        .border(1.dp, Color(0xFFF3DE8E).copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                        .padding(10.dp)
+                val fieldColors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFF07101E),
+                    unfocusedContainerColor = Color(0xFF07101E),
+                    focusedBorderColor = Color(0xFFF3DE8E),
+                    unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedLabelColor = Color(0xFFF3DE8E),
+                    unfocusedLabelColor = Color.White.copy(alpha = 0.7f),
+                    cursorColor = Color(0xFFF3DE8E)
                 )
 
-                // Field 1: Name of Masjid
+                // Field 1: Name of Masjid *
                 OutlinedTextField(
                     value = masjidName,
-                    onValueChange = { 
-                        masjidName = toTitleCaseWords(it)
-                        errorMessage = null 
-                    },
-                    enabled = true,
-                    readOnly = false,
-                    label = {
-                        Text(
-                            text = when (language) {
-                                "ur" -> "مسجد کا نام *"
-                                "hi" -> "मस्जिद का नाम *"
-                                else -> "Name of Masjid *"
-                            }
-                        )
-                    },
-                    placeholder = { 
-                        Text(
-                            text = when (language) {
-                                "ur" -> "مثلاً مرکز مسجد، جامع مسجد"
-                                "hi" -> "उदा. मरकज़ मस्जिद, जामा मस्जिद"
-                                else -> "e.g. Markaz Masjid, Jama Masjid"
-                            },
-                            color = Color.White.copy(alpha = 0.4f),
-                            fontSize = 13.5.sp
-                        ) 
-                    },
+                    onValueChange = { masjidName = toTitleCaseWords(it) },
+                    label = { Text("Name of Masjid *", fontSize = 13.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
-                        keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next
                     ),
-                    keyboardActions = KeyboardActions(
-                        onNext = { locationFocusRequester.requestFocus() }
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFFF3DE8E),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-                        focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = Color(0xFFF3DE8E),
-                        focusedContainerColor = Color(0xFF1E293B),
-                        unfocusedContainerColor = Color(0xFF131D2A)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(masjidNameFocusRequester)
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors
                 )
 
-                // Field 2: Location
+                // Field 2: Location / City / Area *
                 OutlinedTextField(
                     value = location,
-                    onValueChange = { 
-                        location = toTitleCaseWords(it)
-                        errorMessage = null 
-                    },
-                    enabled = true,
-                    readOnly = false,
-                    label = {
-                        Text(
-                            text = when (language) {
-                                "ur" -> "مقام / شہر / علاقہ *"
-                                "hi" -> "स्थान / शहर / इलाका *"
-                                else -> "Location / City / Area *"
-                            }
-                        )
-                    },
-                    placeholder = { 
-                        Text(
-                            text = when (language) {
-                                "ur" -> "مثلاً سولاپور، مسلم پیٹھ"
-                                "hi" -> "उदा. सोलापुर, मुस्लिम पेठ"
-                                else -> "e.g. Solapur, Muslim Peth"
-                            },
-                            color = Color.White.copy(alpha = 0.4f),
-                            fontSize = 13.5.sp
-                        ) 
-                    },
+                    onValueChange = { location = toTitleCaseWords(it) },
+                    label = { Text("Location / City / Area *", fontSize = 13.sp) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
-                        keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next
                     ),
-                    keyboardActions = KeyboardActions(
-                        onNext = { contactFocusRequester.requestFocus() }
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFFF3DE8E),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-                        focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = Color(0xFFF3DE8E),
-                        focusedContainerColor = Color(0xFF1E293B),
-                        unfocusedContainerColor = Color(0xFF131D2A)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(locationFocusRequester)
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors
                 )
 
-                // Field 3: Admin Contact Number
+                // Field 3: Admin Contact Number * with trailing checkmark
                 OutlinedTextField(
                     value = adminContact,
-                    onValueChange = { input ->
-                        val clean = input.replace("\n", "").replace("\r", "")
-                        adminContact = clean
-                        errorMessage = null
-                        if (input.contains("\n") || input.contains("\r")) {
-                            dismissKeyboard()
-                        }
-                    },
-                    enabled = true,
-                    readOnly = false,
-                    label = {
-                        Text(
-                            text = when (language) {
-                                "ur" -> "ایڈمن کا رابطہ نمبر *"
-                                "hi" -> "एडमिन संपर्क नंबर *"
-                                else -> "Admin Contact Number *"
-                            }
+                    onValueChange = { adminContact = it },
+                    label = { Text("Admin Contact Number *", fontSize = 13.sp) },
+                    singleLine = true,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = if (adminContact.filter { ch -> ch.isDigit() }.length >= 10) Color(0xFF2EC878) else Color(0xFFF3DE8E).copy(alpha = 0.85f),
+                            modifier = Modifier.size(18.dp)
                         )
-                    },
-                    placeholder = { 
-                        Text("9876543210", color = Color.White.copy(alpha = 0.4f), fontSize = 13.5.sp) 
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Phone,
                         imeAction = ImeAction.Done
                     ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { dismissKeyboard() },
-                        onSend = { dismissKeyboard() },
-                        onSearch = { dismissKeyboard() },
-                        onGo = { dismissKeyboard() },
-                        onNext = { dismissKeyboard() }
-                    ),
-                    trailingIcon = {
-                        IconButton(
-                            onClick = { dismissKeyboard() },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Done / Hide Keyboard",
-                                tint = Color(0xFFF3DE8E),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFFF3DE8E),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-                        focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = Color(0xFFF3DE8E),
-                        focusedContainerColor = Color(0xFF1E293B),
-                        unfocusedContainerColor = Color(0xFF131D2A)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(contactFocusRequester)
-                        .onKeyEvent { keyEvent ->
-                            if (keyEvent.key == Key.Enter || keyEvent.key == Key.NumPadEnter) {
-                                dismissKeyboard()
-                                true
-                            } else {
-                                false
-                            }
-                        }
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors
                 )
 
-                // Field 4: Admin ID (Common for all as requested)
+                // Field 4: Admin ID - admin
                 OutlinedTextField(
-                    value = "admin",
-                    onValueChange = { },
-                    label = {
-                        Text(
-                            text = when (language) {
-                                "ur" -> "ایڈمن آئی ڈی - admin"
-                                "hi" -> "एडमिन आईडी - admin"
-                                else -> "Admin ID - admin"
-                            }
-                        )
-                    },
-                    readOnly = true,
+                    value = adminId,
+                    onValueChange = { adminId = it },
+                    label = { Text("Admin ID - admin", fontSize = 12.sp) },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFFF3DE8E).copy(alpha = 0.5f),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                        focusedLabelColor = Color(0xFFF3DE8E),
-                        unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
-                        focusedTextColor = Color.White.copy(alpha = 0.7f),
-                        unfocusedTextColor = Color.White.copy(alpha = 0.7f),
-                        focusedContainerColor = Color(0xFF141E2E),
-                        unfocusedContainerColor = Color(0xFF141E2E)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors
                 )
 
-                // Field 5: Photo Browser Button
+                // Section 5: Masjid Photo (Optional)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = when (language) {
-                            "ur" -> "مسجد کی تصویر (اختیاری):"
-                            "hi" -> "मस्जिद की फोटो (वैकल्पिक):"
-                            else -> "Masjid Photo (Optional):"
-                        },
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.75f)
+                        text = "Masjid Photo (Optional):",
+                        fontSize = 11.5.sp,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontWeight = FontWeight.Medium
                     )
-
-                    Button(
-                        onClick = {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                    OutlinedButton(
+                        onClick = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
+                        border = BorderStroke(
+                            1.dp,
+                            if (selectedPhotoUri != null) Color(0xFF2EC878) else Color(0xFF38BDF8).copy(alpha = 0.45f)
+                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (selectedPhotoUri != null) Color(0xFF0C241C) else Color(0xFF0A1A30)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AddPhotoAlternate,
-                            contentDescription = "Upload Photo",
-                            tint = Color(0xFF38BDF8),
+                            imageVector = if (selectedPhotoUri != null) Icons.Default.CheckCircle else Icons.Default.AddPhotoAlternate,
+                            contentDescription = null,
+                            tint = if (selectedPhotoUri != null) Color(0xFF2EC878) else Color(0xFF38BDF8),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (selectedPhotoUri != null) {
-                                when (language) {
-                                    "ur" -> "تصویر منتخب ✓ تبدیل کریں"
-                                    "hi" -> "फोटो चुनी गई ✓ बदलें"
-                                    else -> "Photo Selected ✓ Change"
-                                }
-                            } else {
-                                when (language) {
-                                    "ur" -> "مسجد کی تصویر اپلوڈ کریں"
-                                    "hi" -> "मस्जिद फोटो ब्राउज़ / अपलोड करें"
-                                    else -> "Browse / Upload Masjid Photo"
-                                }
-                            },
+                            text = if (selectedPhotoUri != null) "Masjid Photo Selected ✓ (Change)" else "Browse / Upload Masjid Photo",
                             fontSize = 12.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF38BDF8)
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (selectedPhotoUri != null) Color(0xFF34D399) else Color(0xFF38BDF8)
                         )
-                    }
-
-                    if (selectedPhotoUri != null) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFF0F1A15), RoundedCornerShape(8.dp))
-                                .border(1.dp, Color(0xFF2E533F), RoundedCornerShape(8.dp))
-                                .padding(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(54.dp)
-                                    .background(Color(0xFF1E293B), RoundedCornerShape(6.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AsyncImage(
-                                    model = selectedPhotoUri,
-                                    contentDescription = "Masjid Preview",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = when (language) {
-                                        "ur" -> "مسجد کی تصویر منتخب ہے"
-                                        "hi" -> "मस्जिद फोटो चुनी गई"
-                                        else -> "Masjid Photo Selected"
-                                    },
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF38BDF8)
-                                )
-                                Text(
-                                    text = when (language) {
-                                        "ur" -> "گوگل ڈرائیو میں محفوظ ہوگی"
-                                        "hi" -> "गूगल ड्राइव में सेव होगी"
-                                        else -> "Saved to Google Drive"
-                                    },
-                                    fontSize = 10.sp,
-                                    color = Color.White.copy(alpha = 0.65f)
-                                )
-                            }
-                            IconButton(
-                                onClick = { selectedPhotoUri = null },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove Photo",
-                                    tint = Color(0xFFEF4444),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
                     }
                 }
 
-                // Field 6: QR Code Browser Button (replaces old Azan Time logo & punchline)
+                // Section 6: Masjid QR (Optional)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = when (language) {
-                            "ur" -> "مسجد کا کیو آر (اختیاری):"
-                            "hi" -> "मस्जिद का क्यूआर (वैकल्पिक):"
-                            else -> "Masjid QR (Optional):"
-                        },
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.75f)
+                        text = "Masjid QR (Optional):",
+                        fontSize = 11.5.sp,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontWeight = FontWeight.Medium
                     )
-
-                    Button(
-                        onClick = {
-                            qrPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E293B)),
+                    OutlinedButton(
+                        onClick = { qrPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
+                        border = BorderStroke(
+                            1.dp,
+                            if (selectedQrUri != null) Color(0xFF2EC878) else Color(0xFF38BDF8).copy(alpha = 0.45f)
+                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (selectedQrUri != null) Color(0xFF0C241C) else Color(0xFF0A1A30)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.QrCode,
-                            contentDescription = "Upload QR",
-                            tint = Color(0xFF38BDF8),
+                            imageVector = if (selectedQrUri != null) Icons.Default.CheckCircle else Icons.Default.QrCode2,
+                            contentDescription = null,
+                            tint = if (selectedQrUri != null) Color(0xFF2EC878) else Color(0xFF38BDF8),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (selectedQrUri != null) {
-                                when (language) {
-                                    "ur" -> "کیو آر منتخب ✓ تبدیل کریں"
-                                    "hi" -> "क्यूआर चुना गया ✓ बदलें"
-                                    else -> "QR Selected ✓ Change"
-                                }
-                            } else {
-                                when (language) {
-                                    "ur" -> "مسجد کا کیو آر اپلوڈ کریں"
-                                    "hi" -> "मस्जिद क्यूआर ब्राउज़ / अपलोड करें"
-                                    else -> "Browse / Upload Masjid QR"
-                                }
-                            },
+                            text = if (selectedQrUri != null) "Masjid QR Selected ✓ (Change)" else "Browse / Upload Masjid QR",
                             fontSize = 12.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF38BDF8)
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (selectedQrUri != null) Color(0xFF34D399) else Color(0xFF38BDF8)
                         )
                     }
-
-                    if (isProcessingQr) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
-                                .padding(10.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = Color(0xFF38BDF8)
-                            )
-                            Text(
-                                text = when (language) {
-                                    "ur" -> "کیو آر کو سیدھا اور صاف کیا جا رہا ہے..."
-                                    "hi" -> "क्यूआर को सीधा और साफ़ किया जा रहा है..."
-                                    else -> "Standardizing & Straightening QR..."
-                                },
-                                fontSize = 12.sp,
-                                color = Color(0xFF38BDF8)
-                            )
-                        }
-                    } else if (standardizedQr != null) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFF0F1A15), RoundedCornerShape(8.dp))
-                                .border(1.dp, Color(0xFF2E533F), RoundedCornerShape(8.dp))
-                                .padding(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(54.dp)
-                                    .background(Color.White, RoundedCornerShape(6.dp))
-                                    .padding(3.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Image(
-                                    bitmap = standardizedQr!!.bitmap.asImageBitmap(),
-                                    contentDescription = "Standard QR Preview",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = if (standardizedQr!!.isCleanRegenerated) {
-                                        when (language) {
-                                            "ur" -> "✓ معیاری صاف کیو آر تیار ہے"
-                                            "hi" -> "✓ मानक साफ़ क्यूआर तैयार है"
-                                            else -> "✓ Standard Clean QR Generated"
-                                        }
-                                    } else {
-                                        when (language) {
-                                            "ur" -> "✓ سیدھا چوکور کیو آر کراپ ہو گیا"
-                                            "hi" -> "✓ सीधा चौकोर क्यूआर क्रॉप हुआ"
-                                            else -> "✓ Straight Square QR Cropped"
-                                        }
-                                    },
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF10B981)
-                                )
-                                Text(
-                                    text = if (standardizedQr!!.decodedPayload != null)
-                                        "Payload: ${standardizedQr!!.decodedPayload!!.take(28)}..."
-                                    else
-                                        "Standard high-resolution square QR",
-                                    fontSize = 10.sp,
-                                    color = Color.White.copy(alpha = 0.65f),
-                                    maxLines = 1
-                                )
-                            }
-                            IconButton(
-                                onClick = {
-                                    selectedQrUri = null
-                                    standardizedQr = null
-                                    coroutineScope.launch {
-                                        prefs.setCustomMasjidQrPath(null)
-                                    }
-                                },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove QR",
-                                    tint = Color(0xFFEF4444),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    }
                 }
 
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage ?: "",
-                        fontSize = 12.sp,
-                        color = Color(0xFFEF4444),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Submit Request Button (Uploads photo & QR to Google Drive, sets QR in Support Masjid holder, & inserts into Sheet1)
+                // Submit Button: Emerald Green with Send Icon
                 Button(
-                    onClick = { performFormSubmit() },
+                    onClick = {
+                        when {
+                            masjidName.isBlank() -> {
+                                Toast.makeText(context, "Please enter Name of Masjid", Toast.LENGTH_SHORT).show()
+                            }
+                            location.isBlank() -> {
+                                Toast.makeText(context, "Please enter Location / City / Area", Toast.LENGTH_SHORT).show()
+                            }
+                            adminContact.isBlank() -> {
+                                Toast.makeText(context, "Please enter Admin Contact Number", Toast.LENGTH_SHORT).show()
+                            }
+                            else -> {
+                                isSending = true
+                                coroutineScope.launch {
+                                    val pb = selectedPhotoUri?.let { prepareStraightMasjidPhotoBase64(context, it) }
+                                    val qb = selectedQrUri?.let { prepareStandardizedMasjidQr(context, it)?.base64 }
+                                    try {
+                                        GoogleSheetMasjidSync.submitMasjidRequestAuto(
+                                            name = masjidName.trim(),
+                                            location = location.trim(),
+                                            adminName = adminId.trim().ifBlank { "admin" },
+                                            contact = adminContact.trim(),
+                                            photoBase64 = pb,
+                                            photoName = "${masjidName.trim()}.jpg",
+                                            qrBase64 = qb,
+                                            qrName = "${masjidName.trim()}_QR.jpg",
+                                            webAppUrl = GoogleSheetMasjidSync.APPS_SCRIPT_WEBAPP_URL
+                                        )
+                                    } catch (e: Exception) {
+                                        // Handled gracefully
+                                    }
+                                    isSending = false
+                                    onSubmitted()
+                                }
+                            }
+                        }
+                    },
                     enabled = !isSending,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                     shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2EC878),
+                        disabledContainerColor = Color(0xFF2EC878).copy(alpha = 0.6f)
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(46.dp)
+                        .height(48.dp)
                 ) {
                     if (isSending) {
                         CircularProgressIndicator(
                             color = Color.White,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = when (language) {
-                                "ur" -> "اپلوڈ ہو رہا ہے..."
-                                "hi" -> "अपलोड हो रहा है..."
-                                else -> "Uploading..."
-                            },
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = "Send",
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = when (language) {
-                                "ur" -> "درخواست بھیجیں"
-                                "hi" -> "दरखास्त भेजें"
-                                else -> "Send Request"
-                            },
-                            fontSize = 13.5.sp,
+                            text = "Send Request",
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
@@ -3025,98 +1087,32 @@ fun AddMasjidAutoDialog(
 }
 
 @Composable
-fun StarIconDisplay(
-    fillRatio: Float, // 0f = outline, 0.5f = half filled, 1f = fully filled
-    size: androidx.compose.ui.unit.Dp = 20.dp,
-    tint: Color = Color(0xFFFFD700),
-    modifier: Modifier = Modifier
-) {
-    androidx.compose.foundation.Canvas(modifier = modifier.size(size)) {
+fun StarIconDisplay(fillRatio: Float, starSize: Dp = 20.dp, tint: Color = Color(0xFFFFD700)) {
+    Canvas(modifier = Modifier.size(starSize)) {
         val path = Path().apply {
-            val cx = this@Canvas.size.width / 2f
-            val cy = this@Canvas.size.height / 2f
-            val outerR = this@Canvas.size.minDimension / 2f
-            val innerR = outerR * 0.42f
-            for (p in 0 until 10) {
+            val cx = size.width / 2f; val cy = size.height / 2f; val outerR = size.minDimension / 2f; val innerR = outerR * 0.42f
+            for (p in 0 until 10) { 
                 val r = if (p % 2 == 0) outerR else innerR
                 val angle = Math.toRadians((p * 36 - 90).toDouble())
-                val x = cx + (r * Math.cos(angle)).toFloat()
-                val y = cy + (r * Math.sin(angle)).toFloat()
-                if (p == 0) moveTo(x, y) else lineTo(x, y)
+                val px = cx + (r * kotlin.math.cos(angle)).toFloat()
+                val py = cy + (r * kotlin.math.sin(angle)).toFloat()
+                if (p == 0) moveTo(px, py) else lineTo(px, py) 
             }
             close()
         }
-
-        if (fillRatio >= 1f) {
-            drawPath(path, color = tint, style = Fill)
-        } else if (fillRatio >= 0.5f) {
-            // Half-star: clip left half
-            clipRect(right = this.size.width / 2f) {
-                drawPath(path, color = tint, style = Fill)
-            }
-            // Full star outline
-            drawPath(path, color = tint.copy(alpha = 0.5f), style = Stroke(width = 1.5.dp.toPx()))
-        } else {
-            // Empty star outline
-            drawPath(path, color = tint.copy(alpha = 0.35f), style = Stroke(width = 1.5.dp.toPx()))
-        }
+        if (fillRatio >= 1f) drawPath(path, tint) else if (fillRatio >= 0.5f) { clipRect(right = size.width / 2f) { drawPath(path, tint) }; drawPath(path, tint.copy(alpha = 0.5f), style = Stroke(1.dp.toPx())) } else drawPath(path, tint.copy(alpha = 0.3f), style = Stroke(1.dp.toPx()))
     }
 }
 
 @Composable
-fun InteractiveHalfStarRatingBar(
-    rating: Double,
-    onRatingSelected: (Double) -> Unit,
-    starSize: androidx.compose.ui.unit.Dp = 24.dp,
-    tint: Color = Color(0xFFFFD700),
-    spacing: androidx.compose.ui.unit.Dp = 4.dp,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(spacing),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+fun InteractiveHalfStarRatingBar(rating: Double, onRatingSelected: (Double) -> Unit, starSize: Dp = 24.dp, tint: Color = Color(0xFFFFD700), spacing: Dp = 4.dp) {
+    Row(horizontalArrangement = Arrangement.spacedBy(spacing), verticalAlignment = Alignment.CenterVertically) {
         for (i in 1..5) {
-            val fillRatio = when {
-                rating >= i -> 1f
-                rating >= i - 0.5 -> 0.5f
-                else -> 0f
-            }
-            Box(
-                modifier = Modifier.size(starSize),
-                contentAlignment = Alignment.Center
-            ) {
-                // Drawn Star vector
-                StarIconDisplay(
-                    fillRatio = fillRatio,
-                    size = starSize,
-                    tint = tint
-                )
-                // Left half clickable for (i - 0.5), right half clickable for (i.toDouble())
+            Box(modifier = Modifier.size(starSize)) {
+                StarIconDisplay(fillRatio = if (rating >= i) 1f else if (rating >= i - 0.5) 0.5f else 0f, starSize = starSize, tint = tint)
                 Row(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                onRatingSelected(i - 0.5)
-                            }
-                    )
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                onRatingSelected(i.toDouble())
-                            }
-                    )
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onRatingSelected(i - 0.5) })
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onRatingSelected(i.toDouble()) })
                 }
             }
         }
@@ -3124,701 +1120,436 @@ fun InteractiveHalfStarRatingBar(
 }
 
 @Composable
-fun UpiAppChooserDialog(
-    amount: Int,
-    language: String = "en",
-    onDismiss: () -> Unit,
-    onAppSelected: (String?) -> Unit
-) {
+fun UpiAppChooserDialog(amount: Int, language: String = "en", onDismiss: () -> Unit, onAppSelected: (String?) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1B15)),
-            border = BorderStroke(1.5.dp, Color(0xFFE5B842).copy(alpha = 0.55f)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Header with Close Button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = when (language) {
-                                "ur" -> "UPI کے ذریعے ادائیگی"
-                                "hi" -> "UPI द्वारा भुगतान"
-                                else -> "Pay via UPI"
-                            },
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFF3DE8E)
-                        )
-                        Text(
-                            text = when (language) {
-                                "ur" -> "رقم: ₹$amount"
-                                "hi" -> "राशि: ₹$amount"
-                                else -> "Amount: ₹$amount"
-                            },
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF34D399)
-                        )
-                    }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.7f)
-                        )
+        Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0B1B15)), border = BorderStroke(1.5.dp, Color(0xFFE5B842).copy(alpha = 0.55f)), modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(text = "Pay ₹$amount via UPI", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF3DE8E))
+                val apps = listOf(Triple("PhonePe", "com.phonepe.app", R.drawable.ic_phonepe), Triple("Google Pay", "com.google.android.apps.nbu.paisa.user", R.drawable.ic_gpay), Triple("Paytm", "net.one97.paytm", R.drawable.ic_paytm), Triple("Other / Default", null, R.drawable.ic_upi))
+                apps.forEach { (name, pkg, icon) ->
+                    Row(modifier = Modifier.fillMaxWidth().clickable { onAppSelected(pkg) }.padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Image(painter = painterResource(id = icon), contentDescription = null, modifier = Modifier.size(32.dp).clip(CircleShape))
+                        Text(text = name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     }
                 }
-
-                HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
-
-                Text(
-                    text = when (language) {
-                        "ur" -> "اپنی ادائیگی ایپ منتخب کریں:"
-                        "hi" -> "अपना पेमेंट ऐप चुनें:"
-                        else -> "Select your payment app:"
-                    },
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.75f),
-                    modifier = Modifier.align(Alignment.Start)
-                )
-
-                // 1. Google Pay
-                UpiAppOptionItem(
-                    name = "Google Pay",
-                    subtitle = "GPay UPI",
-                    iconRes = R.drawable.ic_gpay,
-                    onClick = { onAppSelected("com.google.android.apps.nbu.paisa.user") }
-                )
-
-                // 2. PhonePe
-                UpiAppOptionItem(
-                    name = "PhonePe",
-                    subtitle = "PhonePe UPI",
-                    iconRes = R.drawable.ic_phonepe,
-                    onClick = { onAppSelected("com.phonepe.app") }
-                )
-
-                // 3. Paytm
-                UpiAppOptionItem(
-                    name = "Paytm",
-                    subtitle = "Paytm Payments Bank & UPI",
-                    iconRes = R.drawable.ic_paytm,
-                    onClick = { onAppSelected("net.one97.paytm") }
-                )
-
-                // 4. Other UPI App (System Chooser)
-                UpiAppOptionItem(
-                    name = when (language) {
-                        "ur" -> "دیگر UPI ایپ"
-                        "hi" -> "अन्य UPI ऐप"
-                        else -> "Other UPI App"
-                    },
-                    subtitle = "BHIM, Cred, Amazon Pay, etc.",
-                    iconRes = R.drawable.ic_upi,
-                    onClick = { onAppSelected(null) }
-                )
             }
         }
     }
 }
 
 @Composable
-fun UpiAppOptionItem(
-    name: String,
-    subtitle: String,
-    iconRes: Int,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF122820)),
-        border = BorderStroke(1.dp, Color(0xFF1E4636))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .padding(2.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.6f)
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "Select",
-                tint = Color(0xFFF3DE8E),
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
-}
-
-data class QrButtonTheme(
-    val backgroundColor: Color,
-    val contentColor: Color,
-    val borderColor: Color
-)
-
-/**
- * Animated QR Code Button in Support App section
- * Cycles in a continuous top-to-bottom spin loop across 2 distinct color styles:
- * 1. Theme Golden/Yellow background + Black text & icon
- * 2. White background + Black text & icon
- */
-/**
- * QR Code Button in Support App section:
- * Fixed Golden background + Black text & icon, slightly rounded corners.
- */
-@Composable
-fun AnimatedSupportQrButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .width(88.dp)
-            .height(32.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFFF3DE8E))
-            .border(1.dp, Color(0xFFE5B842), RoundedCornerShape(10.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(bounded = true),
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.QrCode,
-                contentDescription = "QR Code",
-                tint = Color(0xFF071711),
-                modifier = Modifier.size(16.dp)
-            )
-            Text(
-                text = "QR Code",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF071711)
-            )
-        }
-    }
-}
-
-/**
- * Social Media Icon Button with title label
- */
-@Composable
-private fun SocialIconButton(
-    title: String,
-    icon: @Composable () -> Unit,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(bounded = true, color = Color.White),
-                onClick = onClick
-            )
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-    ) {
-        icon()
-        Text(
-            text = title,
-            fontSize = 10.5.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White.copy(alpha = 0.85f)
-        )
-    }
-}
-
-/**
- * Circular Social Media Button wrapper
- */
-@Composable
-private fun SocialCircleButton(
-    title: String,
-    icon: @Composable () -> Unit,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(28.dp)
-            .clip(CircleShape)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(bounded = true, color = Color.White),
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        icon()
-    }
-}
-
-/**
- * Official Facebook Brand Badge
- */
-@Composable
-private fun SocialFacebookIcon() {
-    Box(
-        modifier = Modifier
-            .size(25.dp)
-            .clip(CircleShape)
-            .background(Color(0xFF1877F2)),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "f",
-            color = Color.White,
-            fontSize = 14.5.sp,
-            fontWeight = FontWeight.Black,
-            fontFamily = FontFamily.SansSerif,
-            modifier = Modifier.offset(x = 0.5.dp, y = (-0.5).dp)
-        )
-    }
-}
-
-/**
- * Official Instagram Brand Badge with Gradient & Camera glyph
- */
-@Composable
-private fun SocialInstagramIcon() {
-    Box(
-        modifier = Modifier
-            .size(25.dp)
-            .clip(CircleShape)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        Color(0xFF833AB4),
-                        Color(0xFFFD1D1D),
-                        Color(0xFFF77737)
-                    )
-                )
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(12.5.dp)) {
-            val strokePx = 1.5.dp.toPx()
-            // Outer rounded rect
-            drawRoundRect(
-                color = Color.White,
-                cornerRadius = CornerRadius(3.dp.toPx()),
-                style = Stroke(width = strokePx)
-            )
-            // Inner circle
-            drawCircle(
-                color = Color.White,
-                radius = size.width * 0.23f,
-                style = Stroke(width = strokePx)
-            )
-            // Top-right dot
-            drawCircle(
-                color = Color.White,
-                radius = 1.2.dp.toPx(),
-                center = Offset(size.width * 0.73f, size.height * 0.27f)
-            )
-        }
-    }
-}
-
-/**
- * Official YouTube Brand Badge
- */
-@Composable
-private fun SocialYouTubeIcon() {
-    Box(
-        modifier = Modifier
-            .size(25.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFFF0000)),
-        contentAlignment = Alignment.Center
-    ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(11.5.dp)) {
-            val path = Path().apply {
-                moveTo(size.width * 0.32f, size.height * 0.2f)
-                lineTo(size.width * 0.82f, size.height * 0.5f)
-                lineTo(size.width * 0.32f, size.height * 0.8f)
-                close()
-            }
-            drawPath(path, Color.White)
-        }
-    }
-}
-
-/**
- * Official Telegram Brand Badge
- */
-@Composable
-private fun SocialTelegramIcon() {
-    Box(
-        modifier = Modifier
-            .size(25.dp)
-            .clip(CircleShape)
-            .background(Color(0xFF229ED9)),
-        contentAlignment = Alignment.Center
-    ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(11.5.dp)) {
-            val path = Path().apply {
-                moveTo(size.width * 0.15f, size.height * 0.5f)
-                lineTo(size.width * 0.85f, size.height * 0.18f)
-                lineTo(size.width * 0.68f, size.height * 0.82f)
-                lineTo(size.width * 0.48f, size.height * 0.62f)
-                lineTo(size.width * 0.38f, size.height * 0.75f)
-                lineTo(size.width * 0.36f, size.height * 0.58f)
-                close()
-            }
-            drawPath(path, Color.White)
-        }
-    }
-}
-
-/**
- * Single White Colour Social Media Badges
- */
-@Composable
-private fun WhiteSocialFacebookIcon() {
-    Box(
-        modifier = Modifier
-            .size(25.dp)
-            .clip(CircleShape)
-            .background(Color.White),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "f",
-            color = Color(0xFF0F1E17),
-            fontSize = 14.5.sp,
-            fontWeight = FontWeight.Black,
-            fontFamily = FontFamily.SansSerif,
-            modifier = Modifier.offset(x = 0.5.dp, y = (-0.5).dp)
-        )
-    }
-}
-
-@Composable
-private fun WhiteSocialInstagramIcon() {
-    Box(
-        modifier = Modifier
-            .size(25.dp)
-            .clip(CircleShape)
-            .background(Color.White),
-        contentAlignment = Alignment.Center
-    ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(12.5.dp)) {
-            val strokePx = 1.5.dp.toPx()
-            val darkColor = Color(0xFF0F1E17)
-            drawRoundRect(
-                color = darkColor,
-                cornerRadius = CornerRadius(3.dp.toPx()),
-                style = Stroke(width = strokePx)
-            )
-            drawCircle(
-                color = darkColor,
-                radius = size.width * 0.23f,
-                style = Stroke(width = strokePx)
-            )
-            drawCircle(
-                color = darkColor,
-                radius = 1.2.dp.toPx(),
-                center = Offset(size.width * 0.73f, size.height * 0.27f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun WhiteSocialYouTubeIcon() {
-    Box(
-        modifier = Modifier
-            .size(25.dp)
-            .clip(CircleShape)
-            .background(Color.White),
-        contentAlignment = Alignment.Center
-    ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(11.5.dp)) {
-            val path = Path().apply {
-                moveTo(size.width * 0.32f, size.height * 0.2f)
-                lineTo(size.width * 0.82f, size.height * 0.5f)
-                lineTo(size.width * 0.32f, size.height * 0.8f)
-                close()
-            }
-            drawPath(path, Color(0xFF0F1E17))
-        }
-    }
-}
-
-@Composable
-private fun WhiteSocialTelegramIcon() {
-    Box(
-        modifier = Modifier
-            .size(25.dp)
-            .clip(CircleShape)
-            .background(Color.White),
-        contentAlignment = Alignment.Center
-    ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.size(11.5.dp)) {
-            val path = Path().apply {
-                moveTo(size.width * 0.15f, size.height * 0.5f)
-                lineTo(size.width * 0.85f, size.height * 0.18f)
-                lineTo(size.width * 0.68f, size.height * 0.82f)
-                lineTo(size.width * 0.48f, size.height * 0.62f)
-                lineTo(size.width * 0.38f, size.height * 0.75f)
-                lineTo(size.width * 0.36f, size.height * 0.58f)
-                close()
-            }
-            drawPath(path, Color(0xFF0F1E17))
-        }
-    }
-}
-
-private data class ConfettiParticle(
-    val initialXRatio: Float,
-    val initialYRatio: Float,
-    val vx: Float,
-    val vy: Float,
-    val gravity: Float,
-    val color: Color,
-    val width: Float,
-    val height: Float,
-    val rotationSpeed: Float,
-    val isCircle: Boolean,
-    val swayFrequency: Float,
-    val swayPhase: Float
-)
-
-@Composable
-fun ColorfulConfettiOverlay(
-    modifier: Modifier = Modifier,
-    particleCount: Int = 90
-) {
-    val confettiColors = remember {
-        listOf(
-            Color(0xFFFFD700), // Bright Gold
-            Color(0xFFFF3366), // Festive Pink
-            Color(0xFF10B981), // Emerald Green
-            Color(0xFF00B0FF), // Sky Blue
-            Color(0xFFAA00FF), // Vivid Purple
-            Color(0xFFFF9100), // Vibrant Orange
-            Color(0xFF00E5FF), // Cyan
-            Color(0xFFFF5252), // Coral Red
-            Color(0xFF76FF03), // Lime Green
-            Color(0xFFFFEB3B)  // Lemon Yellow
-        )
-    }
-
-    val particles = remember {
-        val random = java.util.Random(1337)
-        List(particleCount) {
-            val angle = random.nextFloat() * 2f * Math.PI.toFloat()
-            val speed = 160f + random.nextFloat() * 420f
-            ConfettiParticle(
-                initialXRatio = 0.5f + (random.nextFloat() - 0.5f) * 0.35f,
-                initialYRatio = 0.30f + (random.nextFloat() - 0.5f) * 0.2f,
-                vx = kotlin.math.cos(angle) * speed,
-                vy = (kotlin.math.sin(angle) * speed * 0.7f) - (180f + random.nextFloat() * 220f),
-                gravity = 420f + random.nextFloat() * 300f,
-                color = confettiColors[random.nextInt(confettiColors.size)],
-                width = 12f + random.nextFloat() * 16f,
-                height = 6f + random.nextFloat() * 10f,
-                rotationSpeed = (random.nextFloat() - 0.5f) * 720f,
-                isCircle = random.nextFloat() < 0.25f,
-                swayFrequency = 2f + random.nextFloat() * 3f,
-                swayPhase = random.nextFloat() * 2f * Math.PI.toFloat()
-            )
-        }
-    }
-
+fun ColorfulConfettiOverlay(modifier: Modifier = Modifier) {
     var elapsedTime by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        val startTime = withFrameNanos { it }
-        while (true) {
-            withFrameNanos { frameTime ->
-                elapsedTime = (frameTime - startTime) / 1_000_000_000f
-            }
-        }
+    LaunchedEffect(Unit) { 
+        val start = System.nanoTime()
+        while (true) { 
+            withFrameNanos { elapsedTime = (it - start) / 1_000_000_000f } 
+        } 
     }
-
-    Canvas(
-        modifier = modifier.fillMaxSize()
-    ) {
-        val canvasWidth = size.width
-        val canvasHeight = size.height
-
-        val loopDuration = 4.0f
-        val t = elapsedTime % loopDuration
-        val alpha = if (t < 2.8f) 1f else (1f - (t - 2.8f) / 1.2f).coerceIn(0f, 1f)
-
-        for (p in particles) {
-            val startX = p.initialXRatio * canvasWidth
-            val startY = p.initialYRatio * canvasHeight
-
-            val sway = kotlin.math.sin(t * p.swayFrequency + p.swayPhase) * 24f
-            val currentX = startX + p.vx * t * 0.65f + sway
-            val currentY = startY + p.vy * t + 0.5f * p.gravity * t * t
-
-            if (currentY > canvasHeight + 50f || currentY < -50f) continue
-
-            val currentRotation = p.rotationSpeed * t
-            val flutterScale = kotlin.math.cos(t * 5f + p.swayPhase)
-            val particleColor = p.color.copy(alpha = alpha)
-
-            rotate(degrees = currentRotation, pivot = androidx.compose.ui.geometry.Offset(currentX, currentY)) {
-                if (p.isCircle) {
-                    drawCircle(
-                        color = particleColor,
-                        radius = (p.width / 2.5f) * kotlin.math.abs(flutterScale).coerceAtLeast(0.3f),
-                        center = androidx.compose.ui.geometry.Offset(currentX, currentY)
-                    )
-                } else {
-                    val effectiveHeight = (p.height * flutterScale).coerceIn(-p.height, p.height)
-                    drawRect(
-                        color = particleColor,
-                        topLeft = androidx.compose.ui.geometry.Offset(currentX - p.width / 2f, currentY - effectiveHeight / 2f),
-                        size = androidx.compose.ui.geometry.Size(p.width, kotlin.math.abs(effectiveHeight).coerceAtLeast(2.5f))
-                    )
-                }
-            }
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val random = java.util.Random(1337)
+        repeat(50) {
+            val t = (elapsedTime + random.nextFloat() * 4f) % 4f
+            val alpha = if (t < 2.5f) 1f else (1f - (t - 2.5f) / 1.5f).coerceIn(0f, 1f)
+            val x = size.width * (0.5f + (random.nextFloat() - 0.5f) * (t * 0.5f))
+            val y = size.height * (0.2f + t * 0.6f)
+            drawCircle(color = listOf(Color.Yellow, Color.Red, Color.Green, Color.Blue, Color.Magenta).random().copy(alpha = alpha), radius = 6f, center = Offset(x, y))
         }
     }
 }
 
 @Composable
-fun SupportGridItem(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    actionText: String? = null
-) {
-    Card(
-        modifier = modifier
+fun AnimatedAddMasjidFormPreview(isSelected: Boolean) {
+    val infiniteTransition = rememberInfiniteTransition(label = "htmlDemoLoop")
+    val progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 11000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "demoProgress"
+    )
+    val caretBlink by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 450, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "caretBlink"
+    )
+    val showCaret = caretBlink > 0.45f
+
+    // Timeline phases (0.0 to 1.0 over 11s):
+    // 0.05 - 0.20: Typing Name
+    val nameProgress = ((progress - 0.05f) / 0.15f).coerceIn(0f, 1f)
+    val nameText = "Jama Masjid".take((nameProgress * "Jama Masjid".length).toInt())
+
+    // 0.20 - 0.35: Typing Location
+    val locProgress = ((progress - 0.20f) / 0.15f).coerceIn(0f, 1f)
+    val locText = "Bijapur Bes, Solapur".take((locProgress * "Bijapur Bes, Solapur".length).toInt())
+
+    // 0.41 - 0.57: Typing Mobile Number + Verified Tick
+    val phoneProgress = ((progress - 0.41f) / 0.16f).coerceIn(0f, 1f)
+    val phoneText = "9890098900".take((phoneProgress * "9890098900".length).toInt())
+    val phoneVerified = progress >= 0.57f
+
+    // 0.63 - 0.73: Photo Upload progress -> Uploaded
+    val photoBarProgress = ((progress - 0.63f) / 0.07f).coerceIn(0f, 1f)
+    val photoUploading = progress in 0.63f..0.70f
+    val photoUploaded = progress >= 0.70f
+
+    // 0.79 - 0.88: QR Upload progress -> Uploaded
+    val qrBarProgress = ((progress - 0.79f) / 0.06f).coerceIn(0f, 1f)
+    val qrUploading = progress in 0.79f..0.85f
+    val qrUploaded = progress >= 0.85f
+
+    // 0.88 - 1.00: Submit / Sending / Success
+    val isSending = progress in 0.88f..0.94f
+    val isSuccess = progress >= 0.94f
+
+    fun smoothStep(start: Float, end: Float, x: Float): Float {
+        val t = ((x - start) / (end - start)).coerceIn(0f, 1f)
+        return t * t * (3f - 2f * t)
+    }
+
+    // Smooth scroll fraction across the entire real scrollable content height
+    val scrollFraction = when {
+        progress < 0.35f -> 0f
+        progress < 0.41f -> 0.42f * smoothStep(0.35f, 0.41f, progress)
+        progress < 0.58f -> 0.42f
+        progress < 0.63f -> 0.42f + 0.34f * smoothStep(0.58f, 0.63f, progress)
+        progress < 0.74f -> 0.76f
+        progress < 0.79f -> 0.76f + 0.24f * smoothStep(0.74f, 0.79f, progress)
+        else -> 1f
+    }
+
+    val scrollState = rememberScrollState()
+    LaunchedEffect(scrollFraction, scrollState.maxValue) {
+        if (scrollState.maxValue > 0) {
+            scrollState.scrollTo((scrollFraction * scrollState.maxValue).toInt())
+        }
+    }
+
+    Box(
+        modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A)),
-        border = BorderStroke(1.dp, Color(0xFFE5B842).copy(alpha = 0.45f))
+            .height(if (isSelected) 370.dp else 240.dp)
+            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+            .background(Color(0xFF0C1424))
+            .padding(12.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .verticalScroll(scrollState, enabled = false),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(Color(0xFF143827), CircleShape),
-                contentAlignment = Alignment.Center
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = Color(0xFFF3DE8E),
-                    modifier = Modifier.size(22.dp)
+                Text(text = "Add New Masjid", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD166))
+                Box(modifier = Modifier.size(20.dp).background(Color(0xFF101A2E), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = null, tint = Color(0xFFFFD166), modifier = Modifier.size(11.dp))
+                }
+            }
+
+            // Instruction Banner
+            Surface(
+                color = Color(0xFF101A2E),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color(0xFFFFD166).copy(alpha = 0.25f))
+            ) {
+                Text(
+                    text = "The responsible person (Moulana / Mutawalli / Bangi sahab / Trust Member) should submit the form.",
+                    fontSize = 9.5.sp,
+                    color = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(8.dp),
+                    lineHeight = 12.sp
                 )
             }
 
-            Text(
-                text = title,
-                fontSize = 14.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFF3DE8E),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            // Field 1: Name of Masjid
+            DemoInputField(
+                placeholder = "Name of Masjid *",
+                value = nameText,
+                isFocused = progress in 0.05f..0.20f,
+                showCaret = showCaret
             )
 
-            Text(
-                text = subtitle,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            // Field 2: Location
+            DemoInputField(
+                placeholder = "Location / City / Area *",
+                value = locText,
+                isFocused = progress in 0.20f..0.35f,
+                showCaret = showCaret
             )
 
-            Spacer(modifier = Modifier.height(2.dp))
+            // Field 3: Admin Contact Number
+            DemoInputField(
+                placeholder = "Admin Contact Number *",
+                value = phoneText,
+                isFocused = progress in 0.41f..0.57f,
+                showCaret = showCaret,
+                trailingIcon = if (phoneVerified) {
+                    { Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = Color(0xFFFFD166), modifier = Modifier.size(14.dp)) }
+                } else null
+            )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(34.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF143827))
-                    .border(
-                        1.2.dp, 
-                        if (actionText != null) Color(0xFF10B981).copy(alpha = 0.6f) else Color.White.copy(alpha = 0.1f), 
-                        RoundedCornerShape(10.dp)
-                    )
-                    .clickable { onClick() },
-                contentAlignment = Alignment.Center
+            // Field 4: Admin ID - admin
+            Surface(
+                color = Color(0xFF101A2E),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color(0xFF1E293B)),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = actionText ?: "Open",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF3DE8E),
-                    textAlign = TextAlign.Center
-                )
+                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                    Text(text = "Admin ID - admin", fontSize = 8.sp, color = Color.Gray)
+                    Text(text = "admin", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                }
+            }
+
+            // Field 5: Masjid Photo Upload
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(text = "Masjid Photo (Optional):", fontSize = 9.sp, color = Color.Gray)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (photoUploaded) Color(0xFF0C241C) else Color(0xFF101A2E))
+                        .border(
+                            1.dp,
+                            when {
+                                photoUploaded -> Color(0xFF22C55E).copy(alpha = 0.6f)
+                                photoUploading -> Color(0xFF38BDF8)
+                                else -> Color(0xFF1E293B)
+                            },
+                            RoundedCornerShape(8.dp)
+                        )
+                ) {
+                    if (photoUploaded) {
+                        Row(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier.size(22.dp).background(Color(0xFF1E293B), RoundedCornerShape(4.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(imageVector = Icons.Default.Mosque, contentDescription = null, tint = Color(0xFFFFD166), modifier = Modifier.size(13.dp))
+                                }
+                                Column {
+                                    Text(text = "jama_masjid.jpg", fontSize = 9.5.sp, color = Color.White, fontWeight = FontWeight.Medium)
+                                    Text(text = "✓ Uploaded (1.2 MB)", fontSize = 8.sp, color = Color(0xFF22C55E), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Text(text = "✕", fontSize = 9.sp, color = Color.Gray)
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(imageVector = Icons.Default.CloudUpload, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (photoUploading) "Uploading Photo..." else "Browse / Upload Masjid Photo",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF38BDF8)
+                            )
+                        }
+                        if (photoUploading) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .fillMaxWidth(photoBarProgress)
+                                    .height(2.5.dp)
+                                    .background(Color(0xFF38BDF8))
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Field 6: Masjid QR Upload
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(text = "Masjid QR (Optional):", fontSize = 9.sp, color = Color.Gray)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (qrUploaded) Color(0xFF0C241C) else Color(0xFF101A2E))
+                        .border(
+                            1.dp,
+                            when {
+                                qrUploaded -> Color(0xFF22C55E).copy(alpha = 0.6f)
+                                qrUploading -> Color(0xFF38BDF8)
+                                else -> Color(0xFF1E293B)
+                            },
+                            RoundedCornerShape(8.dp)
+                        )
+                ) {
+                    if (qrUploaded) {
+                        Row(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier.size(22.dp).background(Color.White, RoundedCornerShape(4.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(imageVector = Icons.Default.QrCode2, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                                }
+                                Column {
+                                    Text(text = "masjid_qr.png", fontSize = 9.5.sp, color = Color.White, fontWeight = FontWeight.Medium)
+                                    Text(text = "✓ Uploaded (245 KB)", fontSize = 8.sp, color = Color(0xFF22C55E), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Text(text = "✕", fontSize = 9.sp, color = Color.Gray)
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(imageVector = Icons.Default.QrCode, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(13.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (qrUploading) "Uploading QR..." else "Browse / Upload Masjid QR",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF38BDF8)
+                            )
+                        }
+                        if (qrUploading) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .fillMaxWidth(qrBarProgress)
+                                    .height(2.5.dp)
+                                    .background(Color(0xFF38BDF8))
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Submit Button
+            Button(
+                onClick = {},
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSuccess) Color(0xFF22C55E) else Color(0xFF10B981)
+                ),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.fillMaxWidth().height(36.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (isSending) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFF070B14)
+                        )
+                    } else if (isSuccess) {
+                        Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = Color(0xFF070B14), modifier = Modifier.size(13.dp))
+                    } else {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = Color(0xFF070B14), modifier = Modifier.size(12.dp))
+                    }
+                    Text(
+                        text = when {
+                            isSuccess -> "Request Sent Successfully! ✓"
+                            isSending -> "Sending Request..."
+                            else -> "Send Request"
+                        },
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF070B14)
+                    )
+                }
             }
         }
     }
 }
 
-
-
+@Composable
+fun DemoInputField(
+    placeholder: String,
+    value: String,
+    isFocused: Boolean,
+    showCaret: Boolean = false,
+    trailingIcon: (@Composable () -> Unit)? = null
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(34.dp)
+            .background(Color(0xFF101A2E), RoundedCornerShape(8.dp))
+            .border(
+                1.dp,
+                if (isFocused) Color(0xFF38BDF8) else Color(0xFF1E293B),
+                RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val displayText = if (value.isEmpty() && !isFocused) placeholder else value
+                if (displayText.isNotEmpty()) {
+                    Text(
+                        text = displayText,
+                        fontSize = 10.5.sp,
+                        color = if (value.isEmpty()) Color.Gray else Color.White,
+                        fontWeight = if (value.isNotEmpty()) FontWeight.Medium else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else if (isFocused) {
+                    Text(
+                        text = placeholder,
+                        fontSize = 10.5.sp,
+                        color = Color.Gray.copy(alpha = 0.55f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (isFocused && showCaret) {
+                    Text(
+                        text = "|",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Light,
+                        color = Color(0xFF38BDF8),
+                        modifier = Modifier.padding(start = 1.dp)
+                    )
+                }
+            }
+            if (trailingIcon != null) {
+                trailingIcon()
+            }
+        }
+    }
+}

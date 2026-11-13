@@ -248,9 +248,7 @@ fun InitialLanguageScreen(
                         Brush.verticalGradient(
                             listOf(DarkEmeraldTop, DarkEmeraldMid, DarkEmeraldBottom)
                         )
-                    )
-                    .statusBarsPadding()
-                    .navigationBarsPadding(),
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Column(

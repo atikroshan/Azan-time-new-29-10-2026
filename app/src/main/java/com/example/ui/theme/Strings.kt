@@ -192,10 +192,12 @@ data class AppStrings(
 
     // Support Menu
     val requestMasjid: String = "Request Masjid",
+    val addMasjidInstruction: String = "Note: Please use the Add button exclusively to submit the form for the responsible person (Moulana / Mutawalli / Bangi Sahab / Trust Member).",
     val changeMasjid: String = "Change Masjid",
     val feedback: String = "Feedback",
     val rateUs: String = "Rate Us",
-    val setting: String = "Setting"
+    val setting: String = "Setting",
+    val changeMasjidInstruction: String = "Tap CHANGE to open a search bar and a list of masjids. Search by ID / Location / Name, select your Masjid from the list, and click PROCEED."
 ) {
     fun getMonthFullName(month: Int): String = when (month) {
         1 -> jan
@@ -450,10 +452,12 @@ val HindiStrings = AppStrings(
 
     // Support Menu
     requestMasjid = "मस्जिद के लिए अनुरोध",
+    addMasjidInstruction = "नोट: कृपया जिम्मेदार व्यक्ति (मौलाना / मुतवल्ली / बंगी साहब / ट्रस्ट मेंबर) के लिए फॉर्म जमा करने के लिए विशेष रूप से ऐड बटन का उपयोग करें।",
     changeMasjid = "मस्जिद बदलें",
     feedback = "सुझाव (फीडबैक)",
     rateUs = "हमें रेटिंग दें",
-    setting = "सेटिंग"
+    setting = "सेटिंग",
+    changeMasjidInstruction = "सर्च बार और मस्जिदों की सूची खोलने के लिए 'बदलें' (CHANGE) पर टैप करें। आईडी / स्थान / नाम से खोजें, सूची से अपनी मस्जिद चुनें, और 'आगे बढ़ें' (PROCEED) पर क्लिक करें।"
 )
 
 val UrduStrings = AppStrings(
@@ -649,7 +653,9 @@ val UrduStrings = AppStrings(
     changeMasjid = "مسجد تبدیل کریں",
     feedback = "فیڈ بیک",
     rateUs = "ہمیں ریٹ کریں",
-    setting = "سیٹنگ"
+    setting = "سیٹنگ",
+    changeMasjidInstruction = "سرچ بار اور مساجد کی فہرست کھولنے کے لیے 'تبدیل' (CHANGE) پر ٹیپ کریں۔ آئی ڈی / مقام / نام سے تلاش کریں، فہرست سے اپنی مسجد منتخب کریں، اور 'آگے بڑھیں' (PROCEED) پر کلک کریں۔",
+    addMasjidInstruction = "نوٹ: براہ کرم ذمہ دار شخص (مولانا / متولی / بنگی صاحب / ٹرسٹ ممبر) کے لیے فارم جمع کروانے کے لیے خاص طور پر ایڈ بٹن کا استعمال کریں۔"
 )
 
 val LocalAppStrings = staticCompositionLocalOf { EnglishStrings }

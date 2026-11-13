@@ -441,6 +441,9 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
             // Layer 2: Initial Language Screen overlay on top (slides off to reveal setup screen)
             if (!uiState.isInitialLanguageChosen) {
                 InitialLanguageScreen(
+                    onLanguagePreselected = { lang ->
+                        viewModel.setLanguage(lang)
+                    },
                     onLanguageSelect = { lang ->
                         viewModel.setLanguage(lang)
                         viewModel.setInitialLanguageChosen(true)
@@ -602,6 +605,7 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                         target = target,
                         containerWidth = containerWidthPx,
                         containerHeight = containerHeightPx,
+                        fabricFold = true,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else if (isGenieBusy && currentOutgoingTab != null) {
@@ -2150,11 +2154,12 @@ fun AzanList(
             for ((name, pair) in prayerPairs) {
                 val (timeStr, isEnabled) = pair
                 if (isEnabled && timeStr == currentTimeStr) {
-                    if (!com.example.service.AzanForegroundService.isPrayerStoppedOrHandled(context, name)) {
+                    if (!com.example.service.AzanForegroundService.isPlayingAzan.value &&
+                        !com.example.service.AzanForegroundService.isPrayerStoppedOrHandled(context, name)
+                    ) {
                         val triggerKey = "$name-$currentTimeStr-$todayDayOfYear"
                         if (lastTriggeredMinute != triggerKey) {
                             lastTriggeredMinute = triggerKey
-                            com.example.service.AzanForegroundService.markPrayerHandled(context, name)
                             try {
                                 val serviceIntent = Intent(context, com.example.service.AzanForegroundService::class.java).apply {
                                     putExtra("AZAN_NAME", name)

@@ -48,12 +48,14 @@ class PreferencesRepository(private val context: Context) {
     }
 
     private val KEY_LAST_SETUP_VERSION = androidx.datastore.preferences.core.intPreferencesKey("last_setup_version")
+    private val KEY_LAST_LANG_VERSION = androidx.datastore.preferences.core.intPreferencesKey("last_lang_version")
     private val KEY_INITIAL_LANG_CHOSEN = booleanPreferencesKey("initial_lang_chosen")
 
     fun isInitialLanguageChosenSync(): Boolean {
         return try {
             val sp = context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
-            sp.getBoolean("initial_lang_chosen", false)
+            sp.getBoolean("initial_lang_chosen", false) &&
+                sp.getInt("last_lang_version", -1) == com.example.BuildConfig.VERSION_CODE
         } catch (e: Exception) {
             false
         }
@@ -62,28 +64,36 @@ class PreferencesRepository(private val context: Context) {
     val isInitialLanguageChosenFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         val sp = try { context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE) } catch (_: Exception) { null }
         val dsChosen = prefs[KEY_INITIAL_LANG_CHOSEN]
+        val dsLangVer = prefs[KEY_LAST_LANG_VERSION]
         val spChosen = sp?.getBoolean("initial_lang_chosen", false) ?: false
-        dsChosen ?: spChosen
+        val spLangVer = sp?.getInt("last_lang_version", -1) ?: -1
+        val chosen = dsChosen ?: spChosen
+        val ver = dsLangVer ?: spLangVer
+        chosen && ver == com.example.BuildConfig.VERSION_CODE
     }
 
     suspend fun setInitialLanguageChosen(chosen: Boolean) {
+        val ver = if (chosen) com.example.BuildConfig.VERSION_CODE else -1
         try {
             context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .putBoolean("initial_lang_chosen", chosen)
+                .putInt("last_lang_version", ver)
                 .commit()
         } catch (e: Exception) {
             e.printStackTrace()
         }
         context.dataStore.edit { prefs ->
             prefs[KEY_INITIAL_LANG_CHOSEN] = chosen
+            prefs[KEY_LAST_LANG_VERSION] = ver
         }
     }
 
     fun isSetupCompletedSync(): Boolean {
         return try {
             val sp = context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
-            sp.getBoolean("setup_completed", false)
+            sp.getBoolean("setup_completed", false) &&
+                sp.getInt("last_setup_version", -1) == com.example.BuildConfig.VERSION_CODE
         } catch (e: Exception) {
             false
         }
@@ -92,23 +102,28 @@ class PreferencesRepository(private val context: Context) {
     val isSetupCompletedFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         val sp = try { context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE) } catch (_: Exception) { null }
         val dsCompleted = prefs[KEY_SETUP_COMPLETED]
+        val dsSetupVer = prefs[KEY_LAST_SETUP_VERSION]
         val spCompleted = sp?.getBoolean("setup_completed", false) ?: false
-        dsCompleted ?: spCompleted
+        val spSetupVer = sp?.getInt("last_setup_version", -1) ?: -1
+        val completed = dsCompleted ?: spCompleted
+        val ver = dsSetupVer ?: spSetupVer
+        completed && ver == com.example.BuildConfig.VERSION_CODE
     }
 
     suspend fun setSetupCompleted(completed: Boolean) {
+        val ver = if (completed) com.example.BuildConfig.VERSION_CODE else -1
         try {
             context.getSharedPreferences("azan_core_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .putBoolean("setup_completed", completed)
-                .putInt("last_setup_version", com.example.BuildConfig.VERSION_CODE)
+                .putInt("last_setup_version", ver)
                 .commit()
         } catch (e: Exception) {
             e.printStackTrace()
         }
         context.dataStore.edit { prefs ->
             prefs[KEY_SETUP_COMPLETED] = completed
-            prefs[KEY_LAST_SETUP_VERSION] = com.example.BuildConfig.VERSION_CODE
+            prefs[KEY_LAST_SETUP_VERSION] = ver
         }
     }
 

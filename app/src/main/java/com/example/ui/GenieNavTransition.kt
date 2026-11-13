@@ -33,7 +33,7 @@ import kotlin.math.max
  * - Respects prefers-reduced-motion with simple fade fallback
  */
 const val GENIE_N: Int = 56
-const val GENIE_DUR: Long = 780L
+const val GENIE_DUR: Long = 1350L
 
 data class TabTarget(
     val centerX: Float = 0f,
@@ -98,7 +98,7 @@ fun rememberPrefersReducedMotion(): Boolean {
 /**
  * Genie Fold Overlay Canvas
  * Renders the outgoing page snapshot into N horizontal strips, each transformed with a 2D affine matrix
- * exactly following the two-phase S-curve funnel physics from mobile-genie-nav.html.
+ * following the two-phase S-curve funnel physics, with optional realistic fabric wrinkle shading & ripples.
  */
 @Composable
 fun GenieFoldOverlay(
@@ -107,7 +107,8 @@ fun GenieFoldOverlay(
     target: TabTarget,
     containerWidth: Float,
     containerHeight: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fabricFold: Boolean = false
 ) {
     val matrix = remember { Matrix() }
     val paint = remember {
@@ -115,6 +116,46 @@ fun GenieFoldOverlay(
             isAntiAlias = true
             isFilterBitmap = true
             isDither = true
+        }
+    }
+    val pleatPaint = remember {
+        Paint().apply {
+            isAntiAlias = true
+        }
+    }
+    val creasePaint = remember {
+        Paint().apply {
+            isAntiAlias = true
+        }
+    }
+    val shaderMatrix = remember { Matrix() }
+    val pleatSpanW = remember(containerWidth) {
+        if (containerWidth > 0f) containerWidth else 1080f
+    }
+    val pleatShader = remember(fabricFold, pleatSpanW) {
+        if (!fabricFold) {
+            null
+        } else {
+            // High-contrast glossy satin pleats: luminous white-gold specular streaks flanked by deep fold shadows
+            android.graphics.LinearGradient(
+                0f, 0f, pleatSpanW, 0f,
+                intArrayOf(
+                    0x7A000000, // left hem velvet shadow
+                    0x6EFFFFFF, // satin gloss ridge 1
+                    0x1E000000, // transition
+                    0x72000000, // fold 1 deep valley
+                    0x66FFF4CC, // satin warm gold-white ridge 2
+                    0x6E000000, // center deep valley
+                    0x76FFFFFF, // center bright satin specular gleam
+                    0x6E000000, // fold 3 deep valley
+                    0x66FFF4CC, // satin warm ridge 4
+                    0x72000000, // fold 4 deep valley
+                    0x6EFFFFFF, // satin gloss ridge 5
+                    0x7A000000  // right hem velvet shadow
+                ),
+                floatArrayOf(0f, 0.08f, 0.14f, 0.22f, 0.34f, 0.44f, 0.52f, 0.60f, 0.70f, 0.81f, 0.92f, 1f),
+                android.graphics.Shader.TileMode.MIRROR
+            )
         }
     }
 
@@ -147,8 +188,13 @@ fun GenieFoldOverlay(
         } else {
             1f
         }
-        paint.alpha = (opacity.coerceIn(0f, 1f) * 255).toInt()
+        val baseAlpha = opacity.coerceIn(0f, 1f)
+        paint.alpha = (baseAlpha * 255).toInt()
         if (paint.alpha <= 0) return@Canvas
+
+        if (pleatShader != null) {
+            pleatPaint.shader = pleatShader
+        }
 
         drawIntoCanvas { composeCanvas ->
             val nativeCanvas = composeCanvas.nativeCanvas
@@ -158,11 +204,27 @@ fun GenieFoldOverlay(
             for (j in 0 until GENIE_N) {
                 val y1 = yt + (yb - yt) * ((j + 1).toFloat() / GENIE_N)
                 val cu = genieProfile(y1, n, span, minS, cx, tx)
-                val a = (pr.f + cu.f) / 2f
+                val baseA = (pr.f + cu.f) / 2f
                 val dc = cu.c - pr.c
                 // 0.8px overlap prevents subpixel gaps between strips during deformation
                 val sy = max(0.001f, (y1 - y0 + 0.8f) / sh)
-                val transX = (pr.c + cu.c) / 2f - a * W / 2f - dc / 2f
+
+                val tStrip = (j + 0.5f) / GENIE_N
+                val envelope = kotlin.math.sin(tStrip * PI.toFloat())
+                val primaryWave = kotlin.math.sin((tStrip * 5.2f - p * 2.6f) * PI.toFloat())
+                val fineWrinkle = kotlin.math.sin((tStrip * 10.8f - p * 3.8f) * PI.toFloat())
+                val combinedWrinkle = 0.65f * primaryWave + 0.35f * fineWrinkle
+
+                val wrinkleScale = if (fabricFold && n > 0.02f) {
+                    1f + (0.030f * combinedWrinkle * envelope * n)
+                } else 1f
+                val a = (baseA * wrinkleScale).coerceAtLeast(0.02f)
+
+                val rippleOffset = if (fabricFold && n > 0.01f) {
+                    combinedWrinkle * envelope * n * (1f - p * 0.30f) * (W * 0.018f)
+                } else 0f
+
+                val transX = (pr.c + cu.c) / 2f + rippleOffset - a * W / 2f - dc / 2f
                 val transY = y0
 
                 matrix.reset()
@@ -179,6 +241,31 @@ fun GenieFoldOverlay(
                 nativeCanvas.clipRect(0f, 0f, W, sh)
                 nativeCanvas.translate(0f, -j * sh)
                 nativeCanvas.drawBitmap(bitmap, 0f, 0f, paint)
+
+                if (fabricFold && pleatShader != null) {
+                    // Shiny satin pleats & glossy wrinkle luster intensify as the cloth gathers inward
+                    val gather = (1f - baseA).coerceIn(0f, 1f)
+                    val foldIntensity = (0.28f * n + 0.72f * gather).coerceIn(0f, 1f)
+                    val pAlpha = (foldIntensity * baseAlpha * 242f).toInt().coerceIn(0, 255)
+                    if (pAlpha > 2) {
+                        nativeCanvas.translate(0f, j * sh)
+                        // Curve vertical satin highlights softly along each horizontal wrinkle wave
+                        shaderMatrix.setTranslate(combinedWrinkle * W * 0.045f * n, 0f)
+                        pleatShader.setLocalMatrix(shaderMatrix)
+                        pleatPaint.alpha = pAlpha
+                        nativeCanvas.drawRect(0f, 0f, W, sh, pleatPaint)
+
+                        // High-contrast satin gleam on wrinkle crests & deep velvet shadows in creases
+                        val waveIntensity = kotlin.math.abs(combinedWrinkle) * foldIntensity * baseAlpha
+                        if (waveIntensity > 0.015f) {
+                            creasePaint.color = if (combinedWrinkle >= 0f) 0xFFFFFFFF.toInt() else 0xFF000000.toInt()
+                            val maxCrease = if (combinedWrinkle >= 0f) 76f else 92f
+                            creasePaint.alpha = (waveIntensity * maxCrease).toInt().coerceIn(0, 255)
+                            nativeCanvas.drawRect(0f, 0f, W, sh, creasePaint)
+                        }
+                    }
+                }
+
                 nativeCanvas.restore()
 
                 y0 = y1

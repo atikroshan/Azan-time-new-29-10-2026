@@ -491,6 +491,17 @@ fun MasjidSelectionDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // Language Bar above Search Bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LanguageCirclesRow(currentLang = language, onLangSelect = onLanguageSelect)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 // Search Bar with Mic for Speak-to-Type
                 OutlinedTextField(
                     value = searchQuery,
@@ -554,16 +565,6 @@ fun MasjidSelectionDialog(
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    LanguageCirclesRow(currentLang = language, onLangSelect = onLanguageSelect)
-                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 

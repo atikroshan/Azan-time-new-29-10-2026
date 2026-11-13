@@ -433,14 +433,181 @@ fun SupportBackScreen(
                                         Column(modifier = Modifier.fillMaxWidth()) {
                                             when (realIndex) {
                                                 0 -> {
-                                                    // Card 0: Change Masjid (Blank container matching Add New Masjid layout, ready for custom animation)
-                                                    Box(
+                                                    // Card 0: Current Masjid photo, top-right ID badge, Name, and Address
+                                                    val currentMasjid = uiState.selectedMasjid
+                                                    val photoData: Any? = com.example.data.MasjidLocalCacheManager.getPhotoModel(
+                                                        context,
+                                                        currentMasjid.id,
+                                                        currentMasjid.photoUrl
+                                                    )
+                                                    var photoLoadError by remember(currentMasjid.id, currentMasjid.photoUrl) {
+                                                        mutableStateOf(false)
+                                                    }
+                                                    val hasPhoto = photoData != null && !photoLoadError
+                                                    val bottomPanelBg = Color(0xFF0C1424)
+                                                    val titleColor = Color(0xFFF3DE8E)
+                                                    val iconColor = Color(0xFFE5A93C)
+                                                    val addressColor = Color.White.copy(alpha = 0.82f)
+
+                                                    Column(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .height(if (isSelected) 370.dp else 240.dp)
-                                                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                                                            .background(Color(0xFF0C1424))
-                                                    )
+                                                            .clip(RoundedCornerShape(24.dp))
+                                                            .background(bottomPanelBg)
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .weight(1f)
+                                                                .background(Color(0xFF08101E))
+                                                        ) {
+                                                            if (hasPhoto) {
+                                                                AsyncImage(
+                                                                    model = coil.request.ImageRequest.Builder(context)
+                                                                        .data(photoData)
+                                                                        .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                                                                        .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                                                                        .crossfade(false)
+                                                                        .listener(onError = { _, _ -> photoLoadError = true })
+                                                                        .build(),
+                                                                    contentDescription = currentMasjid.getLocalizedName(uiState.language),
+                                                                    contentScale = ContentScale.Crop,
+                                                                    alignment = Alignment.Center,
+                                                                    modifier = Modifier.fillMaxSize()
+                                                                )
+                                                            } else {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .fillMaxSize()
+                                                                        .background(
+                                                                            Brush.verticalGradient(
+                                                                                listOf(Color(0xFF132238), Color(0xFF0A1220))
+                                                                            )
+                                                                        )
+                                                                        .padding(bottom = 8.dp),
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Column(
+                                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                                    ) {
+                                                                        AzanLogoCard(
+                                                                            size = if (isSelected) 88.dp else 58.dp,
+                                                                            animateShimmer = false
+                                                                        )
+                                                                        AzanTimeWordmark(
+                                                                            height = if (isSelected) 42.dp else 28.dp,
+                                                                            topPadding = 2.dp,
+                                                                            bottomPadding = 2.dp
+                                                                        )
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            // Bottom transparency fade into dark info panel
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .height(30.dp)
+                                                                    .align(Alignment.BottomCenter)
+                                                                    .background(
+                                                                        Brush.verticalGradient(
+                                                                            listOf(Color.Transparent, bottomPanelBg)
+                                                                        )
+                                                                    )
+                                                            )
+
+                                                            // Top-Right ID Badge (consistent inset inside 24.dp corner)
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .align(Alignment.TopEnd)
+                                                                    .padding(top = 10.dp, end = 12.dp)
+                                                                    .background(
+                                                                        Color(0xFF08101E).copy(alpha = 0.88f),
+                                                                        RoundedCornerShape(6.dp)
+                                                                    )
+                                                                    .border(
+                                                                        1.dp,
+                                                                        Color(0xFFF3DE8E).copy(alpha = 0.65f),
+                                                                        RoundedCornerShape(6.dp)
+                                                                    )
+                                                                    .padding(horizontal = 7.dp, vertical = 1.5.dp),
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Text(
+                                                                    text = "ID: ${currentMasjid.displayId}",
+                                                                    fontSize = if (isSelected) 9.5.sp else 8.sp,
+                                                                    lineHeight = if (isSelected) 11.sp else 9.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = Color(0xFFF3DE8E)
+                                                                )
+                                                            }
+                                                        }
+
+                                                        // Bottom Section: Consistent height & left-aligned Masjid Name aligned to location text start
+                                                        val addressText = currentMasjid.getLocalizedFullLocation(uiState.language)
+                                                        val iconSizeDp = if (isSelected) 12.dp else 10.dp
+                                                        val iconGapDp = 4.dp
+                                                        Column(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .defaultMinSize(minHeight = if (isSelected) 76.dp else 52.dp)
+                                                                .background(bottomPanelBg)
+                                                                .padding(horizontal = 12.dp, vertical = 9.dp),
+                                                            horizontalAlignment = Alignment.Start,
+                                                            verticalArrangement = Arrangement.Top
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                horizontalArrangement = Arrangement.Start
+                                                            ) {
+                                                                if (addressText.isNotBlank()) {
+                                                                    Spacer(modifier = Modifier.width(iconSizeDp + iconGapDp))
+                                                                }
+                                                                Text(
+                                                                    text = currentMasjid.getLocalizedName(uiState.language),
+                                                                    fontSize = if (isSelected) 13.5.sp else 11.sp,
+                                                                    lineHeight = if (isSelected) 16.sp else 13.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = titleColor,
+                                                                    textAlign = TextAlign.Start,
+                                                                    maxLines = 2,
+                                                                    overflow = TextOverflow.Ellipsis,
+                                                                    modifier = Modifier.weight(1f)
+                                                                )
+                                                            }
+                                                            if (addressText.isNotBlank()) {
+                                                                Spacer(modifier = Modifier.height(4.dp))
+                                                                Row(
+                                                                    modifier = Modifier.fillMaxWidth(),
+                                                                    verticalAlignment = Alignment.Top,
+                                                                    horizontalArrangement = Arrangement.Start
+                                                                ) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Outlined.LocationOn,
+                                                                        contentDescription = null,
+                                                                        tint = iconColor,
+                                                                        modifier = Modifier
+                                                                            .padding(top = if (isSelected) 1.dp else 0.5.dp)
+                                                                            .size(iconSizeDp)
+                                                                    )
+                                                                    Spacer(modifier = Modifier.width(iconGapDp))
+                                                                    Text(
+                                                                        text = addressText,
+                                                                        fontSize = if (isSelected) 10.5.sp else 9.sp,
+                                                                        fontWeight = FontWeight.Medium,
+                                                                        color = addressColor,
+                                                                        textAlign = TextAlign.Start,
+                                                                        maxLines = if (isSelected) 2 else 1,
+                                                                        overflow = TextOverflow.Ellipsis,
+                                                                        lineHeight = 13.sp,
+                                                                        modifier = Modifier.weight(1f)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                                 1 -> {
                                                     // Card 1: Add New Masjid (Animated Form Filling & Upward Scrolling Preview)
@@ -775,6 +942,21 @@ fun AddMasjidAutoDialog(language: String, onDismiss: () -> Unit, onSubmitted: ()
     var isSending by remember { mutableStateOf(false) }
 
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val dialogScrollState = rememberScrollState()
+    val locationFocus = remember { FocusRequester() }
+    val contactFocus = remember { FocusRequester() }
+    val adminIdFocus = remember { FocusRequester() }
+
+    fun confirmAndRevealActions() {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+        coroutineScope.launch {
+            delay(100)
+            dialogScrollState.animateScrollTo(dialogScrollState.maxValue)
+        }
+    }
+
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) selectedPhotoUri = uri
     }
@@ -799,7 +981,7 @@ fun AddMasjidAutoDialog(language: String, onDismiss: () -> Unit, onSubmitted: ()
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(18.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(dialogScrollState),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Header with Title and Circular Close Button
@@ -877,7 +1059,7 @@ fun AddMasjidAutoDialog(language: String, onDismiss: () -> Unit, onSubmitted: ()
                         capitalization = KeyboardCapitalization.Words,
                         imeAction = ImeAction.Next
                     ),
-                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }),
+                    keyboardActions = KeyboardActions(onNext = { locationFocus.requestFocus() }),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.fillMaxWidth(),
                     colors = fieldColors
@@ -893,9 +1075,11 @@ fun AddMasjidAutoDialog(language: String, onDismiss: () -> Unit, onSubmitted: ()
                         capitalization = KeyboardCapitalization.Words,
                         imeAction = ImeAction.Next
                     ),
-                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }),
+                    keyboardActions = KeyboardActions(onNext = { contactFocus.requestFocus() }),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(locationFocus),
                     colors = fieldColors
                 )
 
@@ -906,20 +1090,38 @@ fun AddMasjidAutoDialog(language: String, onDismiss: () -> Unit, onSubmitted: ()
                     label = { Text("Admin Contact Number *", fontSize = 13.sp) },
                     singleLine = true,
                     trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = if (adminContact.filter { ch -> ch.isDigit() }.length >= 10) Color(0xFF2EC878) else Color(0xFFF3DE8E).copy(alpha = 0.85f),
-                            modifier = Modifier.size(18.dp)
-                        )
+                        IconButton(
+                            onClick = { confirmAndRevealActions() },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Confirm Contact Number",
+                                tint = if (adminContact.filter { ch -> ch.isDigit() }.length >= 10) Color(0xFF2EC878) else Color(0xFFF3DE8E).copy(alpha = 0.85f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Phone,
                         imeAction = ImeAction.Done
                     ),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    keyboardActions = KeyboardActions(
+                        onDone = { confirmAndRevealActions() },
+                        onNext = { confirmAndRevealActions() }
+                    ),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(contactFocus)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyUp && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
+                                confirmAndRevealActions()
+                                true
+                            } else {
+                                false
+                            }
+                        },
                     colors = fieldColors
                 )
 
@@ -929,8 +1131,16 @@ fun AddMasjidAutoDialog(language: String, onDismiss: () -> Unit, onSubmitted: ()
                     onValueChange = { adminId = it },
                     label = { Text("Admin ID - admin", fontSize = 12.sp) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { confirmAndRevealActions() }
+                    ),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(adminIdFocus),
                     colors = fieldColors
                 )
 

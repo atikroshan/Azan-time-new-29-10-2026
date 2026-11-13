@@ -22,15 +22,21 @@ import com.example.R
 import com.example.data.PreferencesRepository
 import com.example.data.getStopLabel
 import com.example.data.getMuteLabel
+import android.content.pm.ServiceInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
 class AzanForegroundService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: android.os.PowerManager.WakeLock? = null
     private var telephonyManager: TelephonyManager? = null
     private var phoneStateListener: TelephonyCallback? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var isPowerReceiverRegistered = false
     private var lastPowerPressTime = 0L
@@ -130,14 +136,7 @@ class AzanForegroundService : Service() {
                 e.printStackTrace()
             }
             try {
-                val stopIntent = Intent(context, AzanForegroundService::class.java).apply {
-                    action = "STOP_AZAN"
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(stopIntent)
-                } else {
-                    context.startService(stopIntent)
-                }
+                context.stopService(Intent(context, AzanForegroundService::class.java))
             } catch (e: Throwable) {
                 e.printStackTrace()
             }
@@ -246,52 +245,104 @@ class AzanForegroundService : Service() {
         }
     }
 
+    private fun buildAzanNotification(
+        azanName: String,
+        muted: Boolean,
+        userLang: String = "en",
+        includeFullScreenIntent: Boolean = false
+    ): Pair<android.app.Notification, Intent> {
+        val stopIntent = Intent(this, AzanForegroundService::class.java).apply {
+            action = "STOP_AZAN"
+        }
+        val stopPendingIntent = PendingIntent.getService(
+            this,
+            0,
+            stopIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val muteIntent = Intent(this, AzanForegroundService::class.java).apply {
+            action = "MUTE_TOGGLE"
+        }
+        val mutePendingIntent = PendingIntent.getService(
+            this,
+            1,
+            muteIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val stopLabel = getStopLabel(userLang)
+        val muteLabel = getMuteLabel(userLang, muted)
+
+        val mainIntent = Intent(this, MainActivity::class.java).apply {
+            putExtra("FROM_ALARM", true)
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            )
+        }
+        val mainPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            mainIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val builder = NotificationCompat.Builder(this, "azan_channel")
+            .setContentTitle("It's time for $azanName")
+            .setContentText(if (muted) "Azan is muted" else "Azan is playing")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(mainPendingIntent)
+            .addAction(R.mipmap.ic_launcher, stopLabel, stopPendingIntent)
+            .addAction(R.mipmap.ic_launcher, muteLabel, mutePendingIntent)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOngoing(true)
+
+        if (includeFullScreenIntent) {
+            builder.setFullScreenIntent(mainPendingIntent, true)
+        }
+
+        return builder.build() to mainIntent
+    }
+
+    private fun refreshNotificationLabelsAsync(azanName: String, includeFullScreenIntent: Boolean) {
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                val userLang = PreferencesRepository(this@AzanForegroundService)
+                    .languageFlow
+                    .firstOrNull() ?: "en"
+                if (!isPlayingAzan.value && mediaPlayer == null) return@launch
+                val (notification, _) = buildAzanNotification(
+                    azanName = azanName,
+                    muted = isMuted.value,
+                    userLang = userLang,
+                    includeFullScreenIntent = includeFullScreenIntent
+                )
+                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                nm?.notify(1, notification)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun updateNotification() {
         try {
             val rawAzanName = currentPlayingPrayerName.value ?: "Azan"
             val isFriday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY
             val azanName = if (rawAzanName.equals("Dhuhr", ignoreCase = true) && isFriday) "Jumah" else rawAzanName
-            val stopIntent = Intent(this, AzanForegroundService::class.java).apply {
-                action = "STOP_AZAN"
-            }
-            val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-
-            val muteIntent = Intent(this, AzanForegroundService::class.java).apply {
-                action = "MUTE_TOGGLE"
-            }
-            val mutePendingIntent = PendingIntent.getService(this, 1, muteIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-
-            val userLang = try {
-                runBlocking { PreferencesRepository(this@AzanForegroundService).languageFlow.firstOrNull() } ?: "en"
-            } catch (e: Exception) {
-                "en"
-            }
-            val stopLabel = getStopLabel(userLang)
-            val muteLabel = getMuteLabel(userLang, isMuted.value)
-
-            val mainIntent = Intent(this, MainActivity::class.java).apply {
-                putExtra("FROM_ALARM", true)
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                )
-            }
-            val mainPendingIntent = PendingIntent.getActivity(this, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-
-            val notification = NotificationCompat.Builder(this, "azan_channel")
-                .setContentTitle("It's time for $azanName")
-                .setContentText(if (isMuted.value) "Azan is muted" else "Azan is playing")
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentIntent(mainPendingIntent)
-                .addAction(R.mipmap.ic_launcher, stopLabel, stopPendingIntent)
-                .addAction(R.mipmap.ic_launcher, muteLabel, mutePendingIntent)
-                .setOngoing(true)
-                .build()
-
+            val (notification, _) = buildAzanNotification(
+                azanName = azanName,
+                muted = isMuted.value,
+                userLang = "en",
+                includeFullScreenIntent = false
+            )
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             nm?.notify(1, notification)
+            refreshNotificationLabelsAsync(azanName, includeFullScreenIntent = false)
         } catch (e: Throwable) {
             e.printStackTrace()
         }
@@ -300,12 +351,30 @@ class AzanForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         serviceInstance = this
         initFromPrefs(this)
-        val rawAzanName = intent?.getStringExtra("AZAN_NAME") ?: "Azan"
+        val rawAzanName = intent?.getStringExtra("AZAN_NAME")
+            ?: currentPlayingPrayerName.value
+            ?: "Azan"
         val isFriday = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK) == java.util.Calendar.FRIDAY
         val azanName = if (rawAzanName.equals("Dhuhr", ignoreCase = true) && isFriday) "Jumah" else rawAzanName
-        val pIdx = prayerNameToIndex(rawAzanName)
-        if (pIdx != -1) {
-            lastAudioPrayerIndex.value = pIdx
+
+        // CRITICAL: Call startForeground immediately on EVERY onStartCommand invocation
+        // before any early return or stopSelf() to avoid ForegroundServiceDidNotStartInTimeException.
+        createNotificationChannel()
+        val isStopOrMuteAction = intent?.action == "STOP_AZAN" || intent?.action == "MUTE_TOGGLE"
+        val (initialNotification, mainIntent) = buildAzanNotification(
+            azanName = azanName,
+            muted = isMuted.value,
+            userLang = "en",
+            includeFullScreenIntent = !isStopOrMuteAction
+        )
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(1, initialNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            } else {
+                startForeground(1, initialNotification)
+            }
+        } catch (e: Throwable) {
+            e.printStackTrace()
         }
 
         if (intent?.action == "STOP_AZAN") {
@@ -313,12 +382,21 @@ class AzanForegroundService : Service() {
             return START_NOT_STICKY
         }
         if (intent?.action == "MUTE_TOGGLE") {
-            toggleMuteAudio()
+            if (isPlayingAzan.value || mediaPlayer != null) {
+                toggleMuteAudio()
+            } else {
+                stopAzanAudio()
+            }
             return START_NOT_STICKY
         }
 
-        // GUARD: If this prayer was already stopped or played today, do not play again!
-        if (isPrayerStoppedOrHandled(this, azanName)) {
+        val pIdx = prayerNameToIndex(rawAzanName)
+        if (pIdx != -1) {
+            lastAudioPrayerIndex.value = pIdx
+        }
+
+        // GUARD: If this prayer was already stopped or played today (and not currently playing), do not play again!
+        if (!isPlayingAzan.value && isPrayerStoppedOrHandled(this, azanName)) {
             android.util.Log.d("AzanForegroundService", "Prayer $azanName has already been completed or stopped today. Skipping.")
             try {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -331,58 +409,7 @@ class AzanForegroundService : Service() {
 
         isMuted.value = false
         currentPlayingPrayerName.value = azanName
-        
-        createNotificationChannel()
-        
-        val stopIntent = Intent(this, AzanForegroundService::class.java).apply {
-            action = "STOP_AZAN"
-        }
-        val stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-
-        val muteIntent = Intent(this, AzanForegroundService::class.java).apply {
-            action = "MUTE_TOGGLE"
-        }
-        val mutePendingIntent = PendingIntent.getService(this, 1, muteIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-
-        val userLang = try {
-            runBlocking { PreferencesRepository(this@AzanForegroundService).languageFlow.firstOrNull() } ?: "en"
-        } catch (e: Exception) {
-            "en"
-        }
-        val stopLabel = getStopLabel(userLang)
-        val muteLabel = getMuteLabel(userLang, isMuted.value)
-
-        val mainIntent = Intent(this, MainActivity::class.java).apply {
-            putExtra("FROM_ALARM", true)
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-            )
-        }
-        val mainPendingIntent = PendingIntent.getActivity(this, 0, mainIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-
-        val notification = NotificationCompat.Builder(this, "azan_channel")
-            .setContentTitle("It's time for $azanName")
-            .setContentText("Azan is playing")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentIntent(mainPendingIntent)
-            .setFullScreenIntent(mainPendingIntent, true)
-            .addAction(R.mipmap.ic_launcher, stopLabel, stopPendingIntent)
-            .addAction(R.mipmap.ic_launcher, muteLabel, mutePendingIntent)
-            .setOngoing(true)
-            .build()
-            
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-            } else {
-                startForeground(1, notification)
-            }
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
+        refreshNotificationLabelsAsync(azanName, includeFullScreenIntent = true)
 
         // Requirement: Keep CPU running to ensure audio plays completely even in lock mode
         try {
@@ -394,6 +421,11 @@ class AzanForegroundService : Service() {
                 )
                 wakeLock?.acquire(15 * 60 * 1000L) // 15 mins max safety timeout
             }
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
+
+        try {
             startActivity(mainIntent)
         } catch (e: Throwable) {
             e.printStackTrace()
@@ -439,6 +471,11 @@ class AzanForegroundService : Service() {
         wakeLock = null
         try {
             stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        try {
+            stopSelf()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -571,6 +608,7 @@ class AzanForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.cancel()
         if (serviceInstance == this) {
             serviceInstance = null
         }

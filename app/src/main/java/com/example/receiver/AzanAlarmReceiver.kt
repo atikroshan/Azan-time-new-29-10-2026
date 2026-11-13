@@ -29,6 +29,11 @@ class AzanAlarmReceiver : BroadcastReceiver() {
             }
         }
         
+        if (AzanForegroundService.isPlayingAzan.value || AzanForegroundService.isPrayerStoppedOrHandled(context, azanName)) {
+            Log.d("AzanAlarmReceiver", "Azan for $azanName is already playing or handled today. Skipping alarm trigger.")
+            return
+        }
+
         val serviceIntent = Intent(context, AzanForegroundService::class.java).apply {
             putExtra("AZAN_NAME", azanName)
         }

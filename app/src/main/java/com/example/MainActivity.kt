@@ -446,33 +446,143 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
     }
 
     var forceShowSetupAfterLanguage by rememberSaveable { mutableStateOf(false) }
+    var isLangPortalBusy by remember { mutableStateOf(false) }
+    val langPortalProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+    var langOriginX by remember { mutableFloatStateOf(0f) }
+    var langOriginY by remember { mutableFloatStateOf(0f) }
+    var langStartRadius by remember { mutableFloatStateOf(with(density) { 22.dp.toPx() }) }
 
     Box(modifier = modifier.fillMaxSize()) {
         if (!uiState.isInitialLanguageChosen || (!uiState.isSetupCompleted || forceShowSetupAfterLanguage)) {
-            // Layer 1: Setup screen rendered directly underneath in the background
-            FirstTimeSetupScreen(
-                uiState = uiState,
-                onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
-                onFinishSetup = { masjidId ->
-                    viewModel.completeSetup(masjidId)
-                    forceShowSetupAfterLanguage = false
-                },
-                onRefresh = { viewModel.syncGoogleSheet() },
-                onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
-            )
+            val langP = if (isLangPortalBusy) langPortalProgress.value else 0f
 
-            // Layer 2: Initial Language Screen overlay on top (slides off to reveal setup screen)
-            if (!uiState.isInitialLanguageChosen) {
-                InitialLanguageScreen(
-                    onLanguagePreselected = { lang ->
-                        viewModel.setLanguage(lang)
-                    },
-                    onLanguageSelect = { lang ->
-                        viewModel.setLanguage(lang)
-                        viewModel.setInitialLanguageChosen(true)
-                        forceShowSetupAfterLanguage = true
+            // Incoming Setup Screen (Layer 0 while waiting, Layer 2 clipped inside Liquid Portal during transition)
+            val setupScale = if (isLangPortalBusy) 1.04f - 0.04f * langP else 1f
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(if (isLangPortalBusy) 2f else 0f)
+                    .let { base ->
+                        if (isLangPortalBusy) {
+                            base.clip(
+                                com.example.ui.CircularPortalShape(
+                                    progress = langP,
+                                    originX = langOriginX,
+                                    originY = langOriginY,
+                                    startRadius = langStartRadius,
+                                    maxExpansion = 1.03f
+                                )
+                            )
+                        } else base
                     }
-                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = setupScale
+                            scaleY = setupScale
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
+                        }
+                ) {
+                    FirstTimeSetupScreen(
+                        uiState = uiState,
+                        onSelectMasjid = { masjid -> viewModel.selectMasjid(masjid.id) },
+                        onFinishSetup = { masjidId ->
+                            viewModel.completeSetup(masjidId)
+                            forceShowSetupAfterLanguage = false
+                        },
+                        onRefresh = { viewModel.syncGoogleSheet() },
+                        onLanguageSelect = { lang -> viewModel.setLanguage(lang) }
+                    )
+                }
+            }
+
+            // Initial Language Screen (Layer 1: dims, blurs 4.dp, and scales down to 0.95 as portal reveals Setup)
+            if (!uiState.isInitialLanguageChosen) {
+                val langOutScale = if (isLangPortalBusy) 1.0f - 0.05f * langP else 1.0f
+                val langOutBlur = if (isLangPortalBusy) (4f * langP).dp else 0.dp
+                val langOutDim = if (isLangPortalBusy) 0.30f * langP else 0f
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1f)
+                        .graphicsLayer {
+                            scaleX = langOutScale
+                            scaleY = langOutScale
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
+                        }
+                        .let { base ->
+                            if (langOutBlur > 0.1.dp) {
+                                base.blur(langOutBlur, edgeTreatment = androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+                            } else base
+                        }
+                ) {
+                    InitialLanguageScreen(
+                        onLanguagePreselected = { lang ->
+                            viewModel.setLanguage(lang)
+                        },
+                        onStartPortalReveal = { lang, cx, cy, startR ->
+                            if (!isLangPortalBusy) {
+                                viewModel.setLanguage(lang)
+                                langOriginX = cx
+                                langOriginY = cy
+                                langStartRadius = startR
+                                isLangPortalBusy = true
+                                coroutineScope.launch {
+                                    langPortalProgress.snapTo(0f)
+                                    langPortalProgress.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = if (prefersReducedMotion) 220 else com.example.ui.PORTAL_REVEAL_DURATION_MS.toInt(),
+                                            easing = com.example.ui.PortalRevealEasing
+                                        )
+                                    )
+                                    viewModel.setInitialLanguageChosen(true)
+                                    forceShowSetupAfterLanguage = true
+                                    isLangPortalBusy = false
+                                }
+                            }
+                        },
+                        onLanguageSelect = { lang ->
+                            viewModel.setLanguage(lang)
+                            viewModel.setInitialLanguageChosen(true)
+                            forceShowSetupAfterLanguage = true
+                        }
+                    )
+
+                    if (langOutDim > 0.001f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = langOutDim))
+                        )
+                    }
+                }
+            }
+
+            // Layer 3: Expanding golden perimeter ring matching Home/Setting/Ramazan portal transition
+            if (isLangPortalBusy && langP < 0.98f) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(3f)
+                ) {
+                    val d1 = kotlin.math.hypot(langOriginX, langOriginY)
+                    val d2 = kotlin.math.hypot(size.width - langOriginX, langOriginY)
+                    val d3 = kotlin.math.hypot(langOriginX, size.height - langOriginY)
+                    val d4 = kotlin.math.hypot(size.width - langOriginX, size.height - langOriginY)
+                    val cornerMax = maxOf(d1, d2, d3, d4).coerceAtLeast(100f)
+                    val currentRadius = langStartRadius + (cornerMax * 1.03f - langStartRadius) * langP
+
+                    drawCircle(
+                        color = Color(0xFFF3DE8E).copy(alpha = (1f - langP).coerceIn(0f, 1f) * 0.48f),
+                        radius = currentRadius,
+                        center = Offset(langOriginX, langOriginY),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
+                    )
+                }
             }
         } else if (showAdminPanel) {
             BackHandler { showAdminPanel = false }

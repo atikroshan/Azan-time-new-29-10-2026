@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -900,28 +902,33 @@ fun AnimatedTopQrIconButton(
         return
     }
 
-    val themes = remember {
-        listOf(
-            // 1. Golden background + black icon
-            Pair(Color(0xFFF3DE8E), Color(0xFF071711)),
-            // 2. White background + black icon
-            Pair(Color(0xFFFFFFFF), Color(0xFF000000))
-        )
-    }
-
-    var currentIndex by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(4000L)
-            currentIndex = (currentIndex + 1) % 2
-        }
-    }
+    val prefersReducedMotion = rememberPrefersReducedMotion()
+    val transition = rememberInfiniteTransition(label = "home_top_qr_anim")
+    val scanProgress by transition.animateFloat(
+        initialValue = 0.08f,
+        targetValue = 0.92f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "home_qr_scan_line"
+    )
+    val pulseScale by transition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.07f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "home_qr_pulse"
+    )
 
     Box(
         modifier = modifier
             .size(38.dp)
             .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFFF3DE8E))
+            .border(1.2.dp, Color(0xFFE5B842), RoundedCornerShape(10.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = ripple(bounded = true),
@@ -929,39 +936,55 @@ fun AnimatedTopQrIconButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.animation.AnimatedContent(
-            targetState = currentIndex,
-            transitionSpec = {
-                (androidx.compose.animation.slideInVertically(
-                    initialOffsetY = { -it },
-                    animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                ) + androidx.compose.animation.fadeIn(animationSpec = tween(200))) togetherWith
-                (androidx.compose.animation.slideOutVertically(
-                    targetOffsetY = { it },
-                    animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                ) + androidx.compose.animation.fadeOut(animationSpec = tween(200)))
-            },
-            label = "topHomeQrButtonSpin"
-        ) { index ->
-            val (bgColor, iconColor) = themes[index]
-            Box(
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clipToBounds()
+                .let { base ->
+                    if (prefersReducedMotion) base
+                    else base.drawWithContent {
+                        drawContent()
+                        val y = size.height * scanProgress
+                        val glowHalfHeight = 4.dp.toPx()
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFF047857).copy(alpha = 0.38f),
+                                    Color.Transparent
+                                ),
+                                startY = (y - glowHalfHeight).coerceAtLeast(0f),
+                                endY = (y + glowHalfHeight).coerceAtMost(size.height)
+                            ),
+                            topLeft = Offset(0f, (y - glowHalfHeight).coerceAtLeast(0f)),
+                            size = androidx.compose.ui.geometry.Size(
+                                size.width,
+                                (glowHalfHeight * 2f).coerceAtMost(size.height)
+                            )
+                        )
+                        drawLine(
+                            color = Color(0xFF064E3B),
+                            start = Offset(2.dp.toPx(), y),
+                            end = Offset(size.width - 2.dp.toPx(), y),
+                            strokeWidth = 1.7.dp.toPx()
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.QrCodeScanner,
+                contentDescription = "Support Masjid QR",
+                tint = Color(0xFF040E0A),
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(bgColor, RoundedCornerShape(10.dp))
-                    .border(
-                        1.2.dp,
-                        if (bgColor == Color(0xFFFFFFFF)) Color(0xFFE2E8F0) else Color(0xFFE5B842),
-                        RoundedCornerShape(10.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.QrCode,
-                    contentDescription = "Support Masjid QR",
-                    tint = iconColor,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+                    .size(22.dp)
+                    .graphicsLayer {
+                        val s = if (prefersReducedMotion) 1f else pulseScale
+                        scaleX = s
+                        scaleY = s
+                    }
+            )
         }
     }
 }
+

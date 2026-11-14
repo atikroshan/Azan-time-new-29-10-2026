@@ -81,7 +81,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -679,48 +681,58 @@ fun SupportBackScreen(
                                                                     listOf(Color(0xFF132238), Color(0xFF0A1220))
                                                                 )
                                                             )
-                                                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                                                        contentAlignment = Alignment.Center
+                                                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                                                        contentAlignment = Alignment.TopCenter
                                                     ) {
                                                         Column(
-                                                            modifier = Modifier.fillMaxWidth(),
-                                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                                            verticalArrangement = Arrangement.spacedBy(if (isSelected) 6.dp else 5.dp)
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            horizontalAlignment = Alignment.CenterHorizontally
                                                         ) {
-                                                            // 1. Support Icon
+                                                            // 1. Animated Male Customer Support Agent (with cap, beard, light green shirt & headset)
+                                                            AnimatedMaleSupportAgentIcon(
+                                                                isSelected = isSelected,
+                                                                contentDescription = title
+                                                            )
+
+                                                            Spacer(modifier = Modifier.height(if (isSelected) 7.dp else 5.dp))
+
+                                                            // 2. AZAN TIME SUPPORT Golden Badge (ALL CAPS, Center Aligned)
                                                             Box(
                                                                 modifier = Modifier
-                                                                    .size(if (isSelected) 50.dp else 42.dp)
-                                                                    .clip(RoundedCornerShape(15.dp))
-                                                                    .background(Color(0xFF0C1829))
+                                                                    .clip(RoundedCornerShape(50))
+                                                                    .background(
+                                                                        Brush.horizontalGradient(
+                                                                            listOf(
+                                                                                Color(0xFFF6E39A),
+                                                                                Color(0xFFD9A23B)
+                                                                            )
+                                                                        )
+                                                                    )
                                                                     .border(
-                                                                        1.5.dp,
-                                                                        Color(0xFFE5B842).copy(alpha = 0.7f),
-                                                                        RoundedCornerShape(15.dp)
+                                                                        width = 1.dp,
+                                                                        color = Color(0xFFFFF1BA),
+                                                                        shape = RoundedCornerShape(50)
+                                                                    )
+                                                                    .padding(
+                                                                        horizontal = if (isSelected) 12.dp else 9.dp,
+                                                                        vertical = if (isSelected) 3.5.dp else 2.5.dp
                                                                     ),
                                                                 contentAlignment = Alignment.Center
                                                             ) {
-                                                                Icon(
-                                                                    imageVector = Icons.Outlined.HeadsetMic,
-                                                                    contentDescription = title,
-                                                                    tint = Color(0xFFF3DE8E),
-                                                                    modifier = Modifier.size(if (isSelected) 26.dp else 21.dp)
+                                                                Text(
+                                                                    text = supportHeadline,
+                                                                    fontSize = if (isSelected) 11.5.sp else 9.5.sp,
+                                                                    lineHeight = if (isSelected) 14.sp else 11.sp,
+                                                                    fontWeight = FontWeight.ExtraBold,
+                                                                    letterSpacing = 0.7.sp,
+                                                                    color = Color(0xFF0A1220),
+                                                                    textAlign = TextAlign.Center,
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis
                                                                 )
                                                             }
 
-                                                            // 2. AZAN TIME SUPPORT (ALL CAPS, Center Aligned)
-                                                            Text(
-                                                                text = supportHeadline,
-                                                                fontSize = if (isSelected) 13.sp else 10.5.sp,
-                                                                lineHeight = if (isSelected) 16.sp else 13.sp,
-                                                                fontWeight = FontWeight.ExtraBold,
-                                                                letterSpacing = 0.7.sp,
-                                                                color = titleColor,
-                                                                textAlign = TextAlign.Center,
-                                                                maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis,
-                                                                modifier = Modifier.fillMaxWidth()
-                                                            )
+                                                            Spacer(modifier = Modifier.height(if (isSelected) 6.dp else 4.dp))
 
                                                             // 3. Support our app with feedback,\nand rate us 5 ★★★★★ (Center Aligned)
                                                             Text(
@@ -729,64 +741,67 @@ fun SupportBackScreen(
                                                                 fontWeight = FontWeight.Medium,
                                                                 color = descColor,
                                                                 textAlign = TextAlign.Center,
-                                                                lineHeight = if (isSelected) 13.5.sp else 11.5.sp,
+                                                                lineHeight = if (isSelected) 13.5.sp else 11.sp,
                                                                 maxLines = 2,
                                                                 overflow = TextOverflow.Ellipsis,
                                                                 modifier = Modifier.fillMaxWidth()
                                                             )
 
-                                                            // 4. 5 Star Animation
-                                                            LottieFiveStarRating(
-                                                                modifier = Modifier
-                                                                    .width(if (isSelected) 168.dp else 120.dp)
-                                                                    .height(if (isSelected) 38.dp else 28.dp)
-                                                            )
-
-                                                            // 5. Divider -> Official WhatsApp -> Divider -> UPI / QR
+                                                            // 4. Sequence: WhatsApp -> 5 Star -> UPI / QR (All three equal size)
                                                             if (isSelected) {
-                                                                HorizontalDivider(
-                                                                    modifier = Modifier.width(136.dp),
-                                                                    thickness = 0.8.dp,
-                                                                    color = Color.White.copy(alpha = 0.16f)
-                                                                )
-                                                                Row(
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                                                                Spacer(modifier = Modifier.weight(1f).heightIn(min = 6.dp))
+                                                                Column(
+                                                                    modifier = Modifier.fillMaxWidth(),
+                                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                                    verticalArrangement = Arrangement.spacedBy(5.dp)
                                                                 ) {
-                                                                    Image(
-                                                                        painter = painterResource(id = R.drawable.ic_whatsapp_outlined),
-                                                                        contentDescription = "WhatsApp",
-                                                                        modifier = Modifier.size(19.dp)
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .fillMaxWidth()
+                                                                            .height(28.dp),
+                                                                        contentAlignment = Alignment.Center
+                                                                    ) {
+                                                                        AnimatedWhatsAppRow()
+                                                                    }
+                                                                    HorizontalDivider(
+                                                                        modifier = Modifier.width(136.dp),
+                                                                        thickness = 0.8.dp,
+                                                                        color = Color.White.copy(alpha = 0.16f)
                                                                     )
-                                                                    Text(
-                                                                        text = "WhatsApp",
-                                                                        fontSize = 11.sp,
-                                                                        fontWeight = FontWeight.SemiBold,
-                                                                        color = Color.White.copy(alpha = 0.92f)
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .fillMaxWidth()
+                                                                            .height(28.dp),
+                                                                        contentAlignment = Alignment.Center
+                                                                    ) {
+                                                                        LottieFiveStarRating(
+                                                                            modifier = Modifier
+                                                                                .width(114.dp)
+                                                                                .height(28.dp)
+                                                                        )
+                                                                    }
+                                                                    HorizontalDivider(
+                                                                        modifier = Modifier.width(136.dp),
+                                                                        thickness = 0.8.dp,
+                                                                        color = Color.White.copy(alpha = 0.16f)
                                                                     )
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .fillMaxWidth()
+                                                                            .height(28.dp),
+                                                                        contentAlignment = Alignment.Center
+                                                                    ) {
+                                                                        AnimatedQrRow()
+                                                                    }
                                                                 }
-                                                                HorizontalDivider(
-                                                                    modifier = Modifier.width(136.dp),
-                                                                    thickness = 0.8.dp,
-                                                                    color = Color.White.copy(alpha = 0.16f)
+                                                                Spacer(modifier = Modifier.weight(1f).heightIn(min = 2.dp))
+                                                            } else {
+                                                                Spacer(modifier = Modifier.height(6.dp))
+                                                                LottieFiveStarRating(
+                                                                    modifier = Modifier
+                                                                        .width(96.dp)
+                                                                        .height(24.dp)
                                                                 )
-                                                                Row(
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                                                ) {
-                                                                    Icon(
-                                                                        imageVector = Icons.Default.QrCodeScanner,
-                                                                        contentDescription = null,
-                                                                        tint = Color(0xFFF3DE8E),
-                                                                        modifier = Modifier.size(16.dp)
-                                                                    )
-                                                                    Text(
-                                                                        text = "UPI / QR",
-                                                                        fontSize = 11.sp,
-                                                                        fontWeight = FontWeight.SemiBold,
-                                                                        color = Color(0xFFF3DE8E)
-                                                                    )
-                                                                }
                                                             }
                                                         }
                                                     }
@@ -2146,4 +2161,572 @@ fun FlyingArabicAlphabetsBackground(
         }
     }
 }
+
+@Composable
+private fun AnimatedWhatsAppRow(
+    modifier: Modifier = Modifier
+) {
+    val prefersReducedMotion = rememberPrefersReducedMotion()
+    if (prefersReducedMotion) {
+        Row(
+            modifier = modifier.height(28.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_whatsapp_outlined),
+                contentDescription = "WhatsApp",
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = "WhatsApp",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White.copy(alpha = 0.92f)
+            )
+        }
+        return
+    }
+
+    val transition = rememberInfiniteTransition(label = "whatsapp_icon_and_name_loop")
+    val t by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "whatsapp_cycle"
+    )
+
+    // Phase 1 (0.00 -> 0.32): WhatsApp bubble elastic pop-in, wiggle tilt & pulse ring
+    val iconScale = when {
+        t < 0.12f -> {
+            val f = t / 0.12f
+            val ease = 1f - (1f - f) * (1f - f)
+            ease * 1.22f
+        }
+        t < 0.20f -> {
+            val f = (t - 0.12f) / 0.08f
+            1.22f - 0.32f * f
+        }
+        t < 0.26f -> {
+            val f = (t - 0.20f) / 0.06f
+            0.90f + 0.15f * f
+        }
+        t < 0.32f -> {
+            val f = (t - 0.26f) / 0.06f
+            1.05f - 0.05f * f
+        }
+        t < 0.90f -> 1f
+        else -> (1f - ((t - 0.90f) / 0.08f).coerceIn(0f, 1f))
+    }
+
+    val iconRotation = when {
+        t < 0.06f -> -22f * (t / 0.06f)
+        t < 0.15f -> -22f + 36f * ((t - 0.06f) / 0.09f)
+        t < 0.23f -> 14f - 20f * ((t - 0.15f) / 0.08f)
+        t < 0.31f -> -6f + 6f * ((t - 0.23f) / 0.08f)
+        else -> 0f
+    }
+
+    val ringProgress = if (t in 0.07f..0.33f) ((t - 0.07f) / 0.26f).coerceIn(0f, 1f) else -1f
+
+    // Phase 2 (0.34 -> 0.52): Only AFTER the icon animation finishes, reveal "WhatsApp" name smoothly
+    val rawNameProgress = if (t >= 0.34f) ((t - 0.34f) / 0.18f).coerceIn(0f, 1f) else 0f
+    val nameReveal = 1f - (1f - rawNameProgress) * (1f - rawNameProgress) * (1f - rawNameProgress)
+
+    val fadeAlpha = when {
+        t < 0.04f -> (t / 0.04f).coerceIn(0f, 1f)
+        t > 0.89f -> (1f - ((t - 0.89f) / 0.09f).coerceIn(0f, 1f))
+        else -> 1f
+    }
+
+    Row(
+        modifier = modifier
+            .height(28.dp)
+            .graphicsLayer { alpha = fadeAlpha },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .drawBehind {
+                    if (ringProgress in 0f..1f) {
+                        val ringRadius = (9.5.dp.toPx() + 8.dp.toPx() * ringProgress)
+                        val ringAlpha = (1f - ringProgress) * 0.72f
+                        drawCircle(
+                            color = Color(0xFF25D366).copy(alpha = ringAlpha),
+                            radius = ringRadius,
+                            style = Stroke(width = 1.6.dp.toPx())
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_whatsapp_outlined),
+                contentDescription = "WhatsApp",
+                modifier = Modifier
+                    .size(20.dp)
+                    .graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                        rotationZ = iconRotation
+                    }
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .clipToBounds()
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    val w = (placeable.width * nameReveal).toInt().coerceAtLeast(0)
+                    layout(w, placeable.height) {
+                        placeable.placeRelative(0, 0)
+                    }
+                }
+                .graphicsLayer {
+                    alpha = nameReveal
+                    translationX = -6.dp.toPx() * (1f - nameReveal)
+                }
+        ) {
+            Text(
+                text = "WhatsApp",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White.copy(alpha = 0.92f),
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(start = 6.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AnimatedQrRow(
+    modifier: Modifier = Modifier
+) {
+    val prefersReducedMotion = rememberPrefersReducedMotion()
+    if (prefersReducedMotion) {
+        Row(
+            modifier = modifier.height(28.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.QrCodeScanner,
+                contentDescription = null,
+                tint = Color(0xFFF3DE8E),
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = "UPI / QR",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFFF3DE8E)
+            )
+        }
+        return
+    }
+
+    val transition = rememberInfiniteTransition(label = "qr_small_anim")
+    val scanProgress by transition.animateFloat(
+        initialValue = 0.08f,
+        targetValue = 0.92f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "qr_scan_line"
+    )
+    val pulseScale by transition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.07f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "qr_pulse"
+    )
+
+    Row(
+        modifier = modifier.height(28.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clipToBounds()
+                .drawWithContent {
+                    drawContent()
+                    val y = size.height * scanProgress
+                    val glowHalfHeight = 3.5.dp.toPx()
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color(0xFFF3DE8E).copy(alpha = 0.35f),
+                                Color.Transparent
+                            ),
+                            startY = (y - glowHalfHeight).coerceAtLeast(0f),
+                            endY = (y + glowHalfHeight).coerceAtMost(size.height)
+                        ),
+                        topLeft = Offset(0f, (y - glowHalfHeight).coerceAtLeast(0f)),
+                        size = androidx.compose.ui.geometry.Size(
+                            size.width,
+                            (glowHalfHeight * 2f).coerceAtMost(size.height)
+                        )
+                    )
+                    drawLine(
+                        color = Color(0xFFFFF4B8),
+                        start = Offset(1.5.dp.toPx(), y),
+                        end = Offset(size.width - 1.5.dp.toPx(), y),
+                        strokeWidth = 1.4.dp.toPx()
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.QrCodeScanner,
+                contentDescription = null,
+                tint = Color(0xFFF3DE8E),
+                modifier = Modifier
+                    .size(20.dp)
+                    .graphicsLayer {
+                        scaleX = pulseScale
+                        scaleY = pulseScale
+                    }
+            )
+        }
+        Text(
+            text = "UPI / QR",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFFF3DE8E)
+        )
+    }
+}
+
+@Composable
+private fun AnimatedMaleSupportAgentIcon(
+    isSelected: Boolean,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    val prefersReducedMotion = rememberPrefersReducedMotion()
+    val badgeSize = if (isSelected) 48.dp else 40.dp
+
+    val transition = rememberInfiniteTransition(label = "male_support_agent_loop")
+    val t by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "agent_cycle"
+    )
+
+    val phaseRad = (t * 2f * kotlin.math.PI).toFloat()
+    val bobY = if (prefersReducedMotion) 0f else kotlin.math.sin(phaseRad.toDouble()).toFloat() * 1.3f
+    val headTilt = if (prefersReducedMotion) 0f else kotlin.math.sin((phaseRad * 0.5f + 0.4f).toDouble()).toFloat() * 3.5f
+    val wavePulse = if (prefersReducedMotion) 0.5f else ((kotlin.math.sin((phaseRad * 2f).toDouble()).toFloat() + 1f) * 0.5f)
+    val isBlinking = !prefersReducedMotion && (t in 0.44f..0.485f || t in 0.88f..0.915f)
+    val mouthOpen = if (prefersReducedMotion) 0f else (kotlin.math.sin((phaseRad * 3f).toDouble()).toFloat().coerceAtLeast(0f))
+
+    Box(
+        modifier = modifier
+            .size(badgeSize)
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFF1A362C),
+                        Color(0xFF0C1829)
+                    )
+                )
+            )
+            .border(
+                width = 1.5.dp,
+                color = Color(0xFFE5B842).copy(alpha = 0.80f),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clipToBounds(),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationY = bobY * density
+                }
+        ) {
+            val sx = size.width / 100f
+            val sy = size.height / 100f
+            fun pt(x: Float, y: Float) = Offset(x * sx, y * sy)
+
+            // Subtle top-right animated voice/support wave arcs
+            val arcAlpha1 = (0.35f + 0.65f * wavePulse)
+            val arcAlpha2 = (0.25f + 0.75f * (1f - wavePulse))
+            drawArc(
+                color = Color(0xFFF3DE8E).copy(alpha = arcAlpha1),
+                startAngle = -55f,
+                sweepAngle = 70f,
+                useCenter = false,
+                topLeft = pt(69f, 15f),
+                size = androidx.compose.ui.geometry.Size(12f * sx, 12f * sy),
+                style = Stroke(width = 2.0f * sx, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+            drawArc(
+                color = Color(0xFF86EFAC).copy(alpha = arcAlpha2),
+                startAngle = -55f,
+                sweepAngle = 70f,
+                useCenter = false,
+                topLeft = pt(72f, 10f),
+                size = androidx.compose.ui.geometry.Size(18f * sx, 18f * sy),
+                style = Stroke(width = 1.8f * sx, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+
+            // 1. Light Green Collared Shirt & Shoulders
+            val shirtPath = Path().apply {
+                moveTo(14f * sx, 104f * sy)
+                cubicTo(14f * sx, 80f * sy, 26f * sx, 72f * sy, 39f * sx, 70f * sy)
+                lineTo(61f * sx, 70f * sy)
+                cubicTo(74f * sx, 72f * sy, 86f * sx, 80f * sy, 86f * sx, 104f * sy)
+                close()
+            }
+            drawPath(
+                path = shirtPath,
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color(0xFFA7F3D0), Color(0xFF6EE7B7)),
+                    startY = 70f * sy,
+                    endY = 104f * sy
+                )
+            )
+
+            // Neck
+            drawRoundRect(
+                color = Color(0xFFE0AC84),
+                topLeft = pt(43f, 60f),
+                size = androidx.compose.ui.geometry.Size(14f * sx, 15f * sy),
+                cornerRadius = CornerRadius(6f * sx, 6f * sy)
+            )
+
+            // Shirt V-Collar lapels (slightly richer light green for depth)
+            val leftCollar = Path().apply {
+                moveTo(39f * sx, 70f * sy)
+                lineTo(49.5f * sx, 83f * sy)
+                lineTo(41f * sx, 85f * sy)
+                lineTo(35f * sx, 74f * sy)
+                close()
+            }
+            val rightCollar = Path().apply {
+                moveTo(61f * sx, 70f * sy)
+                lineTo(50.5f * sx, 83f * sy)
+                lineTo(59f * sx, 85f * sy)
+                lineTo(65f * sx, 74f * sy)
+                close()
+            }
+            drawPath(leftCollar, color = Color(0xFF34D399))
+            drawPath(rightCollar, color = Color(0xFF34D399))
+
+            // 2. Head group with subtle gentle tilt
+            val pivot = pt(50f, 52f)
+            drawContext.canvas.nativeCanvas.save()
+            drawContext.canvas.nativeCanvas.rotate(headTilt, pivot.x, pivot.y)
+
+            // Headset headband arcing over the cap
+            drawArc(
+                color = Color(0xFFD49B37),
+                startAngle = 185f,
+                sweepAngle = 170f,
+                useCenter = false,
+                topLeft = pt(27f, 12f),
+                size = androidx.compose.ui.geometry.Size(46f * sx, 46f * sy),
+                style = Stroke(width = 3.8f * sx, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+
+            // Ears
+            drawOval(
+                color = Color(0xFFE0AC84),
+                topLeft = pt(29f, 41f),
+                size = androidx.compose.ui.geometry.Size(6f * sx, 10f * sy)
+            )
+            drawOval(
+                color = Color(0xFFE0AC84),
+                topLeft = pt(65f, 41f),
+                size = androidx.compose.ui.geometry.Size(6f * sx, 10f * sy)
+            )
+
+            // Face base
+            drawOval(
+                color = Color(0xFFF3C8A4),
+                topLeft = pt(32.5f, 24f),
+                size = androidx.compose.ui.geometry.Size(35f * sx, 42f * sy)
+            )
+
+            // Side hair peeking cleanly below cap temples
+            drawRoundRect(
+                color = Color(0xFF1F242D),
+                topLeft = pt(32f, 32f),
+                size = androidx.compose.ui.geometry.Size(4.2f * sx, 13f * sy),
+                cornerRadius = CornerRadius(2f * sx, 2f * sy)
+            )
+            drawRoundRect(
+                color = Color(0xFF1F242D),
+                topLeft = pt(63.8f, 32f),
+                size = androidx.compose.ui.geometry.Size(4.2f * sx, 13f * sy),
+                cornerRadius = CornerRadius(2f * sx, 2f * sy)
+            )
+
+            // 3. Cap (crisp white skullcap/topi with subtle golden band sitting neatly on head)
+            val capPath = Path().apply {
+                moveTo(32f * sx, 33f * sy)
+                cubicTo(32f * sx, 18f * sy, 41f * sx, 15f * sy, 50f * sx, 15f * sy)
+                cubicTo(59f * sx, 15f * sy, 68f * sx, 18f * sy, 68f * sx, 33f * sy)
+                close()
+            }
+            drawPath(
+                path = capPath,
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color(0xFFFFFFFF), Color(0xFFE2E8F0)),
+                    startY = 15f * sy,
+                    endY = 33f * sy
+                )
+            )
+            // Golden embroidered cap trim band
+            drawRoundRect(
+                color = Color(0xFFF3DE8E),
+                topLeft = pt(32f, 29.8f),
+                size = androidx.compose.ui.geometry.Size(36f * sx, 3.6f * sy),
+                cornerRadius = CornerRadius(1.8f * sx, 1.8f * sy)
+            )
+
+            // 4. Full Groomed Dark Beard & Mustache wrapping the jawline/chin
+            val beardPath = Path().apply {
+                moveTo(32.5f * sx, 44f * sy)
+                cubicTo(32.2f * sx, 62f * sy, 41f * sx, 68f * sy, 50f * sx, 68f * sy)
+                cubicTo(59f * sx, 68f * sy, 67.8f * sx, 62f * sy, 67.5f * sx, 44f * sy)
+                lineTo(64.5f * sx, 46f * sy)
+                cubicTo(63.5f * sx, 54f * sy, 58f * sx, 58.5f * sy, 50f * sx, 58.5f * sy)
+                cubicTo(42f * sx, 58.5f * sy, 36.5f * sx, 54f * sy, 35.5f * sx, 46f * sy)
+                close()
+            }
+            drawPath(beardPath, color = Color(0xFF1F242D))
+
+            // Mustache framing the smile
+            val mustachePath = Path().apply {
+                moveTo(41.5f * sx, 52.5f * sy)
+                quadraticBezierTo(46f * sx, 49.5f * sy, 50f * sx, 51.5f * sy)
+                quadraticBezierTo(54f * sx, 49.5f * sy, 58.5f * sx, 52.5f * sy)
+                quadraticBezierTo(54f * sx, 53.5f * sy, 50f * sx, 52.8f * sy)
+                quadraticBezierTo(46f * sx, 53.5f * sy, 41.5f * sx, 52.5f * sy)
+                close()
+            }
+            drawPath(mustachePath, color = Color(0xFF1F242D))
+
+            // Friendly animated speaking smile inside beard
+            val smileWidth = (9.5f * sx)
+            val smileHeight = (2.8f + mouthOpen * 2.2f) * sy
+            drawArc(
+                color = Color.White,
+                startAngle = 10f,
+                sweepAngle = 160f,
+                useCenter = true,
+                topLeft = Offset(50f * sx - smileWidth / 2f, 52.8f * sy),
+                size = androidx.compose.ui.geometry.Size(smileWidth, smileHeight)
+            )
+
+            // Eyebrows & Expressive Blinking Eyes
+            drawLine(
+                color = Color(0xFF1F242D),
+                start = pt(39.5f, 38.2f),
+                end = pt(45.5f, 37.5f),
+                strokeWidth = 1.9f * sx,
+                cap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+            drawLine(
+                color = Color(0xFF1F242D),
+                start = pt(54.5f, 37.5f),
+                end = pt(60.5f, 38.2f),
+                strokeWidth = 1.9f * sx,
+                cap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+            if (isBlinking) {
+                drawLine(
+                    color = Color(0xFF1F242D),
+                    start = pt(40.5f, 42.5f),
+                    end = pt(45f, 42.5f),
+                    strokeWidth = 1.8f * sx,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+                drawLine(
+                    color = Color(0xFF1F242D),
+                    start = pt(55f, 42.5f),
+                    end = pt(59.5f, 42.5f),
+                    strokeWidth = 1.8f * sx,
+                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+            } else {
+                drawCircle(color = Color(0xFF181C24), radius = 2.1f * sx, center = pt(42.8f, 42.3f))
+                drawCircle(color = Color(0xFF181C24), radius = 2.1f * sx, center = pt(57.2f, 42.3f))
+                // Tiny eye catchlights
+                drawCircle(color = Color.White, radius = 0.7f * sx, center = pt(42.2f, 41.6f))
+                drawCircle(color = Color.White, radius = 0.7f * sx, center = pt(56.6f, 41.6f))
+            }
+
+            // 5. Headset Earcups & Curved Microphone Boom
+            drawRoundRect(
+                color = Color(0xFF1E293B),
+                topLeft = pt(26.2f, 39.5f),
+                size = androidx.compose.ui.geometry.Size(5.5f * sx, 13f * sy),
+                cornerRadius = CornerRadius(2.8f * sx, 2.8f * sy)
+            )
+            drawRoundRect(
+                color = Color(0xFFF3DE8E),
+                topLeft = pt(25.2f, 41.5f),
+                size = androidx.compose.ui.geometry.Size(3.2f * sx, 9f * sy),
+                cornerRadius = CornerRadius(1.6f * sx, 1.6f * sy)
+            )
+
+            drawRoundRect(
+                color = Color(0xFF1E293B),
+                topLeft = pt(68.3f, 39.5f),
+                size = androidx.compose.ui.geometry.Size(5.5f * sx, 13f * sy),
+                cornerRadius = CornerRadius(2.8f * sx, 2.8f * sy)
+            )
+            drawRoundRect(
+                color = Color(0xFFF3DE8E),
+                topLeft = pt(71.6f, 41.5f),
+                size = androidx.compose.ui.geometry.Size(3.2f * sx, 9f * sy),
+                cornerRadius = CornerRadius(1.6f * sx, 1.6f * sy)
+            )
+
+            // Curved Microphone Boom from Left Earcup to Mouth
+            val micBoomPath = Path().apply {
+                moveTo(28.5f * sx, 51f * sy)
+                quadraticBezierTo(30f * sx, 59f * sy, 44f * sx, 57.5f * sy)
+            }
+            drawPath(
+                path = micBoomPath,
+                color = Color(0xFFF3DE8E),
+                style = Stroke(width = 2.0f * sx, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+            // Glowing mic tip
+            drawCircle(
+                color = Color(0xFF34D399).copy(alpha = 0.7f + 0.3f * wavePulse),
+                radius = 2.4f * sx,
+                center = pt(44.5f, 57.4f)
+            )
+
+            drawContext.canvas.nativeCanvas.restore()
+        }
+    }
+}
+
 

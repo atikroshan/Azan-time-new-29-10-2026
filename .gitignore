@@ -20,6 +20,10 @@ debug.keystore
 # Allow distribution apks in apk/ folder
 !apk/
 !apk/*.apk
+!app/apk/
+!app/apk/*.apk
+!public/apk/
+!public/apk/*.apk
 *.ppm
 *.zip
 *.hprof

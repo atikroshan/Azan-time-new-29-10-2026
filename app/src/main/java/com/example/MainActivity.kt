@@ -380,11 +380,12 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
             } else fallbackCx
 
             portalOriginY = if (measuredTarget != null && measuredTarget.centerY > 0f) {
-                (measuredTarget.centerY - containerOriginInRoot.y).coerceAtLeast(0f)
+                val circleCenterYInRoot = (measuredTarget.centerY - measuredTarget.height / 2f) + with(density) { 7.dp.toPx() }
+                (circleCenterYInRoot - containerOriginInRoot.y).coerceAtLeast(0f)
             } else fallbackCy
 
-            // Starts exactly from the outer circle of the tapped navigation item
-            portalStartRadius = with(density) { 26.dp.toPx() }
+            // Starts exactly from the outer circle (54.dp diameter -> 27.dp radius) of the tapped navigation item
+            portalStartRadius = with(density) { 27.dp.toPx() }
 
             coroutineScope.launch {
                 portalProgress.snapTo(0f)
@@ -609,74 +610,77 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                 }
 
                 // Layer 2: Incoming screen (scale 1.04 down to 1.0, clipped to circle expanding from outer circle of tapped tab)
-                val incomingModifier = if (isPortalBusy) {
-                    val p = portalProgress.value
-                    val incomingScale = 1.04f - 0.04f * p
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .zIndex(2f)
-                        .graphicsLayer {
-                            scaleX = incomingScale
-                            scaleY = incomingScale
-                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
-                        }
-                        .clip(
-                            com.example.ui.CircularPortalShape(
-                                progress = p,
-                                originX = portalOriginX,
-                                originY = portalOriginY,
-                                startRadius = portalStartRadius,
-                                maxExpansion = 1.50f
-                            )
-                        )
-                } else {
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .zIndex(2f)
-                }
+                val incomingP = if (isPortalBusy) portalProgress.value else 1f
+                val incomingScale = if (isPortalBusy) 1.04f - 0.04f * incomingP else 1f
 
-                Box(modifier = incomingModifier) {
-                    when (selectedTab) {
-                        "support" -> {
-                            com.example.ui.SupportScreen(
-                                uiState = uiState,
-                                onBack = { triggerTabSwitch("home") },
-                                onLangSelect = { viewModel.setLanguage(it) },
-                                onMasjidSubmitted = { viewModel.syncGoogleSheet() },
-                                onChangeMasjid = { showMasjidSelectorScreen = true },
-                                onSelectMasjid = { masjid ->
-                                    viewModel.selectMasjid(masjid.id)
-                                    triggerTabSwitch("home")
-                                },
-                                onOpenAdminLogin = { showAdminLoginDialog = true }
-                            )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(2f)
+                        .let { base ->
+                            if (isPortalBusy) {
+                                base.clip(
+                                    com.example.ui.CircularPortalShape(
+                                        progress = incomingP,
+                                        originX = portalOriginX,
+                                        originY = portalOriginY,
+                                        startRadius = portalStartRadius,
+                                        maxExpansion = 1.03f
+                                    )
+                                )
+                            } else base
                         }
-                        "ramazan" -> {
-                            com.example.ui.RamazanScreenContent(
-                                uiState = uiState,
-                                onLanguageSelect = { viewModel.setLanguage(it) },
-                                onTogglePrayer = { month, day, prayerName ->
-                                    viewModel.togglePrayerForDate(month, day, prayerName)
-                                }
-                            )
-                        }
-                        else -> {
-                            AzanHomeContent(
-                                viewModel = viewModel,
-                                uiState = uiState,
-                                onOpenAdminLogin = { showAdminLoginDialog = true },
-                                onChangeMasjid = { showMasjidSelectorScreen = true },
-                                onShowAdminPanel = { showAdminPanel = it },
-                                onSupportClick = { triggerTabSwitch("support") }
-                            )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .graphicsLayer {
+                                scaleX = incomingScale
+                                scaleY = incomingScale
+                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
+                            }
+                    ) {
+                        when (selectedTab) {
+                            "support" -> {
+                                com.example.ui.SupportScreen(
+                                    uiState = uiState,
+                                    onBack = { triggerTabSwitch("home") },
+                                    onLangSelect = { viewModel.setLanguage(it) },
+                                    onMasjidSubmitted = { viewModel.syncGoogleSheet() },
+                                    onChangeMasjid = { showMasjidSelectorScreen = true },
+                                    onSelectMasjid = { masjid ->
+                                        viewModel.selectMasjid(masjid.id)
+                                        triggerTabSwitch("home")
+                                    },
+                                    onOpenAdminLogin = { showAdminLoginDialog = true }
+                                )
+                            }
+                            "ramazan" -> {
+                                com.example.ui.RamazanScreenContent(
+                                    uiState = uiState,
+                                    onLanguageSelect = { viewModel.setLanguage(it) },
+                                    onTogglePrayer = { month, day, prayerName ->
+                                        viewModel.togglePrayerForDate(month, day, prayerName)
+                                    }
+                                )
+                            }
+                            else -> {
+                                AzanHomeContent(
+                                    viewModel = viewModel,
+                                    uiState = uiState,
+                                    onOpenAdminLogin = { showAdminLoginDialog = true },
+                                    onChangeMasjid = { showMasjidSelectorScreen = true },
+                                    onShowAdminPanel = { showAdminPanel = it },
+                                    onSupportClick = { triggerTabSwitch("support") }
+                                )
+                            }
                         }
                     }
                 }
 
-                // Layer 3: Expanding golden perimeter ripple showing the circle exploring/expanding from the tapped button's outer circle
-                if (isPortalBusy && portalProgress.value < 0.96f) {
+                // Layer 3: Expanding golden perimeter ripple hugging the expanding portal circle edge
+                if (isPortalBusy && portalProgress.value < 0.98f) {
                     val p = portalProgress.value
                     val cx = portalOriginX
                     val cy = portalOriginY
@@ -691,13 +695,13 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                         val d3 = kotlin.math.hypot(cx, size.height - cy)
                         val d4 = kotlin.math.hypot(size.width - cx, size.height - cy)
                         val cornerMax = maxOf(d1, d2, d3, d4).coerceAtLeast(100f)
-                        val currentRadius = startR + (cornerMax * 1.50f - startR) * p
+                        val currentRadius = startR + (cornerMax * 1.03f - startR) * p
 
                         drawCircle(
-                            color = Color(0xFFF3DE8E).copy(alpha = (1f - p) * 0.70f),
+                            color = Color(0xFFF3DE8E).copy(alpha = (1f - p) * 0.72f),
                             radius = currentRadius,
                             center = Offset(cx, cy),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx())
                         )
                     }
                 }

@@ -12,21 +12,21 @@ import kotlin.math.hypot
 
 /**
  * Tap-Origin Liquid Portal Reveal
- * Exact 620ms cubic-bezier(0.22, 1, 0.36, 1) transition:
- * - Originates from the outer circle of the tapped navigation item (e.g., Home, Setting, Ramazan)
- * - Expands from the tab's circle button radius to 150% of the screen diagonal
+ * Balanced 1150ms cubic-bezier(0.32, 0.08, 0.22, 1) transition:
+ * - Originates from the outer circle (54.dp) of the tapped navigation item (e.g., Home, Setting, Ramazan)
+ * - Expands continuously from the tab's circle button radius right across the farthest screen corner (103%)
  * - Incoming screen: scale from 1.04 down to 1.0, clipped to the expanding circle
  * - Outgoing screen: scale from 1.0 down to 0.95, blurred 4px, dimmed to 0.7 brightness
  */
-const val PORTAL_REVEAL_DURATION_MS = 620L
-val PortalRevealEasing = CubicBezierEasing(0.22f, 1.0f, 0.36f, 1.0f)
+const val PORTAL_REVEAL_DURATION_MS = 1150L
+val PortalRevealEasing = CubicBezierEasing(0.32f, 0.08f, 0.22f, 1.0f)
 
 class CircularPortalShape(
     private val progress: Float,
     private val originX: Float,
     private val originY: Float,
     private val startRadius: Float,
-    private val maxExpansion: Float = 1.50f
+    private val maxExpansion: Float = 1.03f
 ) : Shape {
     override fun createOutline(
         size: Size,

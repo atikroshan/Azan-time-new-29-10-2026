@@ -324,6 +324,11 @@ fun SupportBackScreen(
             .fillMaxSize()
             .background(Brush.verticalGradient(colors = listOf(Color(0xFF040E0A), Color(0xFF06140D), Color(0xFF040C08), Color(0xFF020704))))
     ) {
+        // Cinematic flying Arabic alphabets rising from bottom to top behind the Setting cards (30% transparency, dense smaller glyphs)
+        FlyingArabicAlphabetsBackground(
+            maxAlpha = 0.30f,
+            modifier = Modifier.fillMaxSize()
+        )
         val screenHeight = maxHeight
         val isCompact = screenHeight < 680.dp
         val isUltraCompact = screenHeight < 580.dp
@@ -633,204 +638,155 @@ fun SupportBackScreen(
                                                     )
                                                 }
                                                 2 -> {
-                                                    // Card 2: Support Us (Current Masjid container structure with Support Us matter)
-                                                    val bottomPanelBg = Color(0xFF0C1424)
+                                                    // Card 2: Support Us - unified centered sequence inside container
                                                     val titleColor = Color(0xFFF3DE8E)
-                                                    val iconColor = Color(0xFFE5A93C)
-                                                    val descColor = Color.White.copy(alpha = 0.82f)
+                                                    val descColor = Color.White.copy(alpha = 0.85f)
+                                                    val supportHeadline = when (uiState.language) {
+                                                        "ur" -> "اذان ٹائم سپورٹ"
+                                                        "hi" -> "अज़ान टाइम सपोर्ट"
+                                                        else -> "AZAN TIME SUPPORT"
+                                                    }
+                                                    val goldenStarSpan = SpanStyle(
+                                                        color = Color(0xFFF3DE8E),
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    val supportMatterAnnotated = buildAnnotatedString {
+                                                        when (uiState.language) {
+                                                            "ur" -> {
+                                                                append("فیڈبیک کے ساتھ ایپ کو سپورٹ کریں،\nاور ہمیں ")
+                                                                withStyle(goldenStarSpan) { append("5 ★★★★★") }
+                                                                append(" ریٹنگ دیں")
+                                                            }
+                                                            "hi" -> {
+                                                                append("फीडबैक के साथ ऐप को सपोर्ट करें,\nऔर हमें ")
+                                                                withStyle(goldenStarSpan) { append("5 ★★★★★") }
+                                                                append(" रेटिंग दें")
+                                                            }
+                                                            else -> {
+                                                                append("Support our app with feedback,\nand rate us ")
+                                                                withStyle(goldenStarSpan) { append("5 ★★★★★") }
+                                                            }
+                                                        }
+                                                    }
 
-                                                    Column(
+                                                    Box(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .height(cardContainerHeight)
                                                             .clip(RoundedCornerShape(24.dp))
-                                                            .background(bottomPanelBg)
-                                                    ) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .weight(1f)
-                                                                .background(Color(0xFF08101E))
-                                                        ) {
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .fillMaxSize()
-                                                                    .background(
-                                                                        Brush.verticalGradient(
-                                                                            listOf(Color(0xFF132238), Color(0xFF0A1220))
-                                                                        )
-                                                                    )
-                                                                    .padding(bottom = 8.dp),
-                                                                contentAlignment = Alignment.Center
-                                                            ) {
-                                                                Column(
-                                                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                                                    verticalArrangement = Arrangement.spacedBy(if (isSelected) 10.dp else 6.dp)
-                                                                ) {
-                                                                    Box(
-                                                                        modifier = Modifier
-                                                                            .size(if (isSelected) 76.dp else 52.dp)
-                                                                            .clip(RoundedCornerShape(20.dp))
-                                                                            .background(Color(0xFF0C1829))
-                                                                            .border(
-                                                                                1.5.dp,
-                                                                                Color(0xFFE5B842).copy(alpha = 0.7f),
-                                                                                RoundedCornerShape(20.dp)
-                                                                            ),
-                                                                        contentAlignment = Alignment.Center
-                                                                    ) {
-                                                                        Icon(
-                                                                            imageVector = Icons.Outlined.HeadsetMic,
-                                                                            contentDescription = title,
-                                                                            tint = Color(0xFFF3DE8E),
-                                                                            modifier = Modifier.size(if (isSelected) 38.dp else 26.dp)
-                                                                        )
-                                                                    }
-                                                                    val ratingComposition by rememberLottieComposition(
-                                                                        LottieCompositionSpec.Asset("rating_5_star.json")
-                                                                    )
-                                                                    val ratingProgress by animateLottieCompositionAsState(
-                                                                        composition = ratingComposition,
-                                                                        iterations = LottieConstants.IterateForever
-                                                                    )
-                                                                    LottieAnimation(
-                                                                        composition = ratingComposition,
-                                                                        progress = { ratingProgress },
-                                                                        modifier = Modifier
-                                                                            .width(if (isSelected) 180.dp else 130.dp)
-                                                                            .height(if (isSelected) 46.dp else 34.dp),
-                                                                        contentScale = ContentScale.Fit
-                                                                    )
-                                                                    if (isSelected) {
-                                                                        Row(
-                                                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                                            verticalAlignment = Alignment.CenterVertically
-                                                                        ) {
-                                                                            listOf("UPI / QR", "WhatsApp", "5★ Rate").forEach { chipLabel ->
-                                                                                Surface(
-                                                                                    color = Color(0xFF08101E).copy(alpha = 0.85f),
-                                                                                    shape = RoundedCornerShape(6.dp),
-                                                                                    border = BorderStroke(0.8.dp, Color(0xFFF3DE8E).copy(alpha = 0.4f))
-                                                                                ) {
-                                                                                    Text(
-                                                                                        text = chipLabel,
-                                                                                        fontSize = 8.5.sp,
-                                                                                        fontWeight = FontWeight.SemiBold,
-                                                                                        color = Color(0xFFF3DE8E),
-                                                                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-                                                                                    )
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            // Bottom transparency fade into dark info panel
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .fillMaxWidth()
-                                                                    .height(30.dp)
-                                                                    .align(Alignment.BottomCenter)
-                                                                    .background(
-                                                                        Brush.verticalGradient(
-                                                                            listOf(Color.Transparent, bottomPanelBg)
-                                                                        )
-                                                                    )
+                                                            .background(
+                                                                Brush.verticalGradient(
+                                                                    listOf(Color(0xFF132238), Color(0xFF0A1220))
+                                                                )
                                                             )
-
-                                                            // Top-Right Badge matching Card 0's inset pill
+                                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Column(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                                            verticalArrangement = Arrangement.spacedBy(if (isSelected) 6.dp else 5.dp)
+                                                        ) {
+                                                            // 1. Support Icon
                                                             Box(
                                                                 modifier = Modifier
-                                                                    .align(Alignment.TopEnd)
-                                                                    .padding(top = 10.dp, end = 12.dp)
-                                                                    .background(
-                                                                        Color(0xFF08101E).copy(alpha = 0.88f),
-                                                                        RoundedCornerShape(6.dp)
-                                                                    )
+                                                                    .size(if (isSelected) 50.dp else 42.dp)
+                                                                    .clip(RoundedCornerShape(15.dp))
+                                                                    .background(Color(0xFF0C1829))
                                                                     .border(
-                                                                        1.dp,
-                                                                        Color(0xFFF3DE8E).copy(alpha = 0.65f),
-                                                                        RoundedCornerShape(6.dp)
-                                                                    )
-                                                                    .padding(horizontal = 7.dp, vertical = 1.5.dp),
+                                                                        1.5.dp,
+                                                                        Color(0xFFE5B842).copy(alpha = 0.7f),
+                                                                        RoundedCornerShape(15.dp)
+                                                                    ),
                                                                 contentAlignment = Alignment.Center
-                                                            ) {
-                                                                Text(
-                                                                    text = "★ 5.0",
-                                                                    fontSize = if (isSelected) 9.5.sp else 8.sp,
-                                                                    lineHeight = if (isSelected) 11.sp else 9.sp,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    color = Color(0xFFF3DE8E)
-                                                                )
-                                                            }
-                                                        }
-
-                                                        // Bottom Section: Same structure & alignment as Card 0 with Support Us matter
-                                                        val supportHeadline = when (uiState.language) {
-                                                            "ur" -> "اذان ٹائم سپورٹ"
-                                                            "hi" -> "अज़ान टाइम सपोर्ट"
-                                                            else -> "Azan Time Support"
-                                                        }
-                                                        val supportMatter = when (uiState.language) {
-                                                            "ur" -> "UPI تعاون، فوری واٹس ایپ مدد اور 5 اسٹار ریٹنگ دیں۔"
-                                                            "hi" -> "UPI सहयोग, तुरंत व्हाट्सएप सहायता और 5 स्टार रेटिंग दें।"
-                                                            else -> subtitle
-                                                        }
-                                                        val iconSizeDp = if (isSelected) 12.dp else 10.dp
-                                                        val iconGapDp = 4.dp
-                                                        Column(
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .defaultMinSize(minHeight = if (isSelected) 76.dp else 52.dp)
-                                                                .background(bottomPanelBg)
-                                                                .padding(horizontal = 12.dp, vertical = 9.dp),
-                                                            horizontalAlignment = Alignment.Start,
-                                                            verticalArrangement = Arrangement.Top
-                                                        ) {
-                                                            Row(
-                                                                modifier = Modifier.fillMaxWidth(),
-                                                                horizontalArrangement = Arrangement.Start
-                                                            ) {
-                                                                Spacer(modifier = Modifier.width(iconSizeDp + iconGapDp))
-                                                                Text(
-                                                                    text = supportHeadline,
-                                                                    fontSize = if (isSelected) 13.5.sp else 11.sp,
-                                                                    lineHeight = if (isSelected) 16.sp else 13.sp,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    color = titleColor,
-                                                                    textAlign = TextAlign.Start,
-                                                                    maxLines = 2,
-                                                                    overflow = TextOverflow.Ellipsis,
-                                                                    modifier = Modifier.weight(1f)
-                                                                )
-                                                            }
-                                                            Spacer(modifier = Modifier.height(4.dp))
-                                                            Row(
-                                                                modifier = Modifier.fillMaxWidth(),
-                                                                verticalAlignment = Alignment.Top,
-                                                                horizontalArrangement = Arrangement.Start
                                                             ) {
                                                                 Icon(
-                                                                    imageVector = Icons.Outlined.Favorite,
-                                                                    contentDescription = null,
-                                                                    tint = iconColor,
-                                                                    modifier = Modifier
-                                                                        .padding(top = if (isSelected) 1.dp else 0.5.dp)
-                                                                        .size(iconSizeDp)
+                                                                    imageVector = Icons.Outlined.HeadsetMic,
+                                                                    contentDescription = title,
+                                                                    tint = Color(0xFFF3DE8E),
+                                                                    modifier = Modifier.size(if (isSelected) 26.dp else 21.dp)
                                                                 )
-                                                                Spacer(modifier = Modifier.width(iconGapDp))
-                                                                Text(
-                                                                    text = supportMatter,
-                                                                    fontSize = if (isSelected) 10.5.sp else 9.sp,
-                                                                    fontWeight = FontWeight.Medium,
-                                                                    color = descColor,
-                                                                    textAlign = TextAlign.Start,
-                                                                    maxLines = if (isSelected) 2 else 1,
-                                                                    overflow = TextOverflow.Ellipsis,
-                                                                    lineHeight = 13.sp,
-                                                                    modifier = Modifier.weight(1f)
+                                                            }
+
+                                                            // 2. AZAN TIME SUPPORT (ALL CAPS, Center Aligned)
+                                                            Text(
+                                                                text = supportHeadline,
+                                                                fontSize = if (isSelected) 13.sp else 10.5.sp,
+                                                                lineHeight = if (isSelected) 16.sp else 13.sp,
+                                                                fontWeight = FontWeight.ExtraBold,
+                                                                letterSpacing = 0.7.sp,
+                                                                color = titleColor,
+                                                                textAlign = TextAlign.Center,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                                modifier = Modifier.fillMaxWidth()
+                                                            )
+
+                                                            // 3. Support our app with feedback,\nand rate us 5 ★★★★★ (Center Aligned)
+                                                            Text(
+                                                                text = supportMatterAnnotated,
+                                                                fontSize = if (isSelected) 10.sp else 8.5.sp,
+                                                                fontWeight = FontWeight.Medium,
+                                                                color = descColor,
+                                                                textAlign = TextAlign.Center,
+                                                                lineHeight = if (isSelected) 13.5.sp else 11.5.sp,
+                                                                maxLines = 2,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                                modifier = Modifier.fillMaxWidth()
+                                                            )
+
+                                                            // 4. 5 Star Animation
+                                                            LottieFiveStarRating(
+                                                                modifier = Modifier
+                                                                    .width(if (isSelected) 168.dp else 120.dp)
+                                                                    .height(if (isSelected) 38.dp else 28.dp)
+                                                            )
+
+                                                            // 5. Divider -> Official WhatsApp -> Divider -> UPI / QR
+                                                            if (isSelected) {
+                                                                HorizontalDivider(
+                                                                    modifier = Modifier.width(136.dp),
+                                                                    thickness = 0.8.dp,
+                                                                    color = Color.White.copy(alpha = 0.16f)
                                                                 )
+                                                                Row(
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                                                                ) {
+                                                                    Image(
+                                                                        painter = painterResource(id = R.drawable.ic_whatsapp_outlined),
+                                                                        contentDescription = "WhatsApp",
+                                                                        modifier = Modifier.size(19.dp)
+                                                                    )
+                                                                    Text(
+                                                                        text = "WhatsApp",
+                                                                        fontSize = 11.sp,
+                                                                        fontWeight = FontWeight.SemiBold,
+                                                                        color = Color.White.copy(alpha = 0.92f)
+                                                                    )
+                                                                }
+                                                                HorizontalDivider(
+                                                                    modifier = Modifier.width(136.dp),
+                                                                    thickness = 0.8.dp,
+                                                                    color = Color.White.copy(alpha = 0.16f)
+                                                                )
+                                                                Row(
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                                ) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Default.QrCodeScanner,
+                                                                        contentDescription = null,
+                                                                        tint = Color(0xFFF3DE8E),
+                                                                        modifier = Modifier.size(16.dp)
+                                                                    )
+                                                                    Text(
+                                                                        text = "UPI / QR",
+                                                                        fontSize = 11.sp,
+                                                                        fontWeight = FontWeight.SemiBold,
+                                                                        color = Color(0xFFF3DE8E)
+                                                                    )
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -840,25 +796,44 @@ fun SupportBackScreen(
                                     }
                                     if (isSelected) {
                                         Spacer(modifier = Modifier.height(10.dp))
-                                        val instr = when (realIndex) { 
-                                            0 -> appStrings.changeMasjidInstruction
-                                            1 -> "Note: Please use the Add button exclusively to submit the form for the responsible person (Moulana / Mutawalli / Bangi Sahab / All the Trust Member)."
-                                            else -> when (uiState.language) {
-                                                "ur" -> "تعاون کرنے، واٹس ایپ پر فیڈبیک بھیجنے یا 5 اسٹار ریٹنگ دینے کے لیے OPEN پر ٹیپ کریں۔"
-                                                "hi" -> "सहयोग करने, व्हाट्सएप पर सुझाव भेजने या 5 स्टार रेटिंग देने के लिए OPEN पर टैप करें।"
-                                                else -> "Tap OPEN to contribute via UPI / QR, chat on WhatsApp for instant feedback, or rate us 5 stars."
+                                        val goldenInstrSpan = SpanStyle(
+                                            color = Color(0xFFF3DE8E),
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        val instrAnnotated = when (realIndex) {
+                                            0 -> buildAnnotatedString { append(appStrings.changeMasjidInstruction) }
+                                            1 -> buildAnnotatedString {
+                                                append("Note: Please use the Add button exclusively to submit the form for the responsible person (Moulana / Mutawalli / Bangi Sahab / All the Trust Member).")
+                                            }
+                                            else -> buildAnnotatedString {
+                                                when (uiState.language) {
+                                                    "ur" -> {
+                                                        append("تعاون کرنے، واٹس ایپ پر فوری فیڈبیک بھیجنے،\nیا ہمیں ")
+                                                        withStyle(goldenInstrSpan) { append("5 ★★★★★") }
+                                                        append(" ریٹنگ دینے کے لیے OPEN پر ٹیپ کریں۔")
+                                                    }
+                                                    "hi" -> {
+                                                        append("सहयोग करने, व्हाट्सएप पर तुरंत फीडबैक भेजने,\nया हमें ")
+                                                        withStyle(goldenInstrSpan) { append("5 ★★★★★") }
+                                                        append(" रेटिंग देने के लिए OPEN पर टैप करें।")
+                                                    }
+                                                    else -> {
+                                                        append("Tap OPEN to contribute via UPI / QR, chat on WhatsApp for instant feedback,\nor rate us ")
+                                                        withStyle(goldenInstrSpan) { append("5 ★★★★★.") }
+                                                    }
+                                                }
                                             }
                                         }
-                                        if (instr.isNotEmpty()) { 
+                                        if (instrAnnotated.isNotEmpty()) {
                                             Text(
-                                                text = instr, 
-                                                fontSize = 10.sp, 
-                                                color = Color.White, 
-                                                textAlign = TextAlign.Center, 
-                                                lineHeight = 13.sp, 
+                                                text = instrAnnotated,
+                                                fontSize = 10.sp,
+                                                color = Color.White,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = 13.sp,
                                                 modifier = Modifier.padding(horizontal = 14.dp)
                                             )
-                                            Spacer(modifier = Modifier.height(9.dp)) 
+                                            Spacer(modifier = Modifier.height(9.dp))
                                         }
                                         val activeLangBrush = Brush.verticalGradient(listOf(Color(0xFFF3DE8E), Color(0xFFD49B37)))
                                         Box(
@@ -989,17 +964,25 @@ fun SupportFrontScreen(uiState: UIState, onClose: () -> Unit, onLangSelect: (Str
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF0F241A))) {
                 Row(modifier = Modifier.fillMaxWidth().clickable { showRateUsDialog = true }.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     val appRatingDisplay = if (averageRating > 0.0) averageRating else 4.9
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { 
-                        Box(modifier = Modifier.size(28.dp).background(Color(0x26F3DE8E), CircleShape), contentAlignment = Alignment.Center) { 
-                            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = primaryGold, modifier = Modifier.size(16.dp)) 
+                    Row(
+                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(modifier = Modifier.size(28.dp).background(Color(0x26F3DE8E), CircleShape), contentAlignment = Alignment.Center) {
+                            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = primaryGold, modifier = Modifier.size(16.dp))
                         }
-                        Column { 
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { 
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                 Text(text = String.format(Locale.US, "%.1f", appRatingDisplay), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = primaryGold)
-                                Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) { for (i in 1..5) { StarIconDisplay(fillRatio = if(appRatingDisplay >= i) 1f else if(appRatingDisplay >= i-0.5) 0.5f else 0f, starSize = 10.dp) } } 
+                                StaticLottieShapeStarBar(
+                                    rating = appRatingDisplay,
+                                    starSize = 15.dp,
+                                    spacing = 2.dp
+                                )
                             }
-                            Text(text = when (uiState.language) { "ur" -> "پلے اسٹور پر ریٹنگ دیں"; "hi" -> "प्ले स्टोर पर रेटिंग दें"; else -> "Rate us on Play Store" }, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.7f)) 
-                        } 
+                            Text(text = when (uiState.language) { "ur" -> "پلے اسٹور پر ریٹنگ دیں"; "hi" -> "प्ले स्टोर पर रेटिंग दें"; else -> "Rate us on Play Store" }, fontSize = 10.5.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.7f))
+                        }
                     }
                     Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(primaryGold).padding(horizontal = 12.dp, vertical = 5.dp)) { Text(text = when (uiState.language) { "ur" -> "5★ ریٹنگ دیں"; "hi" -> "5★ रेटिंग दें"; else -> "Rate Us 5★" }, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF040E0A)) }
                 }
@@ -1050,7 +1033,12 @@ fun SupportFrontScreen(uiState: UIState, onClose: () -> Unit, onLangSelect: (Str
                         IconButton(onClick = { showRateUsDialog = false }, modifier = Modifier.size(36.dp).background(Color(0xFF1E293B), CircleShape).align(Alignment.CenterEnd)) { Icon(imageVector = Icons.Default.Close, contentDescription = null, tint = primaryGold, modifier = Modifier.size(18.dp)) } 
                     }
                     Text(text = when (uiState.language) { "ur" -> "اپنے تجربے کی درجہ بندی کریں۔ جمع کرنے پر آپ کی ریٹنگ محفوظ ہوگی اور پلے اسٹور پر ریویو کے لیے بھیجا جائے گا۔"; "hi" -> "अपने अनुभव को रेट करें। सबमिट करने पर आपकी रेटिंग सुरक्षित होगी और प्ले स्टोर पर रिव्यू के लिए भेजा जाएगा।"; else -> "Rate your experience. Submitting will save your rating and redirect to Google Play Store to review." }, fontSize = 11.5.sp, color = Color.White.copy(alpha = 0.72f), textAlign = TextAlign.Center)
-                    InteractiveHalfStarRatingBar(rating = tempRating, onRatingSelected = { tempRating = it }, starSize = 36.dp, spacing = 8.dp)
+                    StaticLottieShapeStarBar(
+                        rating = tempRating,
+                        onRatingSelected = { tempRating = it },
+                        starSize = 36.dp,
+                        spacing = 8.dp
+                    )
                     Text(text = String.format(Locale.US, "%.1f / 5.0 Stars", tempRating), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = primaryGold)
                     Button(onClick = { 
                         isSubmitting = true
@@ -1979,3 +1967,183 @@ fun DemoInputField(
         }
     }
 }
+
+@Composable
+fun LottieFiveStarRating(
+    modifier: Modifier = Modifier
+) {
+    val ratingComposition by rememberLottieComposition(
+        LottieCompositionSpec.Asset("rating_5_star.json")
+    )
+    val ratingProgress by animateLottieCompositionAsState(
+        composition = ratingComposition,
+        iterations = LottieConstants.IterateForever
+    )
+    LottieAnimation(
+        composition = ratingComposition,
+        progress = { ratingProgress },
+        modifier = modifier,
+        contentScale = ContentScale.Fit
+    )
+}
+
+@Composable
+fun StaticLottieShapeStarBar(
+    rating: Double = 5.0,
+    onRatingSelected: ((Double) -> Unit)? = null,
+    starSize: Dp = 15.dp,
+    spacing: Dp = 2.dp,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(spacing),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val litCount = kotlin.math.round(rating).toInt().coerceIn(0, 5)
+        for (i in 1..5) {
+            val isLit = i <= litCount
+            val starModifier = Modifier
+                .size(starSize)
+                .let { base ->
+                    if (onRatingSelected != null) {
+                        base.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onRatingSelected(i.toDouble()) }
+                    } else base
+                }
+            Image(
+                painter = painterResource(
+                    id = if (isLit) R.drawable.ic_rating_star_lit else R.drawable.ic_rating_star_unlit
+                ),
+                contentDescription = if (onRatingSelected != null) "Rate $i stars" else null,
+                contentScale = ContentScale.Fit,
+                modifier = starModifier
+            )
+        }
+    }
+}
+
+private data class ArabicFloatingParticle(
+    val glyph: String,
+    val xFraction: Float,
+    val initialPhase: Float,
+    val speed: Float,
+    val sizeSp: Float,
+    val swayAmplitudeDp: Float,
+    val swayFrequency: Float,
+    val baseTiltDeg: Float,
+    val tiltSpeed: Float,
+    val peakAlphaFactor: Float
+)
+
+@Composable
+fun FlyingArabicAlphabetsBackground(
+    maxAlpha: Float = 0.30f,
+    modifier: Modifier = Modifier
+) {
+    val prefersReducedMotion = rememberPrefersReducedMotion()
+    val glyphs = remember {
+        listOf(
+            "ا", "ب", "ت", "ث", "ج", "ح", "خ",
+            "د", "ذ", "ر", "ز", "س", "ش", "ص",
+            "ض", "ط", "ظ", "ع", "غ", "ف", "ق",
+            "ك", "ل", "م", "ن", "ه", "و", "ي"
+        )
+    }
+
+    val particles = remember {
+        val rng = java.util.Random(20260786L)
+        List(100) { idx ->
+            val depth = 0.25f + rng.nextFloat() * 0.75f
+            ArabicFloatingParticle(
+                glyph = glyphs[(idx * 7 + rng.nextInt(glyphs.size)) % glyphs.size],
+                xFraction = 0.02f + ((idx + 0.5f) / 100f) * 0.96f + (rng.nextFloat() - 0.5f) * 0.05f,
+                initialPhase = rng.nextFloat(),
+                speed = (0.024f + depth * 0.026f), // Slower gentle cinematic upward drift (20-41s)
+                sizeSp = 6f + depth * 12f, // 6sp - 18sp refined small calligraphy glyphs
+                swayAmplitudeDp = 4f + depth * 8f,
+                swayFrequency = 0.35f + rng.nextFloat() * 0.45f,
+                baseTiltDeg = (rng.nextFloat() - 0.5f) * 22f,
+                tiltSpeed = (rng.nextFloat() - 0.5f) * 0.45f,
+                peakAlphaFactor = (0.45f + depth * 0.55f).coerceIn(0.45f, 1.0f)
+            )
+        }
+    }
+
+    var elapsedSeconds by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(prefersReducedMotion) {
+        if (prefersReducedMotion) {
+            elapsedSeconds = 0f
+            return@LaunchedEffect
+        }
+        val startNs = System.nanoTime()
+        while (true) {
+            withFrameNanos { frameTimeNs ->
+                elapsedSeconds = (frameTimeNs - startNs) / 1_000_000_000f
+            }
+        }
+    }
+
+    val textPaint = remember {
+        android.graphics.Paint().apply {
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+            typeface = android.graphics.Typeface.create(
+                android.graphics.Typeface.SERIF,
+                android.graphics.Typeface.BOLD
+            )
+        }
+    }
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        if (w <= 0f || h <= 0f) return@Canvas
+
+        val nativeCanvas = drawContext.canvas.nativeCanvas
+        for (p in particles) {
+            // Continuous upward flight: progress goes 0 (below bottom) -> 1 (above top)
+            val travel = (p.initialPhase + elapsedSeconds * p.speed) % 1.0f
+            val yNorm = 1.08f - travel * 1.18f // enters at +108%, exits at -10%
+            val yPx = yNorm * h
+
+            // Cinematic smooth fade-in at bottom & fade-out at top, capped strictly <= maxAlpha (0.20f)
+            val fadeIn = (travel / 0.16f).coerceIn(0f, 1f)
+            val fadeOut = ((1f - travel) / 0.22f).coerceIn(0f, 1f)
+            val alpha = (maxAlpha * p.peakAlphaFactor * fadeIn * fadeOut).coerceIn(0f, maxAlpha)
+            if (alpha <= 0.005f) continue
+
+            val swayPx = kotlin.math.sin(
+                (elapsedSeconds * p.swayFrequency + p.initialPhase * 6.283f).toDouble()
+            ).toFloat() * p.swayAmplitudeDp.dp.toPx()
+            val xPx = (p.xFraction * w + swayPx).coerceIn(12.dp.toPx(), w - 12.dp.toPx())
+
+            val tiltDeg = p.baseTiltDeg + kotlin.math.sin(
+                (elapsedSeconds * p.tiltSpeed + p.initialPhase * 4f).toDouble()
+            ).toFloat() * 8f
+
+            // Subtle depth scale growth as letters drift upward
+            val scale = 0.90f + 0.22f * travel
+
+            textPaint.textSize = p.sizeSp.sp.toPx()
+            val alphaInt = (alpha * 255f).toInt().coerceIn(0, 255)
+            textPaint.color = android.graphics.Color.argb(alphaInt, 243, 222, 142) // Warm gold #F3DE8E
+            textPaint.setShadowLayer(
+                8.dp.toPx(),
+                0f,
+                0f,
+                android.graphics.Color.argb((alpha * 0.6f * 255f).toInt().coerceIn(0, 255), 229, 184, 66)
+            )
+
+            nativeCanvas.save()
+            nativeCanvas.translate(xPx, yPx)
+            nativeCanvas.rotate(tiltDeg)
+            nativeCanvas.scale(scale, scale)
+            nativeCanvas.drawText(p.glyph, 0f, 0f, textPaint)
+            nativeCanvas.restore()
+        }
+    }
+}
+

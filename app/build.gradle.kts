@@ -12,8 +12,8 @@ android {
         applicationId = "com.aistudio.offlineazan.egypxe"
         minSdk = 24
         targetSdk = 35
-        versionCode = 407
-        versionName = "3.2.40"
+        versionCode = 408
+        versionName = "3.2.41"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

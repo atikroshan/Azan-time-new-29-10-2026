@@ -17,6 +17,10 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.zIndex
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.ui.FirstTimeSetupScreen
 import com.example.ui.InitialLanguageScreen
@@ -334,47 +338,65 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
     val effectiveRamazanActive = isRamazanActive || forcedRamazanActive
 
     val prefersReducedMotion = com.example.ui.rememberPrefersReducedMotion()
-    val pageGraphicsLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
     val tabTargets = remember { mutableStateMapOf<String, com.example.ui.TabTarget>() }
-    var isGenieBusy by remember { mutableStateOf(false) }
+    var isPortalBusy by remember { mutableStateOf(false) }
     var outgoingTab by remember { mutableStateOf<String?>(null) }
-    var outgoingBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-    val genieProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+    val portalProgress = remember { androidx.compose.animation.core.Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
     var containerWidthPx by remember { mutableFloatStateOf(0f) }
     var containerHeightPx by remember { mutableFloatStateOf(0f) }
+    var containerOriginInRoot by remember { mutableStateOf(Offset.Zero) }
+    var portalOriginX by remember { mutableFloatStateOf(0f) }
+    var portalOriginY by remember { mutableFloatStateOf(0f) }
+    var portalStartRadius by remember { mutableFloatStateOf(0f) }
     val density = LocalDensity.current
 
     val triggerTabSwitch: (String) -> Unit = { targetTab ->
-        if (!isGenieBusy && targetTab != selectedTab) {
+        if (!isPortalBusy && targetTab != selectedTab) {
             val prevTab = selectedTab
-            isGenieBusy = true
+            isPortalBusy = true
+            outgoingTab = prevTab
+            selectedTab = targetTab
+            if (targetTab == "home") {
+                viewModel.selectToday()
+            }
+
+            // Target tab index: support=0, home=1, ramazan=2
+            val targetIndex = when (targetTab) {
+                "support" -> 0
+                "ramazan" -> 2
+                else -> 1
+            }
+            val measuredTarget = tabTargets[targetTab]
+            val fallbackCx = if (containerWidthPx > 0f) {
+                containerWidthPx * ((targetIndex + 0.5f) / 3f)
+            } else with(density) { 180.dp.toPx() }
+            val fallbackCy = if (containerHeightPx > 0f) {
+                containerHeightPx - with(density) { 36.dp.toPx() }
+            } else with(density) { 600.dp.toPx() }
+
+            portalOriginX = if (measuredTarget != null && measuredTarget.centerX > 0f) {
+                (measuredTarget.centerX - containerOriginInRoot.x).coerceIn(0f, if (containerWidthPx > 0f) containerWidthPx else Float.MAX_VALUE)
+            } else fallbackCx
+
+            portalOriginY = if (measuredTarget != null && measuredTarget.centerY > 0f) {
+                (measuredTarget.centerY - containerOriginInRoot.y).coerceAtLeast(0f)
+            } else fallbackCy
+
+            // Starts exactly from the outer circle of the tapped navigation item
+            portalStartRadius = with(density) { 26.dp.toPx() }
+
             coroutineScope.launch {
-                val snapshot = try {
-                    pageGraphicsLayer.toImageBitmap().asAndroidBitmap()
-                } catch (_: Exception) {
-                    null
-                }
-
-                outgoingTab = prevTab
-                outgoingBitmap = snapshot
-                selectedTab = targetTab
-                if (targetTab == "home") {
-                    viewModel.selectToday()
-                }
-
-                genieProgress.snapTo(0f)
-                genieProgress.animateTo(
+                portalProgress.snapTo(0f)
+                portalProgress.animateTo(
                     targetValue = 1f,
                     animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = if (prefersReducedMotion) 240 else com.example.ui.GENIE_DUR.toInt(),
-                        easing = androidx.compose.animation.core.LinearEasing
+                        durationMillis = if (prefersReducedMotion) 220 else com.example.ui.PORTAL_REVEAL_DURATION_MS.toInt(),
+                        easing = com.example.ui.PortalRevealEasing
                     )
                 )
-
+                isPortalBusy = false
                 outgoingTab = null
-                outgoingBitmap = null
-                isGenieBusy = false
             }
         }
     }
@@ -479,12 +501,12 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     homeLabel = homeLabel,
                     ramazanLabel = ramazanLabel,
                     isRamazanEnabled = effectiveRamazanActive,
-                    isBusy = isGenieBusy,
+                    isBusy = isPortalBusy,
                     onTabTargetMeasured = { tabKey, target ->
                         tabTargets[tabKey] = target
                     },
                     onRamazanTap = {
-                        if (isGenieBusy) return@AnimatedCurvedNavBar
+                        if (isPortalBusy) return@AnimatedCurvedNavBar
                         ramazanTapCount++
                         if (!effectiveRamazanActive && ramazanTapCount >= 5) {
                             forcedRamazanActive = true
@@ -513,30 +535,109 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                 modifier = Modifier
                     .fillMaxSize()
                     .appBackground()
-                    .onSizeChanged { size ->
-                        containerWidthPx = size.width.toFloat()
-                        containerHeightPx = size.height.toFloat()
+                    .onGloballyPositioned { coords ->
+                        containerOriginInRoot = coords.positionInRoot()
+                        containerWidthPx = coords.size.width.toFloat()
+                        containerHeightPx = coords.size.height.toFloat()
                     }
             ) {
-                // Layer 1: Newly selected incoming page (rendered immediately underneath)
-                val incomingScale = if (isGenieBusy) {
-                    0.94f + 0.06f * genieProgress.value
-                } else 1f
-                val incomingAlpha = if (isGenieBusy) {
-                    0.5f + 0.5f * genieProgress.value
-                } else 1f
+                // Layer 1: Outgoing screen (transforms scale down to 0.95, blurs 4px, dims brightness to 0.7)
+                val currentOutgoingTab = outgoingTab
+                if (isPortalBusy && currentOutgoingTab != null) {
+                    val p = portalProgress.value
+                    val outgoingScale = 1.0f - 0.05f * p
+                    val outgoingDim = 0.30f * p
+                    val outgoingBlurDp = (4f * p).dp
 
-                Box(
-                    modifier = Modifier
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .zIndex(1f)
+                            .graphicsLayer {
+                                scaleX = outgoingScale
+                                scaleY = outgoingScale
+                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
+                            }
+                            .blur(outgoingBlurDp, edgeTreatment = androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+                    ) {
+                        when (currentOutgoingTab) {
+                            "support" -> {
+                                com.example.ui.SupportScreen(
+                                    uiState = uiState,
+                                    onBack = { triggerTabSwitch("home") },
+                                    onLangSelect = { viewModel.setLanguage(it) },
+                                    onMasjidSubmitted = { viewModel.syncGoogleSheet() },
+                                    onChangeMasjid = { showMasjidSelectorScreen = true },
+                                    onSelectMasjid = { masjid ->
+                                        viewModel.selectMasjid(masjid.id)
+                                        triggerTabSwitch("home")
+                                    },
+                                    onOpenAdminLogin = { showAdminLoginDialog = true }
+                                )
+                            }
+                            "ramazan" -> {
+                                com.example.ui.RamazanScreenContent(
+                                    uiState = uiState,
+                                    onLanguageSelect = { viewModel.setLanguage(it) },
+                                    onTogglePrayer = { month, day, prayerName ->
+                                        viewModel.togglePrayerForDate(month, day, prayerName)
+                                    }
+                                )
+                            }
+                            else -> {
+                                AzanHomeContent(
+                                    viewModel = viewModel,
+                                    uiState = uiState,
+                                    onOpenAdminLogin = { showAdminLoginDialog = true },
+                                    onChangeMasjid = { showMasjidSelectorScreen = true },
+                                    onShowAdminPanel = { showAdminPanel = it },
+                                    onSupportClick = { triggerTabSwitch("support") }
+                                )
+                            }
+                        }
+
+                        // Dim overlay for brightness(0.7)
+                        if (outgoingDim > 0.001f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = outgoingDim))
+                            )
+                        }
+                    }
+                }
+
+                // Layer 2: Incoming screen (scale 1.04 down to 1.0, clipped to circle expanding from outer circle of tapped tab)
+                val incomingModifier = if (isPortalBusy) {
+                    val p = portalProgress.value
+                    val incomingScale = 1.04f - 0.04f * p
+                    Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .drawWithContent {
-                            pageGraphicsLayer.record {
-                                this@drawWithContent.drawContent()
-                            }
-                            drawContent()
+                        .zIndex(2f)
+                        .graphicsLayer {
+                            scaleX = incomingScale
+                            scaleY = incomingScale
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
                         }
-                ) {
+                        .clip(
+                            com.example.ui.CircularPortalShape(
+                                progress = p,
+                                originX = portalOriginX,
+                                originY = portalOriginY,
+                                startRadius = portalStartRadius,
+                                maxExpansion = 1.50f
+                            )
+                        )
+                } else {
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .zIndex(2f)
+                }
+
+                Box(modifier = incomingModifier) {
                     when (selectedTab) {
                         "support" -> {
                             com.example.ui.SupportScreen(
@@ -574,131 +675,30 @@ fun AzanScreen(viewModel: AzanViewModel, uiState: com.example.ui.UIState, modifi
                     }
                 }
 
-                // Layer 2: macOS Genie Fold cloth effect (56-strip 2D affine matrix transform from mobile-genie-nav)
-                val currentOutgoingBitmap = outgoingBitmap
-                val currentOutgoingTab = outgoingTab
-                val outgoingKey = currentOutgoingTab
-                if (isGenieBusy && currentOutgoingBitmap != null && outgoingKey != null) {
-                    val measuredTarget = tabTargets[outgoingKey]
-                    val fallbackTarget = remember(outgoingKey, containerWidthPx, containerHeightPx) {
-                        val w = containerWidthPx
-                        val h = containerHeightPx
-                        val tabW = w / 3f
-                        val cx = when (outgoingKey) {
-                            "support" -> tabW * 0.5f
-                            "ramazan" -> tabW * 2.5f
-                            else -> tabW * 1.5f
-                        }
-                        val barH = with(density) { 72.dp.toPx() }
-                        com.example.ui.TabTarget(
-                            centerX = cx,
-                            centerY = h - (barH / 2f),
-                            width = tabW,
-                            height = barH
-                        )
-                    }
-                    val target = measuredTarget ?: fallbackTarget
-
-                    com.example.ui.GenieFoldOverlay(
-                        bitmap = currentOutgoingBitmap,
-                        progress = genieProgress.value,
-                        target = target,
-                        containerWidth = containerWidthPx,
-                        containerHeight = containerHeightPx,
-                        fabricFold = true,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else if (isGenieBusy && currentOutgoingTab != null) {
-                    // Fallback when bitmap capture is unavailable
-                    val destinationKey = selectedTab
-                    val measuredTarget = tabTargets[destinationKey] ?: tabTargets[currentOutgoingTab]
-                    val targetCenterX = measuredTarget?.centerX?.takeIf { it > 0f } ?: when (destinationKey) {
-                        "support" -> containerWidthPx * (1f / 6f)
-                        "ramazan" -> containerWidthPx * (5f / 6f)
-                        else -> containerWidthPx * 0.5f
-                    }
-                    val targetCenterY = measuredTarget?.centerY?.takeIf { it > 0f } ?: containerHeightPx
-
-                    val p = genieProgress.value
-                    val bounceProgress = (p / 0.15f).coerceIn(0f, 1f)
-                    val bounceSin = kotlin.math.sin(bounceProgress * kotlin.math.PI.toFloat())
-
-                    val suckProgress = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
-                    val sCurve = suckProgress * suckProgress * (3f - 2f * suckProgress)
-
-                    val targetPivotX = if (containerWidthPx > 0f) {
-                        (targetCenterX / containerWidthPx).coerceIn(0.12f, 0.88f)
-                    } else 0.5f
-
-                    val outgoingScaleX = if (p < 0.15f) {
-                        1f + 0.025f * bounceSin
-                    } else {
-                        (1f - 0.94f * sCurve).coerceAtLeast(0.04f)
-                    }
-
-                    val outgoingScaleY = if (p < 0.15f) {
-                        1f + 0.025f * bounceSin
-                    } else {
-                        (1f - 0.96f * sCurve).coerceAtLeast(0.02f)
-                    }
-
-                    val outgoingTranslationY = if (p < 0.15f) {
-                        -with(density) { 12.dp.toPx() } * bounceSin
-                    } else {
-                        val totalDrop = (targetCenterY - containerHeightPx * 0.45f).coerceAtLeast(containerHeightPx * 0.4f)
-                        totalDrop * sCurve
-                    }
-
-                    val outgoingAlpha = if (suckProgress > 0.86f) {
-                        ((1f - suckProgress) / 0.14f).coerceIn(0f, 1f)
-                    } else {
-                        1f
-                    }
-
-                    val blurX = (sCurve * 8f).dp
-                    val blurY = (sCurve * 16f).dp
-
-                    Box(
+                // Layer 3: Expanding golden perimeter ripple showing the circle exploring/expanding from the tapped button's outer circle
+                if (isPortalBusy && portalProgress.value < 0.96f) {
+                    val p = portalProgress.value
+                    val cx = portalOriginX
+                    val cy = portalOriginY
+                    val startR = portalStartRadius
+                    androidx.compose.foundation.Canvas(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(innerPadding)
-                            .graphicsLayer {
-                                this.transformOrigin = androidx.compose.ui.graphics.TransformOrigin(targetPivotX, 1.0f)
-                                this.scaleX = outgoingScaleX
-                                this.scaleY = outgoingScaleY
-                                this.translationY = outgoingTranslationY
-                                this.alpha = outgoingAlpha
-                            }
-                            .blur(radiusX = blurX, radiusY = blurY)
+                            .zIndex(3f)
                     ) {
-                        when (currentOutgoingTab) {
-                            "support" -> {
-                                com.example.ui.SupportScreen(
-                                    uiState = uiState,
-                                    onBack = {},
-                                    onLangSelect = {},
-                                    onMasjidSubmitted = {},
-                                    onChangeMasjid = {},
-                                    onSelectMasjid = {}
-                                )
-                            }
-                            "ramazan" -> {
-                                com.example.ui.RamazanScreenContent(
-                                    uiState = uiState,
-                                    onLanguageSelect = {}
-                                )
-                            }
-                            else -> {
-                                AzanHomeContent(
-                                    viewModel = viewModel,
-                                    uiState = uiState,
-                                    onOpenAdminLogin = {},
-                                    onChangeMasjid = {},
-                                    onShowAdminPanel = {},
-                                    onSupportClick = {}
-                                )
-                            }
-                        }
+                        val d1 = kotlin.math.hypot(cx, cy)
+                        val d2 = kotlin.math.hypot(size.width - cx, cy)
+                        val d3 = kotlin.math.hypot(cx, size.height - cy)
+                        val d4 = kotlin.math.hypot(size.width - cx, size.height - cy)
+                        val cornerMax = maxOf(d1, d2, d3, d4).coerceAtLeast(100f)
+                        val currentRadius = startR + (cornerMax * 1.50f - startR) * p
+
+                        drawCircle(
+                            color = Color(0xFFF3DE8E).copy(alpha = (1f - p) * 0.70f),
+                            radius = currentRadius,
+                            center = Offset(cx, cy),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())
+                        )
                     }
                 }
             }

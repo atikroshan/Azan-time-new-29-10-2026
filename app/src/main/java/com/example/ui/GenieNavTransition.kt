@@ -21,19 +21,17 @@ import kotlin.math.cos
 import kotlin.math.max
 
 /**
- * macOS Genie Fold Page Transition for Bottom Tab Navigation
- * Faithful conversion of mobile-genie-nav.html
+ * Ultra-clean macOS/iOS Genie Fold & Fabric Curtain Animation
+ * Inspired by high-end fluid accordion folding shorts & smooth physics transitions.
  *
- * Requirements:
- * - Easily editable constants at top: N=56 horizontal strips, DUR=780ms duration
- * - Outgoing page folds into ITS OWN nav button
- * - Incoming page is rendered immediately underneath
- * - S-curve funnel profile with 2 phases (bottom pulled first, top slides down)
- * - Sine ease-in-out and fade out in the last 6%
- * - Respects prefers-reduced-motion with simple fade fallback
+ * Features:
+ * - High-density 96 horizontal satin strips for sub-pixel buttery smooth curves
+ * - Two-phase S-curve funnel physics with refined ease-in-out and zero jagged edges
+ * - Hyper-realistic glossy satin pleat shader with dynamic wrinkle displacement waves
+ * - Flawless convergence into bottom navigation tab or initial language button
  */
-const val GENIE_N: Int = 56
-const val GENIE_DUR: Long = 1350L
+const val GENIE_N: Int = 96
+const val GENIE_DUR: Long = 1250L
 
 data class TabTarget(
     val centerX: Float = 0f,
@@ -70,7 +68,7 @@ fun genieProfile(
     tx: Float
 ): GenieProfileResult {
     val t = genieClamp(y / span)
-    val f = 1f + (minS - 1f) * genieSS((t - 0.1f) / 0.9f) * n
+    val f = 1f + (minS - 1f) * genieSS((t - 0.08f) / 0.92f) * n
     val c = cx + (tx - cx) * genieSS(t) * n
     return GenieProfileResult(f, c)
 }
@@ -97,8 +95,8 @@ fun rememberPrefersReducedMotion(): Boolean {
 
 /**
  * Genie Fold Overlay Canvas
- * Renders the outgoing page snapshot into N horizontal strips, each transformed with a 2D affine matrix
- * following the two-phase S-curve funnel physics, with optional realistic fabric wrinkle shading & ripples.
+ * Renders the outgoing page snapshot into 96 horizontal satin strips, each transformed with a 2D affine matrix
+ * following the two-phase S-curve funnel physics, with ultra-clean fabric wrinkle shading & specular highlights.
  */
 @Composable
 fun GenieFoldOverlay(
@@ -108,7 +106,7 @@ fun GenieFoldOverlay(
     containerWidth: Float,
     containerHeight: Float,
     modifier: Modifier = Modifier,
-    fabricFold: Boolean = false
+    fabricFold: Boolean = true
 ) {
     val matrix = remember { Matrix() }
     val paint = remember {
@@ -136,22 +134,22 @@ fun GenieFoldOverlay(
         if (!fabricFold) {
             null
         } else {
-            // High-contrast glossy satin pleats: luminous white-gold specular streaks flanked by deep fold shadows
+            // Ultra-clean glossy satin pleats: luminous white-gold specular streaks flanked by deep fold shadows
             android.graphics.LinearGradient(
                 0f, 0f, pleatSpanW, 0f,
                 intArrayOf(
-                    0x7A000000, // left hem velvet shadow
-                    0x6EFFFFFF, // satin gloss ridge 1
-                    0x1E000000, // transition
-                    0x72000000, // fold 1 deep valley
-                    0x66FFF4CC, // satin warm gold-white ridge 2
-                    0x6E000000, // center deep valley
-                    0x76FFFFFF, // center bright satin specular gleam
-                    0x6E000000, // fold 3 deep valley
-                    0x66FFF4CC, // satin warm ridge 4
-                    0x72000000, // fold 4 deep valley
-                    0x6EFFFFFF, // satin gloss ridge 5
-                    0x7A000000  // right hem velvet shadow
+                    0x82000000.toInt(), // left hem deep shadow
+                    0x75FFFFFF.toInt(), // satin gloss ridge 1
+                    0x24000000.toInt(), // smooth transition
+                    0x7A000000.toInt(), // fold 1 deep valley
+                    0x6FFFFAEE.toInt(), // satin warm gold-white ridge 2
+                    0x76000000.toInt(), // center deep valley
+                    0x85FFFFFF.toInt(), // center brilliant satin specular gleam
+                    0x7A000000.toInt(), // fold 3 deep valley
+                    0x6FFFFAEE.toInt(), // satin warm ridge 4
+                    0x7A000000.toInt(), // fold 4 deep valley
+                    0x75FFFFFF.toInt(), // satin gloss ridge 5
+                    0x82000000.toInt()  // right hem deep shadow
                 ),
                 floatArrayOf(0f, 0.08f, 0.14f, 0.22f, 0.34f, 0.44f, 0.52f, 0.60f, 0.70f, 0.81f, 0.92f, 1f),
                 android.graphics.Shader.TileMode.MIRROR
@@ -168,23 +166,23 @@ fun GenieFoldOverlay(
         val ty = if (target.centerY > 0f) target.centerY else H
         val cx = W / 2f
         val tabW = if (target.width > 0f) target.width else (W / 3f)
-        val minS = max(tabW * 0.55f / W, 0.03f)
+        val minS = max(tabW * 0.48f / W, 0.025f)
         val sh = H / GENIE_N
         val span = if (ty > 0f) ty else H
 
-        // Sine ease-in-out: smooth departure and deceleration
+        // Sine ease-in-out: buttery smooth departure and velvet deceleration
         val u = progress.coerceIn(0f, 1f)
         val p = (0.5f - 0.5f * cos(PI.toFloat() * u)).coerceIn(0f, 1f)
 
-        // Phase 1: Bottom edge pulled down to icon first, creating the funnel
-        val n = genieSS(p / 0.55f)
+        // Phase 1: Bottom edge pulled down to destination icon first, creating the clean accordion funnel
+        val n = genieSS(p / 0.52f)
         // Phase 2: Top edge slides down while page flows into funnel
-        val yt = ty * genieSS((p - 0.28f) / 0.72f)
+        val yt = ty * genieSS((p - 0.25f) / 0.75f)
         val yb = H + (ty - H) * n
 
-        // Fade out during last 6% of progress
-        val opacity = if (p > 0.94f) {
-            max(0f, (1f - p) / 0.06f)
+        // Fade out during last 5% of progress for absolute clean finish
+        val opacity = if (p > 0.95f) {
+            max(0f, (1f - p) / 0.05f)
         } else {
             1f
         }
@@ -206,22 +204,22 @@ fun GenieFoldOverlay(
                 val cu = genieProfile(y1, n, span, minS, cx, tx)
                 val baseA = (pr.f + cu.f) / 2f
                 val dc = cu.c - pr.c
-                // 0.8px overlap prevents subpixel gaps between strips during deformation
-                val sy = max(0.001f, (y1 - y0 + 0.8f) / sh)
+                // 1.0px overlap prevents any subpixel gaps between strips during accordion folding
+                val sy = max(0.001f, (y1 - y0 + 1.0f) / sh)
 
                 val tStrip = (j + 0.5f) / GENIE_N
                 val envelope = kotlin.math.sin(tStrip * PI.toFloat())
-                val primaryWave = kotlin.math.sin((tStrip * 5.2f - p * 2.6f) * PI.toFloat())
-                val fineWrinkle = kotlin.math.sin((tStrip * 10.8f - p * 3.8f) * PI.toFloat())
-                val combinedWrinkle = 0.65f * primaryWave + 0.35f * fineWrinkle
+                val primaryWave = kotlin.math.sin((tStrip * 5.6f - p * 2.8f) * PI.toFloat())
+                val fineWrinkle = kotlin.math.sin((tStrip * 11.2f - p * 4.2f) * PI.toFloat())
+                val combinedWrinkle = 0.7f * primaryWave + 0.3f * fineWrinkle
 
-                val wrinkleScale = if (fabricFold && n > 0.02f) {
-                    1f + (0.030f * combinedWrinkle * envelope * n)
+                val wrinkleScale = if (fabricFold && n > 0.015f) {
+                    1f + (0.035f * combinedWrinkle * envelope * n)
                 } else 1f
-                val a = (baseA * wrinkleScale).coerceAtLeast(0.02f)
+                val a = (baseA * wrinkleScale).coerceAtLeast(0.015f)
 
                 val rippleOffset = if (fabricFold && n > 0.01f) {
-                    combinedWrinkle * envelope * n * (1f - p * 0.30f) * (W * 0.018f)
+                    combinedWrinkle * envelope * n * (1f - p * 0.25f) * (W * 0.02f)
                 } else 0f
 
                 val transX = (pr.c + cu.c) / 2f + rippleOffset - a * W / 2f - dc / 2f
@@ -243,23 +241,22 @@ fun GenieFoldOverlay(
                 nativeCanvas.drawBitmap(bitmap, 0f, 0f, paint)
 
                 if (fabricFold && pleatShader != null) {
-                    // Shiny satin pleats & glossy wrinkle luster intensify as the cloth gathers inward
+                    // Glossy satin pleats & specular wrinkle luster intensify cleanly as the cloth gathers
                     val gather = (1f - baseA).coerceIn(0f, 1f)
-                    val foldIntensity = (0.28f * n + 0.72f * gather).coerceIn(0f, 1f)
-                    val pAlpha = (foldIntensity * baseAlpha * 242f).toInt().coerceIn(0, 255)
+                    val foldIntensity = (0.32f * n + 0.68f * gather).coerceIn(0f, 1f)
+                    val pAlpha = (foldIntensity * baseAlpha * 248f).toInt().coerceIn(0, 255)
                     if (pAlpha > 2) {
                         nativeCanvas.translate(0f, j * sh)
-                        // Curve vertical satin highlights softly along each horizontal wrinkle wave
-                        shaderMatrix.setTranslate(combinedWrinkle * W * 0.045f * n, 0f)
+                        shaderMatrix.setTranslate(combinedWrinkle * W * 0.05f * n, 0f)
                         pleatShader.setLocalMatrix(shaderMatrix)
                         pleatPaint.alpha = pAlpha
                         nativeCanvas.drawRect(0f, 0f, W, sh, pleatPaint)
 
-                        // High-contrast satin gleam on wrinkle crests & deep velvet shadows in creases
+                        // High-contrast clean satin gleam on wrinkle crests & velvety shadows in folds
                         val waveIntensity = kotlin.math.abs(combinedWrinkle) * foldIntensity * baseAlpha
-                        if (waveIntensity > 0.015f) {
+                        if (waveIntensity > 0.012f) {
                             creasePaint.color = if (combinedWrinkle >= 0f) 0xFFFFFFFF.toInt() else 0xFF000000.toInt()
-                            val maxCrease = if (combinedWrinkle >= 0f) 76f else 92f
+                            val maxCrease = if (combinedWrinkle >= 0f) 82f else 98f
                             creasePaint.alpha = (waveIntensity * maxCrease).toInt().coerceIn(0, 255)
                             nativeCanvas.drawRect(0f, 0f, W, sh, creasePaint)
                         }

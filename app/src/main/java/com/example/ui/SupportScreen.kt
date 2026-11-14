@@ -681,20 +681,21 @@ fun SupportBackScreen(
                                                                     listOf(Color(0xFF132238), Color(0xFF0A1220))
                                                                 )
                                                             )
-                                                            .padding(horizontal = 12.dp, vertical = 9.dp),
-                                                        contentAlignment = Alignment.TopCenter
+                                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                                        contentAlignment = Alignment.Center
                                                     ) {
                                                         Column(
-                                                            modifier = Modifier.fillMaxSize(),
-                                                            horizontalAlignment = Alignment.CenterHorizontally
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .wrapContentHeight(),
+                                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                                            verticalArrangement = Arrangement.spacedBy(if (isSelected) 10.dp else 6.dp)
                                                         ) {
-                                                            // 1. Animated Male Customer Support Agent (with cap, beard, light green shirt & headset)
+                                                            // 1. Animated Male Customer Support Agent (enlarged frame)
                                                             AnimatedMaleSupportAgentIcon(
                                                                 isSelected = isSelected,
                                                                 contentDescription = title
                                                             )
-
-                                                            Spacer(modifier = Modifier.height(if (isSelected) 7.dp else 5.dp))
 
                                                             // 2. AZAN TIME SUPPORT Golden Badge (ALL CAPS, Center Aligned)
                                                             Box(
@@ -714,8 +715,8 @@ fun SupportBackScreen(
                                                                         shape = RoundedCornerShape(50)
                                                                     )
                                                                     .padding(
-                                                                        horizontal = if (isSelected) 12.dp else 9.dp,
-                                                                        vertical = if (isSelected) 3.5.dp else 2.5.dp
+                                                                        horizontal = if (isSelected) 14.dp else 10.dp,
+                                                                        vertical = if (isSelected) 4.dp else 3.dp
                                                                     ),
                                                                 contentAlignment = Alignment.Center
                                                             ) {
@@ -732,8 +733,6 @@ fun SupportBackScreen(
                                                                 )
                                                             }
 
-                                                            Spacer(modifier = Modifier.height(if (isSelected) 6.dp else 4.dp))
-
                                                             // 3. Support our app with feedback,\nand rate us 5 ★★★★★ (Center Aligned)
                                                             Text(
                                                                 text = supportMatterAnnotated,
@@ -749,7 +748,6 @@ fun SupportBackScreen(
 
                                                             // 4. Sequence: WhatsApp -> 5 Star -> UPI / QR (All three equal size)
                                                             if (isSelected) {
-                                                                Spacer(modifier = Modifier.weight(1f).heightIn(min = 6.dp))
                                                                 Column(
                                                                     modifier = Modifier.fillMaxWidth(),
                                                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -758,7 +756,7 @@ fun SupportBackScreen(
                                                                     Box(
                                                                         modifier = Modifier
                                                                             .fillMaxWidth()
-                                                                            .height(28.dp),
+                                                                            .height(26.dp),
                                                                         contentAlignment = Alignment.Center
                                                                     ) {
                                                                         AnimatedWhatsAppRow()
@@ -771,13 +769,13 @@ fun SupportBackScreen(
                                                                     Box(
                                                                         modifier = Modifier
                                                                             .fillMaxWidth()
-                                                                            .height(28.dp),
+                                                                            .height(26.dp),
                                                                         contentAlignment = Alignment.Center
                                                                     ) {
                                                                         LottieFiveStarRating(
                                                                             modifier = Modifier
-                                                                                .width(114.dp)
-                                                                                .height(28.dp)
+                                                                                .width(110.dp)
+                                                                                .height(26.dp)
                                                                         )
                                                                     }
                                                                     HorizontalDivider(
@@ -788,15 +786,13 @@ fun SupportBackScreen(
                                                                     Box(
                                                                         modifier = Modifier
                                                                             .fillMaxWidth()
-                                                                            .height(28.dp),
+                                                                            .height(26.dp),
                                                                         contentAlignment = Alignment.Center
                                                                     ) {
                                                                         AnimatedQrRow()
                                                                     }
                                                                 }
-                                                                Spacer(modifier = Modifier.weight(1f).heightIn(min = 2.dp))
                                                             } else {
-                                                                Spacer(modifier = Modifier.height(6.dp))
                                                                 LottieFiveStarRating(
                                                                     modifier = Modifier
                                                                         .width(96.dp)
@@ -2419,7 +2415,7 @@ private fun AnimatedMaleSupportAgentIcon(
     modifier: Modifier = Modifier
 ) {
     val prefersReducedMotion = rememberPrefersReducedMotion()
-    val badgeSize = if (isSelected) 48.dp else 40.dp
+    val badgeSize = if (isSelected) 76.dp else 54.dp
 
     val transition = rememberInfiniteTransition(label = "male_support_agent_loop")
     val t by transition.animateFloat(
